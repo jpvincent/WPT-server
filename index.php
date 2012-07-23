@@ -1,8 +1,6 @@
 <?php 
 include 'common.inc';
 
-
-
 if (array_key_exists('bulk', $_GET)) {
     $settings['noBulk'] = 0;
 }
@@ -68,7 +66,7 @@ $loc = ParseLocations($locations);
             $tab = 'Home';
             include 'header.inc';
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
+            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
             
             <?php
             echo "<input type=\"hidden\" name=\"vo\" value=\"$owner\">\n";
@@ -77,12 +75,18 @@ $loc = ParseLocations($locations);
               $hashStr .= $_SERVER['HTTP_USER_AGENT'];
               $hashStr .= $owner;
               
-              $now = date('c');
+              $now = gmdate('c');
               echo "<input type=\"hidden\" name=\"vd\" value=\"$now\">\n";
               $hashStr .= $now;
               
               $hmac = sha1($hashStr);
               echo "<input type=\"hidden\" name=\"vh\" value=\"$hmac\">\n";
+            }
+            if (array_key_exists('iq', $_REQUEST)) {
+              echo "<input type=\"hidden\" name=\"iq\" value=\"{$_REQUEST['iq']}\">\n";
+            }
+            if (array_key_exists('pngss', $_REQUEST)) {
+              echo "<input type=\"hidden\" name=\"pngss\" value=\"{$_REQUEST['pngss']}\">\n";
             }
             ?>
 
@@ -91,16 +95,16 @@ $loc = ParseLocations($locations);
             <div id="test_box-container">
                 <ul class="ui-tabs-nav">
                     <li class="analytical_review ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#">Analytical Review</a></li>
-                    <li class="visual_comparison"><a href="<?= $GLOBALS['basePath'] ?>/video/">Visual Comparison</a></li>
+                    <li class="visual_comparison"><a href="<?= $GLOBALS['basePath'] ?>video/">Visual Comparison</a></li>
                     <?php
                     if (isset($settings['mobile']))
-                        echo '<li class="mobile_test"><a href="'.$GLOBALS['basePath'].'/mobile">Mobile</a></li>';
+                        echo '<li class="mobile_test"><a href="'.$GLOBALS['basePath'].'mobile">Mobile</a></li>';
                     ?>
-                    <li class="traceroute"><a href="<?= $GLOBALS['basePath'] ?>/traceroute">Traceroute</a></li>
+                    <li class="traceroute"><a href="<?= $GLOBALS['basePath'] ?>traceroute">Traceroute</a></li>
                 </ul>
                 <div id="analytical-review" class="test_box">
                     <ul class="input_fields">
-                        <li><input type="text" name="url" id="url" value="<?php echo $url; ?>" class="text large" onfocus="if (this.value == this.defaultValue) {this.value = '';}" onblur="if (this.value == '') {this.value = this.defaultValue;}"></li>
+                        <li><input type="text" name="url" id="url" <?= (empty( $req_url ) ? '': 'value="'.$url.'"') ?> class="text large" placeholder="<?= $url ?>"></li>
                         <li>
                             <label for="location">Test Location</label>
                             <select name="where" id="location">
@@ -251,7 +255,7 @@ $loc = ParseLocations($locations);
                                     </li>
                                 </ul>
                             </div>
-                            <div id="advanced-settings" class="test_subbox">
+                            <div id="advanced-settings" class="test_subbox ui-tabs-hide">
                                 <ul class="input_fields">
                                     <li>
                                         <input type="checkbox" name="web10" id="stop_test_at_document_complete" class="checkbox before_label">
@@ -271,6 +275,18 @@ $loc = ParseLocations($locations);
                                         <input type="checkbox" name="tcpdump" id="tcpdump" class="checkbox" style="float: left;width: auto;">
                                         <label for="tcpdump" class="auto_width">
                                             Capture network packet trace (tcpdump)
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="timeline" id="timeline" class="checkbox" style="float: left;width: auto;">
+                                        <label for="timeline" class="auto_width">
+                                            Capture Dev Tools Timeline (Chrome Only)
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="netlog" id="netlog" class="checkbox" style="float: left;width: auto;">
+                                        <label for="netlog" class="auto_width">
+                                            Capture Network Log (Chrome Only)
                                         </label>
                                     </li>
                                     <li>
@@ -312,7 +328,7 @@ $loc = ParseLocations($locations);
                                     </li>
                                 </ul>
                             </div>
-                            <div id="auth" class="test_subbox">
+                            <div id="auth" class="test_subbox ui-tabs-hide">
                                 <div class="notification-container">
                                     <div class="notification"><div class="warning">
                                         PLEASE USE A TEST ACCOUNT! as your credentials may be available to anyone viewing the results.<br><br>
@@ -342,7 +358,7 @@ $loc = ParseLocations($locations);
                                 </ul>
                             </div>
 
-                            <div id="script" class="test_subbox">
+                            <div id="script" class="test_subbox ui-tabs-hide">
                                 <div>
                                     <div class="notification-container">
                                         <div class="notification"><div class="message">
@@ -360,7 +376,7 @@ $loc = ParseLocations($locations);
                                 </label>
                             </div>
 
-                            <div id="block" class="test_subbox">
+                            <div id="block" class="test_subbox ui-tabs-hide">
                                 <p>
                                     <input type="checkbox" name="blockads" id="blockads" class="checkbox" style="float: left;width: auto;">
                                     <label for="blockads" class="auto_width">
@@ -378,7 +394,7 @@ $loc = ParseLocations($locations);
                             </div>
 
                             <?php if($settings['enableVideo']) { ?>
-                            <div id="video" class="test_subbox">
+                            <div id="video" class="test_subbox ui-tabs-hide">
                                 <div class="notification-container">
                                     <div class="notification"><div class="message">
                                         Video will appear in the Screenshot page of your results
@@ -419,7 +435,7 @@ $loc = ParseLocations($locations);
                             <?php } ?>
 
                             <?php if (!$settings['noBulk']) { ?>
-                            <div id="bulk" class="test_subbox">
+                            <div id="bulk" class="test_subbox ui-tabs-hide">
                                 <p>
                                     <label for="bulkurls" class="full_width">
                                         List of urls to test (one URL per line)...
@@ -493,7 +509,7 @@ $loc = ParseLocations($locations);
                     $offset = -40 * $sponsor['index'];
                 $sponsor['offset'] = $offset;
             }
-            echo "var sponsors = " . json_encode($sponsors) . ";\n";
+            echo "var sponsors = " . @json_encode($sponsors) . ";\n";
         ?>
         </script>
         <script type="text/javascript" src="<?php echo $GLOBALS['cdnPath']; ?>/js/test.js?v=<?php echo VER_JS_TEST;?>"></script> 

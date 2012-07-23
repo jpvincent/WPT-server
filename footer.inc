@@ -114,8 +114,11 @@
                     $i++;
 
                 $remaining--;
-                $style = "background-image: url(".$GLOBALS['basePath']."{$sponsor['logo']}); background-position: 0px {$sponsor['offset']}px;";
-                echo "<td ><a href=\"{$sponsor['href']}\" title=\"{$sponsor['alt']}\"><div class=\"sponsor_logo\" style=\"$style\"></div></a></td>";
+                $style = "background-image: url({$sponsor['logo']}); background-position: 0px {$sponsor['offset']}px;";
+                $title = '';
+                if (array_key_exists('title', $sponsor))
+                    $title = $sponsor['title'];
+                echo "<td ><a href=\"{$sponsor['href']}\" title=\"$title\"><div class=\"sponsor_logo\" style=\"$style\"></div></a></td>";
                 if( $remaining && $remaining < $rowCount - $i - 1 )
                     echo '<td></td>';
             }
@@ -125,7 +128,18 @@
     ?>
     <div class="cleared"></div>
     
-    <script type="text/javascript" src="<?php echo $GLOBALS['cdnPath']; ?>/js/site.js?v=<?php echo VER_JS;?>"></script>
+    <?php
+    if (!isset($site_js_loaded) || !$site_js_loaded)
+        echo "<script type=\"text/javascript\" src=\"{$GLOBALS['cdnPath']}/js/site.js?v=" . VER_JS . "\"></script>\n";
+    
+    if (array_key_exists('slow', $_REQUEST) && $_REQUEST['slow'] == 'bottom') {
+        $delay = 10;
+        if (array_key_exists('delay', $_REQUEST)) {
+            $delay = $_REQUEST['delay'];
+        }
+        echo "<script type=\"text/javascript\" src=\"/slowtweet.php?delay=$delay\"></script>";
+    }
+    ?>
     <script type="text/javascript">
         function showFeeds(column)
         {
@@ -135,12 +149,12 @@
             document.getElementById("more_feeds_" + column).className = "";
             return false;
         }
-        <?php
-        if (!$privateInstall) {
-            echo '(function(a,b,c){function d(){var a=b.createElement(c),d=b.getElementsByTagName(c)[0];a.async=a.src="http://s2.cdnplanet.com/static/rum/rum.js",d.parentNode.insertBefore(a,d)}if(a.location.protocol=="https:")return;a.addEventListener&&a.addEventListener("load",d,!1)})(window,document,"script")';
-        }
-        ?>
     </script>
+    <?php
+    if (is_file('./settings/customfooter.inc.php')) {
+        include('./settings/customfooter.inc.php');
+    }
+    ?>
     <?php
     if(extension_loaded('newrelic'))
         echo @newrelic_get_browser_timing_footer();

@@ -1,1 +1,1 @@
-{"WDVIRTXP1":{"updated":1343044687,"ip":"10.130.0.245","pc":"WDVIRTXP1","ec2":null,"ver":"312","freedisk":"5.225","last":1343044427}}
+{"WDVIRTXP1":{"updated":1343057890,"ip":"10.130.0.245","pc":"WDVIRTXP1","ec2":null,"ver":"325","freedisk":"5.216"}}

@@ -1,6 +1,5 @@
 <?php
     require_once('common.inc');
-    require_once('unique.inc');
     set_time_limit(300);
      
     $error = NULL;
@@ -78,6 +77,8 @@
             $test['aftEarlyCutoff'] = (int)$req_aftec;
             $test['aftMinChanges'] = (int)$req_aftmc;
             $test['tcpdump'] = $req_tcpdump;
+            $test['timeline'] = $req_timeline;
+            $test['netlog'] = $req_netlog;
             $test['blockads'] = $req_blockads;
             $test['sensitive'] = $req_sensitive;
             $test['type'] = trim($req_type);
@@ -94,8 +95,12 @@
             $test['clear_rv'] = (int)$req_clearRV;
             $test['keepua'] = 0;
             $test['benchmark'] = $req_benchmark;
+            $test['max_retries'] = min((int)$req_retry, 10);
             if (array_key_exists('keepua', $_REQUEST) && $_REQUEST['keepua'])
                 $test['keepua'] = 1;
+            if (is_file('./settings/customrules.txt')) {
+                $test['custom_rules'] = file('./settings/customrules.txt',FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            }
             
             // see if we need to process a template for these requests
             if (isset($req_k) && strlen($req_k)) {
@@ -213,6 +218,14 @@
         $use_closest = false;
         if ($test['location'] == 'closest' && is_file('./settings/closest.ini') ) {
             $use_closest = true;
+        }
+        
+        // populate the IP address of the user who submitted it
+        if (!array_key_exists('ip', $test) || !strlen($test['ip'])) {
+            $test['ip'] = $_SERVER['REMOTE_ADDR'];
+            if ($test['ip'] == '127.0.0.1') {
+                $test['ip'] = @getenv("HTTP_X_FORWARDED_FOR");
+            }
         }
         
         // Make sure we aren't blocking the tester
@@ -654,7 +667,7 @@ function ValidateKey(&$test, &$error, $key = null)
           {
             if( flock($lock, LOCK_EX) )
             {
-                $keyfile = './dat/keys_' . date('Ymd') . '.dat';
+                $keyfile = './dat/keys_' . gmdate('Ymd') . '.dat';
                 $usage = null;
                 if( is_file($keyfile) )
                   $usage = json_decode(file_get_contents($keyfile), true);
@@ -739,7 +752,7 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
                 $test['location'] = GetClosestLocation($destination_url);
             }
 
-            // make sure the test runs are between 1 and 200
+            // make sure the test runs are between 1 and the max
             if( $test['runs'] > $maxruns )
                 $test['runs'] = $maxruns;
             elseif( $test['runs'] < 1 )
@@ -749,42 +762,18 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
             if( $test['fvonly'] > 0 )
                 $test['fvonly'] = 1;
 
-            // make sure private is explicitly 1 or 0
-            if( $test['private'] )
-                $test['private'] = 1;
-            else
-                $test['private'] = 0;
+            // make sure on/off options are explicitly 1 or 0
+            $test['private'] = $test['private'] ? 1 : 0;
+            $test['web10'] = $test['web10'] ? 1 : 0;
+            $test['ignoreSSL'] = $test['ignoreSSL'] ? 1 : 0;
+            $test['tcpdump'] = $test['tcpdump'] ? 1 : 0;
+            $test['timeline'] = $test['timeline'] ? 1 : 0;
+            $test['netlog'] = $test['netlog'] ? 1 : 0;
+            $test['blockads'] = $test['blockads'] ? 1 : 0;
+            $test['sensitive'] = $test['sensitive'] ? 1 : 0;
+            $test['pngss'] = $test['pngss'] ? 1 : 0;
+            $test['bodies'] = $test['bodies'] ? 1 : 0;
                 
-            // make sure web10 is explicitly 1 or 0
-            if( $test['web10'] )
-                $test['web10'] = 1;
-            else
-                $test['web10'] = 0;
-
-            // make sure ignoreSSL is explicitly 1 or 0
-            if( $test['ignoreSSL'] )
-                $test['ignoreSSL'] = 1;
-            else
-                $test['ignoreSSL'] = 0;
-                
-            // make sure tcpdump is explicitly 1 or 0
-            if( $test['tcpdump'] )
-                $test['tcpdump'] = 1;
-            else
-                $test['tcpdump'] = 0;
-                
-            // make sure blockads is explicitly 1 or 0
-            if( $test['blockads'] )
-                $test['blockads'] = 1;
-            else
-                $test['blockads'] = 0;
-
-            // make sure sensitive is explicitly 1 or 0
-            if( $test['sensitive'] )
-                $test['sensitive'] = 1;
-            else
-                $test['sensitive'] = 0;
-
             if( $test['aft'] )
             {
                 $test['aft'] = 1;
@@ -793,16 +782,6 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
             else
                 $test['aft'] = 0;
 
-            if( $test['pngss'] )
-                $test['pngss'] = 1;
-            else
-                $test['pngss'] = 0;
-
-            if( $test['bodies'] )
-                $test['bodies'] = 1;
-            else
-                $test['bodies'] = 0;
-            
             if( !$test['aftMinChanges'] && $settings['aftMinChanges'] )
                 $test['aftMinChanges'] = $settings['aftMinChanges'];
 
@@ -923,7 +902,7 @@ function ValidateScript(&$script, &$error)
     
     if( !$ok )
         $error = "Invalid Script (make sure there is at least one navigate command and that the commands are tab-delimited).  Please contact us if you need help with your test script.";
-    else if( $navigateCount > 10 )
+    else if( $navigateCount > 20 )
         $error = "Sorry, your test has been blocked.  Please contact us if you have any questions";
     
     if( strlen($error) )
@@ -1015,7 +994,10 @@ function ScriptParameterCount($command)
         !strcasecmp($command, 'setCookie') || 
         !strcasecmp($command, 'setDNS') || 
         !strcasecmp($command, 'setDnsName') ||
+        !strcasecmp($command, 'setBrowserSize') ||
+        !strcasecmp($command, 'setViewportSize') ||
         !strcasecmp($command, 'overrideHost') ||
+        !strcasecmp($command, 'addCustomRule') ||
         !strcasecmp($command, 'overrideHostUrl') )
     {
         $count = 3;
@@ -1122,6 +1104,7 @@ function SubmitUrl($testId, $testData, &$test, $url)
             if( strlen($host) )
             {
                 $script = str_ireplace('%HOST%', $host, $script);
+                $script = str_ireplace('%HOST_REGEX%', str_replace('.', '\\.', $host), $script);
                 if( stripos($script, '%HOSTR%') !== false )
                 {
                     // do host substitution but also clone the command for a final redirected domain if there are redirects involved
@@ -1189,6 +1172,11 @@ function WriteJob($location, &$test, &$job, $testId)
                 {
                     if( AddJobFile($workDir, $fileName, $test['priority'], $test['queue_limit']) )
                     {
+                        // store a copy of the job file with the original test in case the test fails and we need to resubmit it
+                        $test['work_dir'] = $workDir;
+                        $test['job_file'] = $file;
+                        $testPath = './' . GetTestPath($testId);
+                        file_put_contents("$testPath/$fileName.test", $job);
                         $tests = json_decode(file_get_contents("./tmp/$location.tests"), true);
                         if( !$tests )
                             $tests = array();
@@ -1338,7 +1326,7 @@ function LogTest(&$test, $testId, $url)
     if( $file )
     {
         $ip = $_SERVER['REMOTE_ADDR'];
-        if( $test['ip'] && strlen($test['ip']) )
+        if( array_key_exists('ip',$test) && strlen($test['ip']) )
             $ip = $test['ip'];
         
         $log = gmdate("Y-m-d G:i:s") . "\t$ip" . "\t0" . "\t0";
@@ -1362,7 +1350,7 @@ function LogTest(&$test, $testId, $url)
 function CheckIp(&$test)
 {
     $ok = true;
-    $ip2 = $test['ip'];
+    $ip2 = @$test['ip'];
     $ip = $_SERVER['REMOTE_ADDR'];
     $blockIps = file('./settings/blockip.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach( $blockIps as $block )
@@ -1413,26 +1401,32 @@ function CheckUrl($url)
 * Generate a shard key to better spread out the test results
 * 
 */
-function ShardKey()
-{
+function ShardKey($test_num) {
     global $settings;
     $key = '';
 
-    // default to a 2-digit shard (1024-way shard)
-    $size = 2;
-    if( array_key_exists('shard', $settings) )
-        $size = (int)$settings['shard'];
-    
-    if( $size > 0 && $size < 20 )
-    {
-        $digits = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-        $digitCount = strlen($digits) - 1;
-        while( $size )
+    if( array_key_exists('bucket_size', $settings) && $settings['bucket_size'] > 0 ) {
+        // group the tests sequentially
+        $bucket_size = (int)$settings['bucket_size'];
+        $bucket = $test_num / $bucket_size;
+        $key = NumToString($bucket) . '_';
+    } else {
+        // default to a 2-digit shard (1024-way shard)
+        $size = 2;
+        if( array_key_exists('shard', $settings) )
+            $size = (int)$settings['shard'];
+        
+        if( $size > 0 && $size < 20 )
         {
-            $key .= substr($digits, rand(0, $digitCount), 1);
-            $size--;
+            $digits = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+            $digitCount = strlen($digits) - 1;
+            while( $size )
+            {
+                $key .= substr($digits, rand(0, $digitCount), 1);
+                $size--;
+            }
+            $key .= '_';
         }
-        $key .= '_';
     }
     
     return $key;
@@ -1450,11 +1444,12 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
     $testId = null;
     
     // generate the test ID
-    $id = null;
+    $test_num;
+    $id = uniqueId($test_num);
     if( $test['private'] )
-        $id = ShardKey() . md5(uniqid(rand(), true));
+        $id = ShardKey($test_num) . md5(uniqid(rand(), true));
     else
-        $id = ShardKey() . uniqueId();
+        $id = ShardKey($test_num) . $id;
     $today = new DateTime("now", new DateTimeZone('UTC'));
     $testId = $today->format('ymd_') . $id;
     $test['path'] = './' . GetTestPath($testId);
@@ -1463,7 +1458,7 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
     while( is_dir($test['path']) )
     {
         // fall back to random ID's
-        $id = ShardKey() . md5(uniqid(rand(), true));
+        $id = ShardKey($test_num) . md5(uniqid(rand(), true));
         $testId = $today->format('ymd_') . $id;
         $test['path'] = './' . GetTestPath($testId);
     }
@@ -1535,6 +1530,10 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
             $testFile .= "\r\nignoreSSL=1";
         if( $test['tcpdump'] )
             $testFile .= "\r\ntcpdump=1";
+        if( $test['timeline'] )
+            $testFile .= "\r\ntimeline=1";
+        if( $test['netlog'] )
+            $testFile .= "\r\nnetlog=1";
         if( $test['blockads'] )
             $testFile .= "\r\nblockads=1";
         if( $test['video'] )
@@ -1584,7 +1583,17 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
         if( $test['clear_rv'] )
             $testFile .= "clearRV={$test['clear_rv']}\r\n";
         if( $test['keepua'] )
-            $testFile .= "\r\nkeepua=1";
+            $testFile .= "keepua=1\r\n";
+        
+        // see if we need to add custom scan rules
+        if (array_key_exists('custom_rules', $test)) {
+            foreach($test['custom_rules'] as &$rule) {
+                $rule = trim($rule);
+                if (strlen($rule)) {
+                    $testFile .= "customRule=$rule\r\n";
+                }
+            }
+        }
 
         // see if we need to generate a SNS authentication script
         if( strlen($test['login']) && strlen($test['password']) )
@@ -1645,9 +1654,10 @@ function ParseBulkUrl($line)
     
     $equals = strpos($line, '=');
     $query = strpos($line, '?');
+    $slash = strpos($line, '/');
     $label = null;
     $url = null;
-    if( $equals === false || ($query !== false && $query < $equals) )
+    if( $equals === false || ($query !== false && $query < $equals) || ($slash !== false && $slash < $equals) )
         $url = $line;
     else
     {
@@ -1744,7 +1754,7 @@ function RelayTest()
     $location = trim($_POST['location']);
     $test['workdir'] = $locations[$location]['localDir'];
     
-    ValidateKey($testinfo, $error, $rkey);
+    ValidateKey($test, $error, $rkey);
     if( !isset($error) )
     {
         $id = $rkey . '.' . $test['id'];
@@ -1836,5 +1846,79 @@ function GetClosestLocation($url) {
         }
     }
     return $location;
+}
+
+/**
+*   Generate a unique Id
+*/
+function uniqueId(&$test_num) {
+    $id = NULL;
+    $test_num = 0;
+    
+    if( !is_dir('./work/jobs') )
+        mkdir('./work/jobs', 0777, true);
+    
+    // try locking the context file
+    $filename = './work/jobs/uniqueId.dat';
+    $file = fopen( $filename, "a+b",  false);
+    if( $file ) {
+        if( flock($file, LOCK_EX) ) {
+            fseek($file, 0, SEEK_SET);
+            $json = fread($file, 300);
+            $num = 0;
+            $day = (int)date('z');
+            $testData = array('day' => $day, 'num' => 0);
+            if ($json !== false) {
+                $newData = json_decode($json, true);
+                if (isset($newData) && is_array($newData) && 
+                    array_key_exists('day', $newData) && 
+                    array_key_exists('num', $newData) &&
+                    $newData['day'] == $day) {
+                    $testData['num'] = $newData['num'];
+                }
+            }
+            
+            $testData['num']++;
+            $test_num = $testData['num'];
+            
+            // convert the number to a base-32 string for shorter text
+            $id = NumToString($testData['num']);
+
+            // go back to the beginning of the file and write out the new value
+            fseek($file, 0, SEEK_SET);
+            ftruncate($file, 0);
+            fwrite($file, json_encode($testData));
+        }
+
+        fclose($file);
+    }
+    
+    if (!isset($id)) {
+        $test_num = rand();
+        $id = md5(uniqid($test_num, true));
+    }
+    
+    return $id;
+} 
+
+/**
+* Convert a number to a base-32 string
+* 
+* @param mixed $num
+*/
+function NumToString($num) {
+    if ($num > 0) {
+        $str = '';
+        $digits = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+        while($num > 0) {
+            $digitValue = $num % 32;
+            $num = (int)($num / 32);
+            $str .= $digits[$digitValue];
+        }
+        $str = strrev($str);
+    } else {
+        $str = '0';
+    }
+    return $str;
 }
 ?>

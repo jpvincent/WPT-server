@@ -89,9 +89,9 @@ foreach($requests as $reqNum => $request)
 		if( $request['connect_ms'] && (int)$request['connect_ms'] !== -1 )
 		{
 			echo '<td class="reqSocket ' . $highlight . '">' . $request['connect_ms'] . ' ms</td>';
-			if( $request['is_secure'] && $request['is_secure'] == 1 )
-				echo '<td class="reqSSL ' . $highlight . '">' . (int)$request['sslTime'] . ' ms</td>';
-			elseif( $secure )
+			if( $request['is_secure'] && $request['is_secure'] == 1 ) {
+				echo '<td class="reqSSL ' . $highlight . '">' . (int)$request['ssl_ms'] . ' ms</td>';
+			} elseif( $secure )
 				echo '<td class="reqSSL ' . $highlight . '">-</td>';
 		}
 		elseif( $request['connect_end'] > 0 )
@@ -214,6 +214,11 @@ foreach($requests as $reqNum => $request)
 						    echo '<b>Error/Status Code: </b>' . $request['responseCode'] . "<br>\n";
                             if (array_key_exists('initiator', $request)) {
                                 echo '<b>Initiated By: </b>' . $request['initiator'] . "<br>\n";
+                            }
+                            if (array_key_exists('custom_rules', $request)) {
+                                foreach($request['custom_rules'] as $rule_name => &$rule) {
+                                    echo "<b>Custom Rule - $rule_name: </b>({$rule['count']} matches) - " . htmlspecialchars($rule['value']) . "<br>\n";
+                                }
                             }
 						    echo '<b>Start Offset: </b>' . $request['load_start'] / 1000.0 . " s<br>\n";
 						    if( $request['dns_ms'] && (int)$request['dns_ms'] !== -1 )

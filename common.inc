@@ -1,26 +1,41 @@
-<?php 
+<?php
+
+//phpinfo();
+
 // shared initializiation/loading code
 set_time_limit(300);
-error_reporting(0);
+//if (!array_key_exists('debug', $_REQUEST) && (!isset($debug) || !$debug)) {
+    error_reporting(0);
+//}
 umask(0);
 date_default_timezone_set('UTC');
-import_request_variables('PG', 'req_');
+extract($_POST, EXTR_SKIP|EXTR_PREFIX_ALL|EXTR_REFS, 'req');
+extract($_GET, EXTR_SKIP|EXTR_PREFIX_ALL|EXTR_REFS, 'req');
 
-if ($_SERVER['HTTP_MOD_REWRITE'] == 'On')
+require_once('./logging.inc');
+
+if (function_exists('apache_request_headers')) {
+    $headers = apache_request_headers();
+    if (array_key_exists('X-Forwarded-For', $headers)){
+        $_SERVER["REMOTE_ADDR"] = $headers['X-Forwarded-For'];
+    }
+}
+if (array_key_exists('HTTP_MOD_REWRITE', $_SERVER) && $_SERVER['HTTP_MOD_REWRITE'] == 'On')
     define('FRIENDLY_URLS', true);
 else
     define('FRIENDLY_URLS', false);
 
 // constants
 define('VER_WEBPAGETEST', '2.2.1');   // webpagetest version
-define('VER_CSS', 57);          // version of the sitewide css file
-define('VER_JS', 19);            // version of the sitewide javascript file
+define('VER_CSS', 58);           // version of the sitewide css file
+define('VER_JS', 20);            // version of the sitewide javascript file
 define('VER_JS_TEST', 20);       // version of the javascript specific to the test pages
-define('VER_JS_RUNNING', 1);    // version of the javascript specific to the test running status page
-define('UNKNOWN_TIME', -1);  // Value used as a flag for an unknown time.
-                             // To find code that fails to check that a time
-                             // is unknown, change this constant to a large
-                             // negative number.
+define('VER_JS_RUNNING', 1);     // version of the javascript specific to the test running status page
+define('VER_TIMELINE', 1);       // version of the timeline javascript
+define('UNKNOWN_TIME', -1);      // Value used as a flag for an unknown time.
+                                 // To find code that fails to check that a time
+                                 // is unknown, change this constant to a large
+                                 // negative number.
 
 // SEO stuff
 $page_keywords = array('Webpagetest','Website Speed Test','Page Speed');
@@ -37,6 +52,12 @@ if (isset($req_bare)) {
 }
 // load the install-specific settings
 $settings = parse_ini_file('./settings/settings.ini');
+if (!isset($settings) || !is_array($settings)) {
+    $settings = array();
+}
+if (!array_key_exists('nogzip', $settings)) {
+    $settings['nogzip'] = false;
+}
 
 // override some settings from the URI
 if (isset($req_bulk)) {
@@ -48,12 +69,20 @@ if (isset($settings['cdn']) && !$is_ssl) {
     $GLOBALS['cdnPath'] = $settings['cdn'];
 }
 
-$GLOBALS['basePath'] = 'http://'.$_SERVER['HTTP_HOST'].'/WPT/'; // 'http://10.130.0.52:8888/WPT/';
-$GLOBALS['cdnPath'] = $GLOBALS['basePath'];
+$GLOBALS['basePath'] = '';
+if (isset($settings['basePath'])) {
+	$GLOBALS['basePath'] = 'http://10.130.0.245:8888/WPT/'; //$settings['basePath'];
+	if(empty($GLOBALS['cdnPath']))
+		$GLOBALS['cdnPath'] = $GLOBALS['basePath'];
+}
 
 $GLOBALS['ptotocol'] = 'http';
 if ($is_ssl) {
     $GLOBALS['ptotocol'] = 'https';
+}
+$median_metric = 'loadTime';
+if (array_key_exists('medianMetric', $_REQUEST)) {
+    $median_metric = $_REQUEST['medianMetric'];
 }
 
 $tz_offset = null;
@@ -68,7 +97,7 @@ $uid = NULL;
 $user = NULL;
 $admin = false;
 $api_keys;
-if (is_dir('./forums') && !$settings['disableMybb']) {
+if (is_dir('./forums') && (!array_key_exists('disableMybb', $settings) || !$settings['disableMybb'])) {
     ob_start();
     $supportsAuth = true;
 
@@ -105,8 +134,9 @@ else if( isset($_COOKIE['o']) && strlen($_COOKIE['o']) ){
 }
 setcookie('o', $owner, time()+60*60*24*365, '/');
 
-if( $supportsAuth && ($admin || strpos($_COOKIE['google_email'], '@google.com') !== false) )
+if( $supportsAuth && ($admin || (array_key_exists('google_email', $_COOKIE) && strpos($_COOKIE['google_email'], '@google.com') !== false)) ) {
     $settings['enable_google_csi'] = true;
+}
 
 // set their color selection as a cookie
 if (isset($req_color)) {
@@ -186,6 +216,14 @@ if (strlen($id)) {
         $testLabel = FitText(' - ' . $locs . ' : ' . $label . $url_temp, 40);
         if( isset($testDate) && strlen($testDate) )
             $testLabel .= " - $testDate";
+    }
+    
+    if (!isset($test)) {
+        $test = array();
+    }
+    
+    if (!array_key_exists('testinfo', $test)) {
+        $test['testinfo'] = array();
     }
 }
 
@@ -366,6 +404,7 @@ function GetVideoPath($id, $find = false)
 */
 function GenerateVideoThumbnail($dir)
 {
+	print 'GenerateVideoThumbnail';
     $dir = realpath($dir);
     if( is_file("$dir/video.mp4") && !is_file("$dir/video.png") )
     {
@@ -374,6 +413,7 @@ function GenerateVideoThumbnail($dir)
         $command = "ffmpeg -i \"$dir/video.mp4\" -vframes 1 -ss 00:00:00 -f image2 \"$dir/video.png\"";
         $retStr = exec($command, $output, $result);
     }
+print $retStr;
 }
 
 /**
@@ -502,9 +542,10 @@ function gz_file_get_contents($file)
     if( $zip === false )
         $zip = gzopen($file, 'rb');
     
-    if( $zip !== false )
-    {
-        $data = gzread($zip, 10000000);
+    if( $zip !== false ) {
+        while ($string = gzread($zip, 4096)) {
+            $data .= $string;
+        }
         gzclose($zip);
     }
     else 
@@ -519,12 +560,12 @@ function gz_file_get_contents($file)
 * @param mixed $filename
 * @param mixed $data
 */
-function gz_file_put_contents($filename, &$data)
+function gz_file_put_contents($filename, $data)
 {
     global $settings;
     $ret = false;
     
-    if( !$settings['nogzip'] && extension_loaded('zlib') )
+    if( (!array_key_exists('nogzip', $settings) || !$settings['nogzip']) && extension_loaded('zlib') )
     {
         $zip = gzopen("$filename.gz", 'wb9');
         if( $zip !== false )
@@ -570,7 +611,7 @@ function gz_compress($filename)
     global $settings;
     $ret = false;
     
-    if( !$settings['nogzip'] && extension_loaded('zlib') )
+    if( (!array_key_exists('nogzip', $settings) || !$settings['nogzip']) && extension_loaded('zlib') )
     {
         $data = file_get_contents($filename);
         if( $data ){
@@ -652,46 +693,6 @@ function LoadPageSpeedData($file)
 }
 
 /**
- * Message logging
- *
- * @param mixed $msg
- */
-function logMsg($msg, $logFile = './log.txt', $force = false)
-{
-    global $debug;
-    if ($debug || $force) {
-        $file = fopen($logFile, 'a');
-        if ($file) {
-            fwrite($file, date('Y/m/d H:i:s - ') . $msg . "\n");
-            fclose($file);
-        }
-    }
-}
-
-/**
- * Message logging with the source location of the log message.
- * @param mixed $msg
- */
-function logWithLocation($msg)
-{
-  $backtrace = debug_backtrace();
-  $file = $backtrace[0]["file"];
-  $line = $backtrace[0]["line"];
-  logMsg("$file:$line: $msg");
-}
-
-/**
- * Log unexpected input.  Usefull for debugging interaction with an agent.
- * Search for "Unexpected input" to find these messages in the logs.
- * Set a breakpoint in this function to stop on unexpected input.
- * @param mixed $msg
- */
-function logMalformedInput($msg)
-{
-  logWithLocation("Unexpected input: " . $msg);
-}
-
-/**
 * Count the number of test files in the given directory
 * 
 * @param mixed $dir
@@ -733,46 +734,51 @@ function BuildLocations( &$locations )
                     $locations[$name] = $loc;
                 } else {
                     $index = 1;
-                    $default = $loc['default'];
+                    $default = null;
+                    if (array_key_exists('default', $loc)) {
+                        $default = $loc['default'];
+                    }
                     $location = array();
                     foreach ($loc as $key => $value) {
                         if (is_numeric($key)) {
                             // make sure we have a default
-                            if (!strlen($default)) {
+                            if (!isset($default) || !strlen($default)) {
                                 $default = $value;
                             }
                             // clone the individual configuration based on the available browsers
-                            $configuration = $original[$value];
-                            if (strlen($configuration['browser'])) {
-                                $configuration['localDir'] = "./work/jobs/$value";
-                                $configuration['location'] = $value;
-                                if (!is_dir($configuration['localDir'])) {
-                                    mkdir($configuration['localDir'], 0777, true);
-                                }
-                                $browsers = array();
-                                $parts = explode(',', $configuration['browser']);
-                                foreach ($parts as $browser) {
-                                    $browsers[] = trim($browser);
-                                }
-                                if (count($browsers) > 1) {
-                                    // default to the first browser in the list
-                                    if ($default == $value) {
-                                        $default .= ':' . $browsers[0];
+                            if (array_key_exists($value, $original)) {
+                                $configuration = $original[$value];
+                                if (strlen($configuration['browser'])) {
+                                    $configuration['localDir'] = "./work/jobs/$value";
+                                    $configuration['location'] = $value;
+                                    if (!is_dir($configuration['localDir'])) {
+                                        mkdir($configuration['localDir'], 0777, true);
                                     }
-                                    // build the actual configurations
-                                    foreach ($browsers as $browser) {
-                                        $label = $value . ':' . $browser;
-                                        $location[$index] = $label;
+                                    $browsers = array();
+                                    $parts = explode(',', $configuration['browser']);
+                                    foreach ($parts as $browser) {
+                                        $browsers[] = trim($browser);
+                                    }
+                                    if (count($browsers) > 1) {
+                                        // default to the first browser in the list
+                                        if ($default == $value) {
+                                            $default .= ':' . $browsers[0];
+                                        }
+                                        // build the actual configurations
+                                        foreach ($browsers as $browser) {
+                                            $label = $value . ':' . $browser;
+                                            $location[$index] = $label;
+                                            $index++;
+                                            $cfg = $configuration;
+                                            $cfg['browser'] = $browser;
+                                            $cfg['label'] = $cfg['label'] . " - $browser";
+                                            $locations[$label] = $cfg;
+                                        }
+                                    } else {
+                                        // for single-browser locations, just copy it over as it exists
+                                        $location[$index] = $value;
                                         $index++;
-                                        $cfg = $configuration;
-                                        $cfg['browser'] = $browser;
-                                        $cfg['label'] = $cfg['label'] . " - $browser";
-                                        $locations[$label] = $cfg;
                                     }
-                                } else {
-                                    // for single-browser locations, just copy it over as it exists
-                                    $location[$index] = $value;
-                                    $index++;
                                 }
                             }
                         } elseif ($key !== 'default') {
@@ -819,8 +825,10 @@ function FilterLocations(&$locations, $includeHidden = '',
         // first remove any locations that haven't checked in for 30 minutes (could tighten this up in the future)
         foreach ($locations as $name => &$locRef) {
             if (isset($locRef['browser'])) {
+                $parts = explode(':', $name);
+                $locname = $parts[0];
                 // now check the times
-                $file = "./tmp/$name.tm";
+                $file = "./tmp/$locname.tm";
                 if (is_file($file)) {
                     $updated = filemtime($file);
                     $now = time();
@@ -1136,7 +1144,15 @@ function GetTestInfoHtml($includeScript = true)
     }
     if( isset($test['testinfo']) && strlen($test['testinfo']['script']) )
     {
-        if ($includeScript && ($settings['show_script_in_results'] || $isOwner || $admin) && !$test['testinfo']['sensitive'])
+        $show = false;
+        if ($includeScript) {
+            if ($admin || $settings['show_script_in_results']) {
+                $show = true;
+            } elseif ($isOwner && !$test['testinfo']['sensitive']) {
+                $show = true;
+            }
+        }
+        if ($show)
         {
             $html .= '<p><a href="javascript:void(0)" id="script_in_results">Script <span class="arrow"></span></a></p>';
             $html .= '<div id="script_in_results-container" class="hidden">';
@@ -1192,28 +1208,33 @@ function RestoreTest($id)
 {
     global $settings;
     $ret = false;
-    $testPath = './' . GetTestPath($id);
-    if( isset($settings['archive_dir']) || isset($settings['archive_s3_url']) )
-    {
-        if( is_dir($testPath) && is_file("$testPath/testinfo.json") )
+    if (ValidateTestId($id)) {
+        $testPath = './' . GetTestPath($id);
+        if( array_key_exists('archive_dir', $settings) || 
+            array_key_exists('archive_s3_url', $settings) ||
+            array_key_exists('archive_s3_server', $settings) )
         {
-            $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
-            if( $testInfo['restored'] && $testInfo['restoredDataOnly'] && !defined('RESTORE_DATA_ONLY') )
+            $restore = false;
+            if( is_dir($testPath) && gz_is_file("$testPath/testinfo.json") )
+            {
+                $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
+                if( $testInfo['restored'] && $testInfo['restoredDataOnly'] && !defined('RESTORE_DATA_ONLY') )
+                    $restore = true;
+            }
+            else
                 $restore = true;
-        }
-        else
-            $restore = true;
-        
-        if( $restore )
-        {
-            require_once('archive.inc');
-            $ret = RestoreArchive($id);
+            
+            if( $restore )
+            {
+                require_once('archive.inc');
+                $ret = RestoreArchive($id);
+            }
+            else
+                $ret = true;
         }
         else
             $ret = true;
     }
-    else
-        $ret = true;
         
     return $ret;
 }
@@ -1267,33 +1288,36 @@ function fastimagecopyresampled (&$dst_image, $src_image, $dst_x, $dst_y, $src_x
 * Get the number of pending high-priority page loads at the given location
 * and the average time per page load (from the last 100 tests)
 */
-function GetPendingTests($location, &$count, &$avgTime)
+function GetPendingTests($loc, &$count, &$avgTime)
 {
-    $parts = explode(':', $location);
-    $location = $parts[0];
     $total = 0;
-    $count = 0;
-    $avgTime = 0;
-    $tests = json_decode(file_get_contents("./tmp/$location.tests"), true);
-    if( $tests )
-    {
-        $count = (int)$tests['tests'];
-        $timeCount = count($tests['times']);
-        if( $timeCount )
+    $locations = explode(',', $loc);
+    foreach($locations as $location) {
+        $parts = explode(':', $location);
+        $location = $parts[0];
+        $count = 0;
+        $avgTime = 0;
+        $tests = json_decode(file_get_contents("./tmp/$location.tests"), true);
+        if( $tests )
         {
-            $timeTotal = 0;
-            foreach( $tests['times'] as $time )
-                $timeTotal += $time;
-            $avgTime = ceil($timeTotal / $timeCount);
+            $count = (int)$tests['tests'];
+            $timeCount = count($tests['times']);
+            if( $timeCount )
+            {
+                $timeTotal = 0;
+                foreach( $tests['times'] as $time )
+                    $timeTotal += $time;
+                $avgTime = ceil($timeTotal / $timeCount);
+            }
         }
-    }
-    // now count just the low priority tests
-    if( LoadJobQueue("./work/jobs/$location", $queue) ) {
-        foreach( $queue as $priority => &$q ) {
-            if ($priority < 9)
-                $total += count($q);
+        // now count just the low priority tests
+        if( LoadJobQueue("./work/jobs/$location", $queue) ) {
+            foreach( $queue as $priority => &$q ) {
+                if ($priority < 9)
+                    $total += count($q);
+            }
+            $count = count($queue[0]);
         }
-        $count = count($queue[0]);
     }
     return $total;
 }
@@ -1341,6 +1365,7 @@ function AddJobFile($workDir, $file, $priority, $queue_limit = 0)
 function GetJobFile($workDir)
 {
     $file = null;
+    $modified = false;
     
     if( LoadJobQueue($workDir, $queue) )
     {
@@ -1348,13 +1373,22 @@ function GetJobFile($workDir)
         while( !isset($file) && $priority <= 9 )
         {
             $file = array_shift($queue[$priority]);
-            $priority++;
+            if (isset($file)) {
+                $modified = true;
+            }
+            if (isset($file) && !is_file("$workDir/$file")) {
+                unset($file);
+            } else {
+                $priority++;
+            }
         }
 
-        if( isset($file) )
-        {
+        if( isset($file) ) {
             $file = "$workDir/$file";
-            $ret = SaveJobQueue($workDir, $queue);
+        }
+        
+        if ($modified) {
+            SaveJobQueue($workDir, $queue);
         }
     }
 
@@ -1401,12 +1435,31 @@ function LoadJobQueue($workDir, &$queue)
 {
     $ret = true;
     
+    $queue = null;
     $queueName = sha1($workDir);
     $queueFile = "./tmp/$queueName.queue";
-    if( is_file($queueFile) )
+    if( is_file($queueFile) ) {
         $queue = json_decode(file_get_contents($queueFile), true);
-    else
-    {
+        // re-scan the directory if the queue is empty
+        if (isset($queue)) {
+            if (is_array($queue)) {
+                $empty = true;
+                foreach ($queue as &$p) {
+                    if (count($p)) {
+                        $empty = false;
+                        break;
+                    }
+                }
+                if ($empty) {
+                    unset($queue);
+                }
+            } else {
+                unset($queue);
+            }
+        }
+    }
+
+    if (!isset($queue)) {
         // build the queue from disk
         $files = array();
         $f = scandir($workDir);
@@ -1616,12 +1669,12 @@ function xml_entities($text, $charset = 'UTF-8')
 }
 
 /**
-* Send a JSON response (including callback for JSONP)
-* 
-* @param mixed $response
-*/
+ * Send a JSON response (including callback for JSONP)
+ *
+ * @param mixed $response
+ */
 function json_response(&$response) {
-    header ("Content-type: application/json");
+    header ("Content-type: application/json; charset=utf-8");
     if( array_key_exists('callback', $_REQUEST) && strlen($_REQUEST['callback']) )
         echo "{$_REQUEST['callback']}(";
 
@@ -1632,4 +1685,75 @@ function json_response(&$response) {
     if( isset($_REQUEST['callback']) && strlen($_REQUEST['callback']) )
         echo ");";
 }
+
+/**
+ * Check to make sure a test ID is valid
+ *
+ * @param mixed $id
+ */
+function ValidateTestId(&$id) {
+    $valid = false;
+    $testId = $id;
+    // see if it is a relay test (includes the key)
+    if( strpos($id, '.') !== false ) {
+        $parts = explode('.', $id);
+        if( count($parts) == 2 ) {
+            $testId = trim($parts[1]);
+        }
+    }
+
+    if (preg_match('/^[a-zA-Z0-9_]+$/', @$testId)) {
+        $valid = true;
+    } else {
+        $id = '';
+    }
+    return $valid;
+}
+
+function arrayLookupWithDefault($key, $searchArray, $default) {
+  if (!is_array($searchArray) || !array_key_exists($key, $searchArray))
+    return $default;
+
+  return $searchArray[$key];
+}
+
+function formatMsInterval($val, $digits) {
+  if ($val == UNKNOWN_TIME)
+    return '-';
+
+  return number_format($val / 1000.0, $digits) . 's';
+}
+
+/**
+* Make sure there are no risky files in the given directory and make everything no-execute
+* 
+* @param mixed $path
+*/
+function SecureDir($path) {
+    $files = scandir($path);
+    foreach ($files as $file) {
+        $filepath = "$path/$file";
+        if (is_file($filepath)) {
+            $parts = pathinfo($file);
+            $ext = strtolower($parts['extension']);
+            if (strpos($ext, 'php') === false &&
+                strpos($ext, 'pl') === false &&
+                strpos($ext, 'py') === false &&
+                strpos($ext, 'cgi') === false &&
+                strpos($ext, 'asp') === false &&
+                strpos($ext, 'js') === false &&
+                strpos($ext, 'rb') === false &&
+                strpos($ext, 'htaccess') === false &&
+                strpos($ext, 'jar') === false) {
+                @chmod($filepath, 0666);
+            } else {
+                @chmod($filepath, 0666);    // just in case the unlink fails for some reason
+                unlink($filepath);
+            }
+        } elseif ($file != '.' && $file != '..' && is_dir($filepath)) {
+            SecureDir($filepath);
+        }
+    }
+}
+
 ?>

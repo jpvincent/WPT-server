@@ -1,0 +1,6 @@
+browser=Chrome
+url=http://s3.amazonaws.com/wpt-software/chrome_20.msi
+md5=73620937A97A03B9831CD56AC14E64FF
+version=20.0.1132.47
+command=Msiexec /q /I chrome_20.msi
+update=0

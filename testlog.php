@@ -271,9 +271,9 @@ else
                                                 $labelTxt = $label;
                                                 if( strlen($labelTxt) > 30 )
                                                     $labelTxt = substr($labelTxt, 0, 27) . '...';
-                                                echo "<td title=\"$label\" class=\"label\"><a href=\"".$GLOBALS['basePath']."$link\">$labelTxt</a></td>";
+                                                echo "<td title=\"$label\" class=\"label\"><a href=\"$link\">$labelTxt</a></td>";
                                                 
-							                    echo '<td class="url"><a title="' . $url . '" href="' . $GLOBALS['basePath'].$link . '">' . fittext($url,80) . '</a></td></tr>';
+							                    echo '<td class="url"><a title="' . $url . '" href="' . $link . '">' . fittext($url,80) . '</a></td></tr>';
                                                 
                                                 // split the tables every 30 rows so the browser doesn't wait for ALL the results
                                                 if( $rowCount % 30 == 0 )

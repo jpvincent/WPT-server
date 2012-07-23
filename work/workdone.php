@@ -1,57 +1,91 @@
 <?php
 chdir('..');
+//$debug = true;
 include('common.inc');
+require_once('archive.inc');
 require_once('./lib/pclzip.lib.php');
 header('Content-type: text/plain');
 header("Cache-Control: no-cache, must-revalidate");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+ignore_user_abort(true);
 set_time_limit(60*5*10);
+require_once('harTiming.inc');
+
+
 $location = $_REQUEST['location'];
-$key = $_REQUEST['key'];
-$done = $_REQUEST['done'];
-$id = $_REQUEST['id'];
-$har = $_REQUEST['har'];
-$pcap = $_REQUEST['pcap'];
+$key  = $_REQUEST['key'];
+$id   = $_REQUEST['id'];
+
+// The following params have a default value:
+$done = arrayLookupWithDefault('done', $_REQUEST, false);
+$har  = arrayLookupWithDefault('har',  $_REQUEST, false);
+$pcap = arrayLookupWithDefault('pcap', $_REQUEST, false);
+
+// Sometimes we need to make changes to the way the client and server
+// communicate, without updating both at the same time.  The following
+// params can be set by a client to declare that they support a new
+// behavior.  Once all clients are updated, they should be removed.
+
+// Should zipped har uploads be flattened?  The main user is the mobitest iOS
+// agent.  The agent will be updated to always set this, but until we can
+// re-image all agents we need to support the old behavior for a while.
+$flattenUploadedZippedHar =
+    arrayLookupWithDefault('flattenZippedHar', $_REQUEST, false);
 
 // When we upgrade the pcap to har converter, we need to test
 // each agent.  Agents can opt in to testing the latest
-// version by setting this POST param.
-$useLatestPCap2Har = $_REQUEST['useLatestPCap2Har'];
+// version by setting this POST param to '1'.
+$useLatestPCap2Har =
+    arrayLookupWithDefault('useLatestPCap2Har', $_REQUEST, false);
 
-// Android client sends the run-state in post params.
-$runNumber = $_REQUEST['_runNumber'];
-$cacheWarmed = $_REQUEST['_cacheWarmed'];
-$docComplete = $_REQUEST['_docComplete'];
+// The following params are set by the android agents (blaze and WebpageTest).
+// TODO(skerner): POST params are not saved to disk directly, so it is hard to
+// see what the agent uploaded after the fact.  Consider writing them to a
+// file that gets uploaded.
+$runNumber     = arrayLookupWithDefault('_runNumber',     $_REQUEST, null);
+$cacheWarmed   = arrayLookupWithDefault('_cacheWarmed',   $_REQUEST, null);
+$docComplete   = arrayLookupWithDefault('_docComplete',   $_REQUEST, null);
+$onFullyLoaded = arrayLookupWithDefault('_onFullyLoaded', $_REQUEST, null);
+$onRender      = arrayLookupWithDefault('_onRender',      $_REQUEST, null);
+$urlUnderTest  = arrayLookupWithDefault('_urlUnderTest',  $_REQUEST, null);
 
 $testInfo_dirty = false;
 
 
-if( $_REQUEST['video'] )
+if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
 {
     logMsg("Video file $id received from $location");
     
-    $dir = './' . GetVideoPath($id);
-    if( isset($_FILES['file']) )
-    {
-        $dest = $dir . '/video.mp4';
-        move_uploaded_file($_FILES['file']['tmp_name'], $dest);
+    if (ValidateTestId($id)) {
+        $dir = './' . GetVideoPath($id);
+        if( isset($_FILES['file']) )
+        {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            $dest = $dir . '/video.mp4';
+            move_uploaded_file($_FILES['file']['tmp_name'], $dest);
+            @chmod($dest, 0666);
 
-        // update the ini file
-        $iniFile = $dir . '/video.ini';
-        $ini = file_get_contents($iniFile);
-        $ini .= 'completed=' . date('c') . "\r\n";
-        file_put_contents($iniFile, $ini);
+            // update the ini file
+            $iniFile = $dir . '/video.ini';
+            if (is_file($iniFile)) {
+                $ini = file_get_contents($iniFile);
+            } else {
+                $ini = '';
+            }
+            $ini .= 'completed=' . gmdate('c') . "\r\n";
+            file_put_contents($iniFile, $ini);
+        }
     }
-}
-else
-{
+} elseif (ValidateTestId($id)) {
     // load all of the locations
     $locations = parse_ini_file('./settings/locations.ini', true);
     BuildLocations($locations);
     
     $settings = parse_ini_file('./settings/settings.ini');
 
-    $locKey = $locations[$location]['key'];
+    $locKey = arrayLookupWithDefault('key', $locations[$location], "");
 
     logMsg("\n\nWork received for test: $id, location: $location, key: $key\n");
 
@@ -68,22 +102,28 @@ else
         if( !isset($_FILES['file']) )
             logMsg(" No uploaded file attached\n");
         
-        // figure out the path to the results
+        // Figure out the path to the results.
         $testPath = './' . GetTestPath($id);
         $ini = parse_ini_file("$testPath/testinfo.ini");
-         
-        if (isset($har) && $har && isset($_FILES['file']) && isset($_FILES['file']['tmp_name']))
-        {
-            ProcessHAR($testPath);
+
+        if (isset($har) && $har && isset($_FILES['file']) && isset($_FILES['file']['tmp_name'])) {
+            ProcessUploadedHAR($testPath);
         }
         elseif(isset($pcap) && $pcap &&
-               isset($_FILES['file']) && isset($_FILES['file']['tmp_name']))
-        {
-             ProcessPCAP($testPath);
+               isset($_FILES['file']) && isset($_FILES['file']['tmp_name'])) {
+            // The results page allows a user to download a pcap file.  It
+            // expects the file to be at a specific path, which encodes the
+            // run number and cache state.
+            $finalPcapFileName =
+                $runNumber . ($cacheWarmed ? "_Cached" : "") . ".cap";
 
+            MovePcapIntoPlace($_FILES['file']['name'],
+                              $_FILES['file']['tmp_name'],
+                              $testPath, $finalPcapFileName);
+
+            ProcessPCAP($testPath, $finalPcapFileName);
         }
-        elseif( isset($_FILES['file']) )
-        {
+        elseif( isset($_FILES['file']) ) {
             // extract the zip file
             logMsg(" Extracting uploaded file '{$_FILES['file']['tmp_name']}' to '$testPath'\n");
             $archive = new PclZip($_FILES['file']['tmp_name']);
@@ -130,19 +170,73 @@ else
                 $testInfo_dirty = true;
             }
         }
+        
+        // make sure the test result is valid, otherwise re-run it
+        if ($done && !$har && !$pcap && isset($testInfo) && array_key_exists('job_file', $testInfo)) {
+            $testfile = null;
+            $valid = false;
+            $files = scandir($testPath);
+            foreach ($files as $file) {
+                if (stripos($file, 'IEWPG')) {
+                    $valid = true;
+                }
+                if (preg_match('/.*\.test$/', $file)) {
+                    $testfile = "$testPath/$file";
+                }
+            }
+            if (!array_key_exists('retries', $testInfo)) {
+                $testInfo['retries'] = 0;
+            }
+            if (array_key_exists('max_retries', $testInfo)) {
+                $testInfo['max_retries'] = min($testInfo['max_retries'], 10);
+                if ($valid) {
+                    require_once 'page_data.inc';
+                    $pageData = loadAllPageData($testPath);
+                    $count = CountSuccessfulTests($pageData, 0);
+                    if ($count < 1) {
+                        $valid = false;
+                    }
+                }
+            } else {
+                $testInfo['max_retries'] = 1;
+            }
+            if (!$valid && $testInfo['retries'] < $testInfo['max_retries'] && isset($testfile)) {
+                // re-submit the test (move the test file so we only try this once)
+                if (copy($testfile, $testInfo['job_file'])) {
+                    $testInfo['retries']++;
+                    AddJobFile($testInfo['work_dir'], $testInfo['job'], $testInfo['priority'], 0);
+                    $done = false;
+                    unset($testInfo['started']);
+                    $testInfo_dirty = true;
+                }
+            }
+        }
             
         // see if the test is complete
         if( $done )
         {
+            // delete any .test files
+            $files = scandir($testPath);
+            foreach ($files as $file) {
+                if (preg_match('/.*\.test$/', $file)) {
+                    unlink("$testPath/$file");
+                }
+            }
+            if (array_key_exists('job_file', $testInfo) && is_file($testInfo['job_file'])) {
+                unlink($testInfo['job_file']);
+            }
+            
             $perTestTime = 0;
             $testCount = 0;
             $beaconUrl = null;
-            if( strlen($settings['showslow'])  )
+            if (strlen($settings['showslow']))
             {
                 $beaconUrl = $settings['showslow'] . '/beacon/webpagetest/';
-                if( strlen($settings['showslow_key'])  )
+                if (array_key_exists('showslow_key', $settings) &&
+                    strlen($settings['showslow_key']))
                     $beaconUrl .= '?key=' . trim($settings['showslow_key']);
-                if( $settings['beaconRate'] && rand(1, 100) > $settings['beaconRate'] )
+                if (array_key_exists('beaconRate', $settings) &&
+                    $settings['beaconRate'] && rand(1, 100) > $settings['beaconRate'] )
                     unset($beaconUrl);
                 else {
                     $testInfo['showslow'] = 1;
@@ -152,26 +246,31 @@ else
 
             // do pre-complete post-processing
             require_once('video.inc');
+            require_once('video/visualProgress.inc.php');
             MoveVideoFiles($testPath);
             BuildVideoScripts($testPath);
             
             require_once 'page_data.inc';
-            $pageData = loadAllPageData($testPath);
+            if (!isset($pageData)) {
+                $pageData = loadAllPageData($testPath);
+            }
             $medianRun = GetMedianRun($pageData, 0);
             
-            // calculate and cache the content breakdown information
+            // calculate and cache the content breakdown and visual progress information
             if( isset($testInfo) ) {
                 require_once('breakdown.inc');
                 for ($i = 1; $i <= $testInfo['runs']; $i++) {
                     getBreakdown($id, $testPath, $i, 0, $requests);
+                    GetVisualProgress($testPath, $i, 0);
                     if (!$testInfo['fvonly']) {
                         getBreakdown($id, $testPath, $i, 1, $requests);
+                        GetVisualProgress($testPath, $i, 1);
                     }
                 }
             }
 
             $test = file_get_contents("$testPath/testinfo.ini");
-            $now = date("m/d/y G:i:s", $time);
+            $now = gmdate("m/d/y G:i:s", $time);
 
             // update the completion time if it isn't already set
             if( !strpos($test, 'completeTime') )
@@ -230,9 +329,25 @@ else
                 foreach($files as $file)
                     unlink($file);
             }
+
+            // log any slow tests
+            if (isset($testInfo) && array_key_exists('slow_test_time', $settings) && array_key_exists('url', $testInfo) && strlen($testInfo['url'])) {
+                $elapsed = $time - $testInfo['started'];
+                if ($elapsed > $settings['slow_test_time']) {
+                    $log_entry = gmdate("m/d/y G:i:s", $testInfo['started']) . "\t$elapsed\t{$testInfo['ip']}\t{$testInfo['url']}\t{$testInfo['location']}\t$id\n";
+                    $log_file = fopen('./tmp/slow_tests.log', 'a+');
+                    if ($log_file) {
+                        if (flock($log_file, LOCK_EX)) {
+                            fwrite($log_file, $log_entry);
+                        }
+                        fclose($log_file);
+                    }
+                }
+            }
             
             // see if it is an industry benchmark test
-            if( strlen($ini['industry']) && strlen($ini['industry_page']) )
+            if( array_key_exists('industry', $ini) && array_key_exists('industry_page', $ini) && 
+                strlen($ini['industry']) && strlen($ini['industry_page']) )
             {
                 // lock the industry list
                 // we will just lock it against ourselves to protect against  simultaneous updates
@@ -263,14 +378,22 @@ else
             }
             
             // delete all of the videos except for the median run?
-            if( $ini['median_video'] )
+            if( array_key_exists('median_video', $ini) && $ini['median_video'] )
                 KeepVideoForRun($testPath, $medianRun);
+                
+            // archive the test (modifies the on-disk testinfo so we need to flush it and update
+            if( isset($testInfo) && $testInfo_dirty ) {
+                $testInfo_dirty = false;
+                gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfo));
+            }
+            ArchiveTest($id);
+            $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
             
             // do any other post-processing (e-mail notification for example)
             if( isset($settings['notifyFrom']) && is_file("$testPath/testinfo.ini") )
             {
                 $test = parse_ini_file("$testPath/testinfo.ini",true);
-                if( strlen($test['test']['notify']) )
+                if( array_key_exists('notify', $test['test']) && strlen($test['test']['notify']) )
                     notify( $test['test']['notify'], $settings['notifyFrom'], $id, $testPath, $settings['host'] );
             }
             
@@ -304,24 +427,22 @@ else
                     $ctx = stream_context_create(array('http' => array('timeout' => 10))); 
 
                     // send the request (we don't care about the response)
-                    file_get_contents($url, 0, $ctx);
+                    @file_get_contents($url, 0, $ctx);
                 }
             }
             
             // send a beacon?
-            if( strlen($beaconUrl) )
+            if( isset($beaconUrl) && strlen($beaconUrl) )
             {
                 @include('./work/beacon.inc');
                 @SendBeacon($beaconUrl, $id, $testPath, $testInfo, $pageData);
             }
-            
-            // archive the test result
-            require_once('archive.inc');
-            ArchiveTest($id);
         }
         
         if( isset($testInfo) && $testInfo_dirty )
             gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfo));
+
+        SecureDir($testPath);
     }
     else
         logMsg("location key incorrect\n");
@@ -336,6 +457,10 @@ else
 */
 function notify( $mailto, $from,  $id, $testPath, $host )
 {
+    global $test;
+    
+    // calculate the results
+    require_once 'page_data.inc';
     $headers  = "MIME-Version: 1.0\r\n";
     $headers .= "Content-type: text/html; charset=iso-8859-1\r\n";
     $headers .= "From: $from\r\n";
@@ -352,24 +477,23 @@ function notify( $mailto, $from,  $id, $testPath, $host )
     if( !isset($host) )
         $host  = $_SERVER['HTTP_HOST'];
 
-    // calculate the results
-    require_once 'page_data.inc';
-    $pageData = loadAllPageData($testPath);
-    $fv = null;
-    $rv = null;
-    $pageStats = calculatePageStats($pageData, $fv, $rv);
-    if( isset($fv) )
+    $fv = GetMedianRun($pageData, 0);
+    if( isset($fv) && $fv )
     {
-        $load = number_format($fv['loadTime'] / 1000.0, 3);
-        $render = number_format($fv['render'] / 1000.0, 3);
-        $requests = number_format($fv['requests'],0);
-        $bytes = number_format($fv['bytesIn'] / 1024, 0);
+        $load = number_format($pageData[$fv][0]['loadTime'] / 1000.0, 3);
+        $render = number_format($pageData[$fv][0]['render'] / 1000.0, 3);
+        $numRequests = number_format($pageData[$fv][0]['requests'],0);
+        $bytes = number_format($pageData[$fv][0]['bytesIn'] / 1024, 0);
         $result = "http://$host/result/$id";
         
         // capture the optimization report
-        require_once '../optimization.inc';
+        require_once 'optimization.inc';
+        require_once('object_detail.inc');
+        $secure = false;
+        $haveLocations = false;
+        $requests = getRequests($id, $testPath, 1, 0, $secure, $haveLocations, false);
         ob_start();
-        dumpOptimizationReport($testPath, 1, 0);
+        dumpOptimizationReport($pageData[$fv][0], $requests, $id, 1, 0, $test);
         $optimization = ob_get_contents();
         ob_end_clean();
         
@@ -386,8 +510,8 @@ function notify( $mailto, $from,  $id, $testPath, $host )
             <body>
             <p>The full test results for <a href=\"$url\">$url</a> are now <a href=\"$result/\">available</a>.</p>
             <p>The page loaded in <b>$load seconds</b> with the user first seeing something on the page after <b>$render seconds</b>.  To download 
-            the page required <b>$requests requests</b> and <b>$bytes KB</b>.</p>
-            <p>Here is what the page looked like when it loaded (click the image for a larger view):<br><a href=\"$result/1/screen_shot/\"><img src=\"$result/1_screen_thumb.jpg\"></a></p>
+            the page required <b>$numRequests requests</b> and <b>$bytes KB</b>.</p>
+            <p>Here is what the page looked like when it loaded (click the image for a larger view):<br><a href=\"$result/$fv/screen_shot/\"><img src=\"$result/{$fv}_screen_thumb.jpg\"></a></p>
             <h3>Here are the things on the page that could use improving:</h3>
             $optimization
             </body>
@@ -450,11 +574,20 @@ function ExecPcap2Har($pcapPath, $harPath, $useLatestPCap2Har,
          "$pathContainingPCapToHar:".
          "./mobile/dpkt-1.7:".
          "./mobile/simplejson");
+  // When converting dates to ms since the epoch, do not add an offset
+  // for time zones.
+  putenv("TZ=UTC");
 
   $pcap2harExe = "$pathContainingPCapToHar/pcap2har/main.py";
 
+  // Use switch --no-pages to avoid splitting requests into multiple page
+  // loads.  WebpageTest agents start tcpdump for each page load, so we know
+  // all network traffic is part of the same page load.  The heuristics used
+  // to split requests into pages fail on some sites, such as m.yahoo.com.
+  $pcap2harArgs = ($useLatestPCap2Har ? "--no-pages" : "");
+
   $retLine = exec("/usr/bin/python ".
-                  "$pcap2harExe $pcapPath $harPath 2>&1",
+                  "$pcap2harExe $pcap2harArgs $pcapPath $harPath 2>&1",
                   $consoleOut,
                   $returnCode);
 
@@ -462,44 +595,94 @@ function ExecPcap2Har($pcapPath, $harPath, $useLatestPCap2Har,
 }
 
 /**
+ * Move an uploaded pcap file into the right place, unzipping if nessisary.
+ *
+ * @param String $clientFileName     File name set by the client.
+ * @param String $uploadTmpFileName  Absolute path to the uploaded file.
+ * @param String $testPath           Root of the results subdirectory of our test.
+ * @param String $finalPcapFileName  The final file name the pcap should have.
+ */
+function MovePcapIntoPlace($clientFileName, $uploadTmpFileName,
+                           $testPath, $finalPcapFileName) {
+    // Is the upload a zip archive?  If so, unpack it.
+    if (preg_match("/\.zip$/", $clientFileName)) {
+        // Directory structure is not flattened, because the android
+        // agent puts needed files at paths that encode their run
+        // number and cache state.
+        $archive = new PclZip($uploadTmpFileName);
+        $list = $archive->extract(PCLZIP_OPT_PATH, "$testPath/");
+
+        // Find the path to the uploaded pcap file, relative to
+        // $testPath.
+        $pcapFileName = null;
+        foreach ($list as $file) {
+            if (preg_match('/\.pcap$/', $file['stored_filename'])) {
+                if ($pcapFileName !== null) {
+                    logMalformedInput("zipped pcap upload should ".
+                                      "contain only one .pcap file.");
+                }
+                // The zip library starts all paths with a "/".
+                $pcapFileName = ltrim($file['stored_filename'], "/");
+            }
+        }
+        if ($pcapFileName === null) {
+            logMalformedInput(".pcap.zip file contains no .pcap file.");
+        } else if (!rename("$testPath/$pcapFileName",
+                           "$testPath/$finalPcapFileName")) {
+            logMalformedInput("Failed to rename( $testPath/$pcapFileName , ".
+                              "$testPath/$finalPcapFileName )");
+        }
+    } else {
+        move_uploaded_file(
+            $_FILES['file']['tmp_name'],
+            "$testPath/$finalPcapFileName");
+    }
+}
+
+/**
  * @param string $testPath
  */
-function ProcessPCAP($testPath)
+function ProcessPCAP($testPath, $pcapFile)
 {
-    require_once('./lib/pcltar.lib.php3');
-    require_once('./lib/pclerror.lib.php3');
-    require_once('./lib/pcltrace.lib.php3');
     global $runNumber;
     global $cacheWarmed;
+    global $useLatestPCap2Har;
 
-    $pcapfile = $testPath . "/network.pcap";
-    move_uploaded_file($_FILES['file']['tmp_name'], $pcapfile);
-
-    $harFile = $testPath . "/results.har";
+    $pcapFilePath = "$testPath/$pcapFile";
+    $harFilePath = $pcapFilePath . ".har";
 
     $consoleOut = array();
 
     // Execute pcap2har
-    $returnCode = ExecPcap2Har($pcapfile, $harFile,
+    $returnCode = ExecPcap2Har($pcapFilePath, $harFilePath,
                                $useLatestPCap2Har,
                                $consoleOut);
 
     if ($returnCode != 0)
     {
        logMalformedInput("pcap to HAR converter returned $returnCode.  ".
-                        "Expected 0.  pcap file is $pcapfile .  ".
-                        "Console output is $consoleOut .");
+                         "Expected 0.  pcap file is $pcapFilePath .  ".
+                         "Console output is :\n". print_r($consoleOut, true));
        return;
     }
-    ProcessHARText($testPath);
+
+    // The mobile agents assume the har file is named results.har.  Make a copy
+    // with the expected path.  We don't just write a file with this name,
+    // because we want to keep the har from each run.
+    copy($harFilePath, $testPath . "/results.har");
+
+    // The entire pacp file captured one single page loading.
+    $harIsFromSinglePageLoad = true;
+    ProcessHARText($testPath, $harIsFromSinglePageLoad);
 }
 
-function ProcessHAR($testPath)
+function ProcessUploadedHAR($testPath)
 {
     require_once('./lib/pcltar.lib.php3');
     require_once('./lib/pclerror.lib.php3');
     require_once('./lib/pcltrace.lib.php3');
     global $done;
+    global $flattenUploadedZippedHar;
 
     // From the mobile agents we get the zip file with sub-folders
     if( isset($_FILES['file']) )
@@ -507,43 +690,147 @@ function ProcessHAR($testPath)
         //var_dump($_FILES['file']);
         logMsg(" Extracting uploaded file '{$_FILES['file']['tmp_name']}' to '$testPath'\n");
         if ($_FILES['file']['type'] == "application/tar" || preg_match("/\.tar$/",$_FILES['file']['name']))
-            $list = PclTarExtract($_FILES['file']['tmp_name'],"$testPath","/","tar");
+        {
+            PclTarExtract($_FILES['file']['tmp_name'],"$testPath","/","tar");
+        }
         else if (preg_match("/\.zip$/",$_FILES['file']['name']))
         {
             $archive = new PclZip($_FILES['file']['tmp_name']);
-            $list = $archive->extract(PCLZIP_OPT_PATH, "$testPath/");
+            if ($flattenUploadedZippedHar)
+            {
+                // PCLZIP_OPT_REMOVE_ALL_PATH causes any directory structure
+                // within the zip to be flattened.  Different agents have
+                // slightly different directory layout, but all file names
+                // are guaranteed to be unique.  Flattening allows us to avoid
+                // directory traversal.
+                // TODO(skerner): Find out why the blaze agents have different
+                // directory structure and make it consistent, and remove
+                // $flattenUploadedZippedHar as an option.
+                $archive->extract(PCLZIP_OPT_PATH, "$testPath/",
+                                  PCLZIP_OPT_REMOVE_ALL_PATH);
+            }
+            else
+            {
+                logMalformedInput("Depricated har upload path.  Agents should ".
+                                  "set flattenZippedHar=1.");
+                $archive->extract(PCLZIP_OPT_PATH, "$testPath/");
+            }
         }
         else
-            move_uploaded_file($_FILES['file']['tmp_name'], $testPath . "/" . $_FILES['file']['name']);
+        {
+            move_uploaded_file($_FILES['file']['tmp_name'],
+                               $testPath . "/" . $_FILES['file']['name']);
+        }
     }
-    ProcessHARText($testPath);
+
+    // The HAR may hold multiple page loads.
+    $harIsFromSinglePageLoad = false;
+    ProcessHARText($testPath, $harIsFromSinglePageLoad);
 }
 
-function ProcessHARText($testPath)
+function ProcessHARText($testPath, $harIsFromSinglePageLoad)
 {
-    global $done;
-    // TODO(skerner): Should be able to always do har processing if there is a
-    // HAR file.  Will need to test mobile agents.
-    if (!$done) {
-        logMsg("Processing har, but not done.  ".
-               "Potential backward compatibility issues.");
-    }
-
-    // Save the json HAR file
+    // Read the json HAR file
     $rawHar = file_get_contents("{$testPath}/results.har");
 
-    // Parsethe json file
+    // Parse the json file
     $parsedHar = json_decode($rawHar, true);
     if (!$parsedHar)
     {
         logMalformedInput("Failed to parse json file");
+        return;
     }
-    else
-    {
+    ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad);
+}
+
+/**
+ * We may get a HAR with no page records.  Add one that references all
+ * requests in the HAR.
+ *
+ * @global type $urlUnderTest Sent as a POST param.  What URL was loaded to
+ *                            make the HAR?
+ * @param array $parsedHar Parsed in-memory reprentation of the HAR.
+ * @param type $sortedEntries The requests from the har, soprted by start time.
+ */
+function CreatePageRecordInHar(&$parsedHar, &$sortedEntries) {
+  global $urlUnderTest;
+
+  // Find the time of the first request.
+  reset($sortedEntries);
+  $firstRequest = current($sortedEntries);
+  $firstStartedDateTime = $firstRequest['startedDateTime'];
+
+  // Pick a page id, to be added to all requests.
+  $generatedPageId = "generatedPageId";
+
+  $generatedPagesRecord = array(
+      "id" => $generatedPageId,
+      "pageTimings" => array(),
+
+      // The start time of the page is the start time of the first request.
+      "startedDateTime" => $firstStartedDateTime,
+      "title" => $urlUnderTest
+  );
+
+  $parsedHar['log']['pages'] = array( $generatedPagesRecord );
+
+  // Make sure all entries point to the generated page record.
+  foreach ($sortedEntries as $entind => &$entry) {
+    $entry['pageref'] = $generatedPageId;
+  }
+}
+
+function ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad) {
+        // Sort the entries by start time. This is done across runs, but
+        // since each of them references its own page it shouldn't matter
+        $sortedEntries;
+        foreach ($parsedHar['log']['entries'] as $entrycount => $entry)
+        {
+            // We use the textual start date as key, which should work fine
+            // for ISO dates.
+            $start = $entry['startedDateTime'];
+            $sortedEntries[$start . "-" . $entrycount] = $entry;
+        }
+        ksort($sortedEntries);
+
+        // HAR files can hold multiple page loads.  Some sources of HAR files
+        // can only hold one page load, and don't know anything about the page.
+        // For example, HAR files generated from a .pcap file captured durring
+        // a single page load must have only one page, and many things in a HAR
+        // page record, such as the page title, can not be found.  Based on the
+        // number of page records, and the argument $harIsFromSinglePageLoad,
+        // check that the pages record is as expected, and generate a minimal
+        // page record if nessisary.
+        $numPageRecords = array_key_exists('pages', $parsedHar['log'])
+                ? count($parsedHar['log']['pages'])
+                : 0;
+        if ($harIsFromSinglePageLoad) {
+          if ($numPageRecords > 1) {
+            logMalformedInput("HAR has multiple pages, but it should be from " .
+                              "a single run.");
+            return;
+          }
+
+          if ($numPageRecords == 0) {
+            // pcap2har will not generate any pages records when using option
+            // --no-pages.  Build a fake one.  This simplfies the rest of the
+            // HAR proccessing code, because it does not need to check for the
+            // existance of the page record every time it tries to read page
+            // info.
+            CreatePageRecordInHar($parsedHar, $sortedEntries);
+          }
+
+        } else {  // ! if ($harIsFromSinglePageLoad)
+          if ($numPageRecords == 0) {
+            logMalformedInput("No page records in HAR.  Expect at least one.");
+            return;
+          }
+        }
+
         // Keep meta data about a page from iterating the entries
         $pageData;
 
-        // Iterate the pages
+        // Iterate over the page records.
         foreach ($parsedHar['log']['pages'] as $pagecount => $page)
         {
             $pageref = $page['id'];
@@ -553,70 +840,80 @@ function ProcessHARText($testPath)
             $curPageData["url"] = $page['title'];
 
             $startFull = $page['startedDateTime'];
-            if (preg_match("/^(.+)T(.+)\.\d+[+-]\d\d:?\d\d$/",
-                           $startFull, $matches)) {
-              $curPageData["startDate"] = $matches[1];
-              $curPageData["startTime"] = $matches[2];
+            $startFullDatePart = '';
+            $startFullTimePart = '';
+            if (SplitISO6801DateIntoDateAndTime(
+                    $startFull,  // Split this datetime
+                    $startFullDatePart, $startFullTimePart)) {  // into these parts.
+              $curPageData["startDate"] = $startFullDatePart;
+              $curPageData["startTime"] = $startFullTimePart;
               $curPageData["startFull"] = $startFull;
             } else {
               logMalformedInput(
-                  "Failed to parse page key 'startedDateTime'.  ".
-                   "Value of key is '$startFull'.");
+                  "Failed to split page key 'startedDateTime' into a date and ".
+                  "a time part.  Value of key is '$startFull'.");
             }
 
-            if (array_key_exists('onRender', $page['pageTimings'])) {
-              $curPageData["onRender"] = $page['pageTimings']['onRender'];
-            } else if (array_key_exists('_onRender',$page['pageTimings'])) {
-              $curPageData["onRender"] = $page['pageTimings']['_onRender'];
-            } else {
-              logMsg("onRender not set for page $pageref");
-              $curPageData["onRender"] = UNKNOWN_TIME;
-            }
+            global $onRender;
+            $curPageData["onRender"] =
+                arrayLookupWithDefault('onRender', $page['pageTimings'],
+                    arrayLookupWithDefault('_onRender', $page['pageTimings'],
+                        ($onRender !== null ? $onRender : UNKNOWN_TIME)));
 
-            $curPageData["docComplete"] = $page['pageTimings']['onContentLoad'];
-            $curPageData["fullyLoaded"] = $page['pageTimings']['onLoad'];
-            // TODO: Remove this patch for files missing the data
+            $curPageData["docComplete"] =
+                arrayLookupWithDefault('onContentLoad', $page['pageTimings'], UNKNOWN_TIME);
+            $curPageData["fullyLoaded"] =
+                arrayLookupWithDefault('onLoad', $page['pageTimings'], UNKNOWN_TIME);
+
+            // TODO: Remove this patch for files missing the data.
             if ($curPageData["docComplete"] <= 0)
               $curPageData["docComplete"] = $curPageData["fullyLoaded"];
-            if ($curPageData["onRender"] <= 0)
-              $curPageData["onRender"] = 0;
 
-            if (!preg_match("/^https?:\/\/([^\/?]+)(((?:\/|\\?).*$)|$)/",
-                            $curPageData["url"], $urlMatches))
+            // Agents that upload .pcap files must tell us the URL being tested,
+            // because the URL is not always in the .pcap file.  If POST
+            // parameter _urlUnderTest is set, use it as the URL being measured.
+            global $urlUnderTest;
+            $curPageDataUrl = (isset($urlUnderTest) ? $urlUnderTest
+                                                    : $curPageData["url"]);
+
+            if (preg_match("/^https?:\/\/([^\/?]+)(((?:\/|\\?).*$)|$)/",
+                            $curPageDataUrl, $urlMatches)) {
+              $curPageData["host"] = $urlMatches[1];
+            } else {
               logMalformedInput("HAR error: Could not match host in URL ".
-                                $curPageData["url"]);
-
-            $curPageData["host"] = $urlMatches[1];
+                                $curPageDataUrl);
+            }
 
             // Some clients encode the run number and cache status in the
             // page name.  Others give the information in properties on the
             // pageTimings record.  Prefer the explicit properties.  Fall
             // back to decoding the information from the name of the page
             // record.
-	    global $runNumber;
-	    global $cacheWarmed;
-	    global $docComplete;
-            if (array_key_exists('_runNumber', $page))
-            {
+            global $runNumber;
+            global $cacheWarmed;
+            global $docComplete;
+            global $onFullyLoaded;
+            if (array_key_exists('_runNumber', $page)) {
               $curPageData["run"] = $page['_runNumber'];
               $curPageData["cached"] = $page['_cacheWarmed'];
-            }
-	    else if (isset($runNumber) && isset($cacheWarmed))
-	    {
-	      $curPageData["run"] = $runNumber;
-	      $curPageData["cached"] = $cacheWarmed;
-	      if (isset($docComplete) && $curPageData["docComplete"] <= 0)
-	      {
-		$curPageData["docComplete"] = $docComplete;
-	      }
-	    }
-            else if (preg_match("/page_(\d+)_([01])/", $pageref, $matches))
-            {
+
+            } else if (isset($runNumber) && isset($cacheWarmed)) {
+              $curPageData["run"] = $runNumber;
+              $curPageData["cached"] = $cacheWarmed;
+
+              if (isset($docComplete) && $curPageData["docComplete"] <= 0) {
+                $curPageData["docComplete"] = $docComplete;
+              }
+              
+              if (isset($onFullyLoaded) && $curPageData['fullyLoaded'] <=0) {
+                $curPageData['fullyLoaded'] = $onFullyLoaded;
+              }
+
+            } else if (preg_match("/page_(\d+)_([01])/", $pageref, $matches)) {
               $curPageData["run"] = $matches[1];
               $curPageData["cached"] = $matches[2];
-            }
-            else
-            {
+
+            } else {
               logMalformedInput("HAR error: Could not get runs or cache ".
                                 "status, from post params, pages array ".
                                 "or page name \"$pageref\".");
@@ -690,7 +987,8 @@ function ProcessHARText($testPath)
                 "Base Page Response: 200\r\n" . 
                 "Request details:\r\n\r\n");                    
 
-            // Start by stating the time-to-first-byte is the page load time, will be updated as we iterate requets
+            // Start by stating the time-to-first-byte is the page load time,
+            // will be updated as we iterate requests.
             $curPageData["TTFB"] = $curPageData["docComplete"];
 
             // Reset counters for requests
@@ -724,18 +1022,6 @@ function ProcessHARText($testPath)
             $pageData[$pageref] = $curPageData;
         }
 
-        // Sort the entries by start time. This is done across runs, but
-        // since each of them references its own page it shouldn't matter
-        $sortedEntries;
-        foreach ($parsedHar['log']['entries'] as $entrycount => $entry)
-        {
-            // We use the textual start date as key, which should work fine
-            // for ISO dates.
-            $start = $entry['startedDateTime'];
-            $sortedEntries[$start . "-" . $entrycount] = $entry;
-        }
-        ksort($sortedEntries);
-
         // Iterate the entries
         foreach ($sortedEntries as $entind => $entry)
         {
@@ -748,7 +1034,9 @@ function ProcessHARText($testPath)
             $respEnt = $entry['response'];
             $cacheEnt = $entry['cache'];
             $timingsEnt = $entry['timings'];
-            $reqIpAddr = $entry['serverIPAddress'];
+
+            // pcap2har doesn't set the server's IP address, so it may be unset:
+            $reqIpAddr = arrayLookupWithDefault('serverIPAddress', $entry, null);
 
             // The following HAR fields are in the HAR spec, but we do not
             // use them:
@@ -760,15 +1048,18 @@ function ProcessHARText($testPath)
             // Extract the variables
             $reqHttpVer = $reqEnt['httpVersion'];
             $respHttpVer = $respEnt['httpVersion'];
-            if (preg_match("/^(.+)T(.+)\.\d+[+-]\d\d:?\d\d$/",
-                           $startedDateTime, $matches)) {
-              $reqDate = $matches[1];
-              $reqTime = $matches[2];
-            } else {
+
+            $reqDate = '';
+            $reqTime = '';
+            if (!SplitISO6801DateIntoDateAndTime(
+                    $startedDateTime,  // Split this datetime
+                    $reqDate, $reqTime)) {  // into these parts.
               logMalformedInput(
                   "Sorted entry key 'startedDateTime' could ".
-                  "not be parsed.  Value is '$startedDateTime'");
+                  "not be split into a date and time part.  ".
+                  "Value is '$startedDateTime'");
             }
+
             $reqEventName = $curPageData['title'];
             $reqAction = $reqEnt['method'];
 
@@ -791,13 +1082,6 @@ function ProcessHARText($testPath)
             $reqRespCodeText = $respEnt['statusText'];
             $reqLoadTime = 0 + $entryTime;
 
-            // The specific times are currently unavailable, and set to
-            // arbitrary values.
-            $reqDnsTime = 0; // + $timingEnt['dns'];
-            $reqConnectTime = 0; // + $timingEnt['connect'];
-            $reqSslTime = 0;
-            $reqTTFB = 0; //$timingEnt['wait'] + $reqDnsTime + $reqConnectTime + $timingEnt['send'];
-
             // The list is sorted by time, so use the first resource as the real start time,
             // since the start time on the page isn't always reliable (likely a bug, but this will do for now)
             if ($curPageData["calcStarTime"] == 0) {
@@ -814,6 +1098,11 @@ function ProcessHARText($testPath)
                   $curPageData["startFull"] . "\n".
                   "\$startedDateTime =          " . $startedDateTime."\n");
             }
+
+            $requestTimings = convertHarTimesToWebpageTestTimes($timingsEnt, $reqStartTime);
+            $reqDnsTime = $requestTimings['dns_ms'];
+            $reqSslTime = $requestTimings['ssl_ms'];
+            $reqConnectTime = $requestTimings['connect_ms'];
             $reqBytesOut = abs($reqEnt['headersSize']) + abs($reqEnt['bodySize']);
             $reqBytesIn = abs($respEnt['headersSize']) + abs($respEnt['bodySize']);
             $reqObjectSize = abs($respEnt['bodySize']);
@@ -848,10 +1137,10 @@ function ProcessHARText($testPath)
                 "$reqHost\t" . 
                 "$reqUrl\t" . 
                 "$reqRespCode\t" . 
-                "$reqLoadTime\t" . 
-                "$reqTTFB\t" . 
-                "$reqStartTime\t" . 
-                "$reqBytesOut\t" . 
+                $requestTimings['load']  . "\t" . // Time to Load (ms)
+                $requestTimings['ttfb']  . "\t" . // Time to First Byte (ms)
+                $requestTimings['start'] . "\t" . // Start Time (ms)
+                "$reqBytesOut\t" .
                 "$reqBytesIn\t" . 
                 "$reqObjectSize\t" . 
                 "$reqCookieSize\t" . 
@@ -887,9 +1176,9 @@ function ProcessHARText($testPath)
                 "\t" . //"ETag Score\t" . 
                 "\t" . //"Flagged\t" . 
                 "$reqSecure\t" . 
-                "$reqDnsTime\t" . 
-                "$reqConnectTime\t" . 
-                "$reqSslTime\t" . 
+                "-1\t" . // DNS Time (ms)            Set start and end instead.
+                "-1\t" . // Socket Connect time (ms) Set start and end instead.
+                "-1\t" . // SSL time (ms)            Set start and end instead.
                 "\t" . //"Gzip Total Bytes\t" . 
                 "\t" . //"Gzip Savings\t" . 
                 "\t" . //"Minify Total Bytes\t" . 
@@ -899,8 +1188,17 @@ function ProcessHARText($testPath)
                 "\t" . //"Cache Time (sec)\t" . 
                 "\t" . //"Real Start Time (ms)\t" . 
                 "\t" . //"Full Time to Load (ms)\t" . 
-                "0\r\n", //"Optimization Checked\r\n
-            FILE_APPEND);
+                "0\t". //"Optimization Checked\r\n
+                "\t" . //CDN Provider
+                $requestTimings['dns_start']     . "\t" . // DNS start
+                $requestTimings['dns_end']       . "\t" . // DNS end
+                $requestTimings['connect_start'] . "\t" . // connect start
+                $requestTimings['connect_end']   . "\t" . // connect end
+                $requestTimings['ssl_start']     . "\t" . // ssl negotiation start
+                $requestTimings['ssl_end']       . "\t" . // ssl negotiation end
+                "\t" . //initiator
+                "\r\n",
+                FILE_APPEND);
 
             $reqNum = $curPageData["reqNum"] + 1;
             $curPageData["reqNum"] = $reqNum;
@@ -913,7 +1211,7 @@ function ProcessHARText($testPath)
                 "      Host: {$reqHost}\r\n".
                 "      Result code: $reqRespCode\r\n".
                 "      Transaction time: $reqTime milliseconds\r\n".
-                "      Time to first byte: $reqTTFB milliseconds\r\n".
+                "      Time to first byte: " . $requestTimings['ttfb'] . " milliseconds\r\n".
                 "      Request size (out): $reqBytesOut Bytes\r\n".
                 "      Response size (in): $reqBytesIn Bytes\r\n".
                 "  Request Headers:\r\n".
@@ -983,15 +1281,15 @@ function ProcessHARText($testPath)
                 }
             }
 
-            // If this request started earlier than the current TTFB, make it the page's TTFB
-            if ($curPageData["TTFB"] > $reqStartTime)
-            {
-                $curPageData["TTFB"] = $reqStartTime;
-            }
+            // Find the page's time-to-first-byte which is minimum first-byte
+            // time of all the requests. The request's time-to-first-byte can
+            // not be used because it is relative to the start of the request,
+            // not the start of the page.
+            $curPageData["TTFB"] = min(
+                $curPageData["TTFB"], $requestTimings['receive_start']);
 
             // Update the page data variable back into the array
             $pageData[$pageref] = $curPageData;
-
         }
 
         // Create the page files
@@ -1081,7 +1379,6 @@ function ProcessHARText($testPath)
                 "0\r\n", //"Optimization Checked\r\n"
             FILE_APPEND);
         }
-    }
 }
 
 /**
@@ -1127,15 +1424,47 @@ function GetDeltaMillisecondsFromISO6801Dates($before, $after) {
   // expression.  The second parameter is the time to use for a date that does
   // not have hours or minutes.  We assume that "1997" means the first instant
   // of 1997, which is midnight on new years eve.
-  $beforeTimeSeconds = strtotime($before, "00:00");
-  $afterTimeSeconds = strtotime($after, "00:00");
+  $beforeTimeSeconds = strtotime($before, "00");
+  $afterTimeSeconds = strtotime($after, "00");
   if ($beforeTimeSeconds === False ||
       $afterTimeSeconds  === False)
-    return NULL;
+    return null;
 
   return 1000.0 * (double)($afterTimeSeconds - $beforeTimeSeconds)
          + GetMillisecondsFromValidISO8601String($after)
          - GetMillisecondsFromValidISO8601String($before);
+}
+
+/**
+ * Split an ISO8601 string into a date part, and a time part.
+ * Tricky because we want to preserve the exiact time, but PHP date objects
+ * are limited to a resolution of seconds.
+ */
+function SplitISO6801DateIntoDateAndTime($ISO8601String,
+                                         &$out_dateString, &$out_timeString) {
+  $timestamp = strtotime($ISO8601String, "00");
+  if ($timestamp === False)
+    return False;  // Invalid date/time.
+
+  // Because strtotime parsed |$ISO8601String|, we know it is well formed.
+  // Split the string at the first 'T', which should be the border between
+  // the date part and the time part.
+  $dateAndTimeParts = explode("T", $ISO8601String, 2);
+  $numParts = count($dateAndTimeParts);
+  switch ($numParts) {
+    case 1:
+      $out_dateString = $dateAndTimeParts[0];
+      $out_timeString = "";
+      return True;
+
+    case 2:
+      $out_dateString = $dateAndTimeParts[0];
+      $out_timeString = $dateAndTimeParts[1];
+      return True;
+
+    default:
+      return False;
+  }
 }
 
 /**
@@ -1150,4 +1479,3 @@ function RemoveSensitiveHeaders($file) {
 }
 
 ?>
-

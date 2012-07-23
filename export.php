@@ -70,10 +70,25 @@ function msdate($mstimestamp)
     $timestamp = floor($mstimestamp);
     $milliseconds = round(($mstimestamp - $timestamp) * 1000);
     
-    $date = date('c', $timestamp);
+    $date = gmdate('c', $timestamp);
     $msDate = substr($date, 0, 19) . '.' . sprintf('%03d', $milliseconds) . substr($date, 19);
 
     return $msDate;
+}
+
+/**
+ * Time intervals can be UNKNOWN_TIME or a non-negative number of milliseconds.
+ * Intervals that are set to UNKNOWN_TIME represent events that did not happen,
+ * so their duration is 0ms.
+ *
+ * @param type $value
+ * @return int The duration of $value
+ */
+function durationOfInterval($value) {
+  if ($value == UNKNOWN_TIME) {
+    return 0;
+  }
+  return (int)$value;
 }
 
 /**
@@ -97,6 +112,9 @@ function BuildResult(&$pageData)
     $result['log']['pages'] = array();
     foreach ($pageData as $run => $pageRun) {
         foreach ($pageRun as $cached => $data) {
+            $cached_text = '';
+            if ($cached)
+                $cached_text = '_Cached';
             if (!array_key_exists('browser', $result['log'])) {
                 $result['log']['browser'] = array(
                     'name' => $data['browser_name'],
@@ -115,10 +133,7 @@ function BuildResult(&$pageData)
             $pd['pageTimings'] = array( 'onLoad' => $data['docTime'], 'onContentLoad' => -1 );
             
             // add the pagespeed score
-            if( $cached )
-                $score = GetPageSpeedScore("$testPath/{$run}_Cached_pagespeed.txt");
-            else
-                $score = GetPageSpeedScore("$testPath/{$run}_pagespeed.txt");
+            $score = GetPageSpeedScore("$testPath/{$run}{$cached_text}_pagespeed.txt");
             if( strlen($score) )
                 $pd['_pageSpeed'] = array( 'score' => $score );
             
@@ -133,7 +148,7 @@ function BuildResult(&$pageData)
             {
                 $entry = array();
                 $entry['pageref'] = $pd['id'];
-                $entry['startedDateTime'] = msdate((double)$data['date'] + ($r['offset'] / 1000.0));
+                $entry['startedDateTime'] = msdate((double)$data['date'] + ($r['load_start'] / 1000.0));
                 $entry['time'] = $r['all_ms'];
                 
                 $request = array();
@@ -239,7 +254,7 @@ function BuildResult(&$pageData)
 
                 $response['content'] = array();
                 $response['content']['size'] = (int)$r['objectSize'];
-                if( isset($r['contentType']) && strlen($r['contentType']) )
+                if( isset($r['contentType']) && strlen($r['contentType']))
                     $response['content']['mimeType'] = (string)$r['contentType'];
                 else
                     $response['content']['mimeType'] = '';
@@ -254,19 +269,53 @@ function BuildResult(&$pageData)
                 $timings = array();
                 $timings['blocked'] = -1;
                 $timings['dns'] = (int)$r['dns_ms'];
-                if( !$timings['dns'] )
+                if( !$timings['dns'])
                     $timings['dns'] = -1;
-                $timings['connect'] = (int)($r['connect_ms'] + $r['ssl_ms']);
-                if( !$timings['connect'] )
+
+                // HAR did not have an ssl time until version 1.2 .  For
+                // backward compatibility, "connect" includes "ssl" time.
+                // WepbageTest's internal representation does not assume any
+                // overlap, so we must add our connect and ssl time to get the
+                // connect time expected by HAR.
+                $timings['connect'] = (durationOfInterval($r['connect_ms']) +
+                                       durationOfInterval($r['ssl_ms']));
+                if(!$timings['connect'])
                     $timings['connect'] = -1;
+
+                $timings['ssl'] = (int)$r['ssl_ms'];
+                if (!$timings['ssl'])
+                    $timings['ssl'] = -1;
+
+                // TODO(skerner): WebpageTest's data model has no way to
+                // represent the difference between the states HAR calls
+                // send (time required to send HTTP request to the server)
+                // and wait (time spent waiting for a response from the server).
+                // We lump both into "wait".  Issue 24* tracks this work.  When
+                // it is resolved, read the real values for send and wait
+                // instead of using the request's TTFB.
+                // *: http://code.google.com/p/webpagetest/issues/detail?id=24
                 $timings['send'] = 0;
                 $timings['wait'] = (int)$r['ttfb_ms'];
                 $timings['receive'] = (int)$r['download_ms'];
+
                 $entry['timings'] = $timings;
 
-                $entry['time'] = (int)(
-                    $r['dns_ms'] + $r['connect_ms'] + $r['ssl_ms'] +
-                    $r['ttfb_ms'] + $timings['receive']);
+                // The HAR spec defines time as the sum of the times in the
+                // timings object, excluding any unknown (-1) values and ssl
+                // time (which is included in "connect", for backward
+                // compatibility with tools written before "ssl" was defined
+                // in HAR version 1.2).
+                $entry['time'] = 0;
+                foreach ($timings as $timingKey => $duration) {
+                    if ($timingKey != 'ssl' && $duration != UNKNOWN_TIME) {
+                        $entry['time'] += $duration;
+                    }
+                }
+                
+                if (array_key_exists('custom_rules', $r)) {
+                    $entry['_custom_rules'] = $r['custom_rules'];
+                }
+                
                 // add it to the list of entries
                 $entries[] = $entry;
             }

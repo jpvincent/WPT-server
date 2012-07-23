@@ -1,0 +1,6 @@
+browser=Firefox
+url=http://s3.amazonaws.com/wpt-software/firefox_13.exe
+md5=06864F75506147501AFECA1A310977CB
+version=13.0
+command=firefox_13.exe -ms
+update=1

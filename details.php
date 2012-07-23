@@ -3,7 +3,7 @@ include 'common.inc';
 include 'object_detail.inc'; 
 require_once('page_data.inc');
 require_once('waterfall.inc');
-$data = loadPageRunData($testPath, $run, $cached);
+$data = loadPageRunData($testPath, $run, $cached, array('SpeedIndex' => true));
 
 $page_keywords = array('Performance Test','Details','Webpagetest','Website Speed Test','Page Speed');
 $page_description = "Website performance test details$testLabel";
@@ -105,16 +105,16 @@ $page_description = "Website performance test details$testLabel";
                         ?>
                     </div>
                     <?php
-	    		        echo '<a href="/export.php?' . "test=$id&run=$run&cached=$cached" . '">Export HTTP Archive (.har)</a>';
+	    		        echo '<a href="'.$GLOBALS['basePath'].'export.php?' . "test=$id&run=$run&cached=$cached" . '">Export HTTP Archive (.har)</a>';
 			            if ( is_dir('./google') && $settings['enable_google_csi'] )
-				            echo '<br><a href="/google/google_csi.php?' . "test=$id&run=$run&cached=$cached" . '">CSI (.csv) data</a>';
+				            echo '<br><a href="'.$GLOBALS['basePath'].'google/google_csi.php?' . "test=$id&run=$run&cached=$cached" . '">CSI (.csv) data</a>';
                         if( is_file("$testPath/{$run}{$cachedText}_dynaTrace.dtas") )
                         {
-                            echo "<br><a href=\"/$testPath/{$run}{$cachedText}_dynaTrace.dtas\">Download dynaTrace Session</a>";
+                            echo "<br><a href=\"".$GLOBALS['basePath']."$testPath/{$run}{$cachedText}_dynaTrace.dtas\">Download dynaTrace Session</a>";
                             echo ' (<a href="http://ajax.dynatrace.com/pages/" target="_blank">get dynaTrace</a>)';
                         }
                         if( is_file("$testPath/{$run}{$cachedText}_bodies.zip") )
-                            echo "<br><a href=\"/$testPath/{$run}{$cachedText}_bodies.zip\">Download Response Bodies</a>";
+                            echo "<br><a href=\"".$GLOBALS['basePath']."$testPath/{$run}{$cachedText}_bodies.zip\">Download Response Bodies</a>";
                         echo '<br>';
                     ?>
                 </div>
@@ -144,8 +144,8 @@ $page_description = "Website performance test details$testLabel";
                         <?php if( $test['test']['aft'] ) { ?>
                         <th align="center" valign="middle">Above the Fold</th>
                         <?php } ?>
-                        <?php if( (float)$data['visualComplete'] > 0.0 ) { ?>
-                        <th align="center" valign="middle">Visually Complete</th>
+                        <?php if( array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0 ) { ?>
+                        <th align="center" valign="middle"><a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a></th>
                         <?php } ?>
                         <?php if( (float)$data['domTime'] > 0.0 ) { ?>
                         <th align="center" valign="middle">DOM Element</th>
@@ -165,28 +165,29 @@ $page_description = "Website performance test details$testLabel";
                     </tr>
                     <tr>
                         <?php
-                        echo "<td id=\"LoadTime\" valign=\"middle\">" . number_format($data['loadTime'] / 1000.0, 3) . "s</td>\n";
-                        echo "<td id=\"TTFB\" valign=\"middle\">" . number_format($data['TTFB'] / 1000.0, 3) . "s</td>\n";
-                        echo "<td id=\"startRender\" valign=\"middle\">" . number_format($data['render'] / 1000.0, 3) . "s</td>\n";
+                        echo "<td id=\"LoadTime\" valign=\"middle\">" . formatMsInterval($data['loadTime'], 3) . "</td>\n";
+                        echo "<td id=\"TTFB\" valign=\"middle\">" . formatMsInterval($data['TTFB'], 3) . "</td>\n";
+                        //echo "<td id=\"startRender\" valign=\"middle\">" . number_format($data['render'] / 1000.0, 3) . "s</td>\n";
+                        echo "<td id=\"startRender\" valign=\"middle\">" . formatMsInterval($data['render'], 3) . "</td>\n";
                         if( $test['test']['aft'] ) {
                             $aft = number_format($data['aft'] / 1000.0, 1) . 's';
                             if( !$data['aft'] )
                                 $aft = 'N/A';
                             echo "<td id=\"aft\" valign=\"middle\">$aft</th>";
                         }
-                        if( (float)$data['visualComplete'] > 0.0 )
-                            echo "<td id=\"visualComplate\" valign=\"middle\">" . number_format($data['visualComplete'] / 1000.0, 1) . "s</td>\n";
+                        if( array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0 )
+                            echo "<td id=\"visualComplate\" valign=\"middle\">{$data['SpeedIndex']}</td>\n";
                         if( (float)$data['domTime'] > 0.0 )
-                            echo "<td id=\"domTime\" valign=\"middle\">" . number_format($data['domTime'] / 1000.0, 3) . "s</td>\n";
+                            echo "<td id=\"domTime\" valign=\"middle\">" . formatMsInterval($data['domTime'], 3) . "</td>\n";
                         if( $data['domElements'] > 0 )
                             echo "<td id=\"domElements\" valign=\"middle\">{$data['domElements']}</td>\n";
                         echo "<td id=\"result\" valign=\"middle\">{$data['result']}</td>\n";
 
-                        echo "<td id=\"docComplete\" class=\"border\" valign=\"middle\">" . number_format($data['docTime'] / 1000.0, 3) . "s</td>\n";
+                        echo "<td id=\"docComplete\" class=\"border\" valign=\"middle\">" . formatMsInterval($data['docTime'], 3) . "</td>\n";
                         echo "<td id=\"requestsDoc\" valign=\"middle\">{$data['requestsDoc']}</td>\n";
                         echo "<td id=\"bytesInDoc\" valign=\"middle\">" . number_format($data['bytesInDoc'] / 1024, 0) . " KB</td>\n";
 
-                        echo "<td id=\"fullyLoaded\" class=\"border\" valign=\"middle\">" . number_format($data['fullyLoaded'] / 1000.0, 3) . "s</td>\n";
+                        echo "<td id=\"fullyLoaded\" class=\"border\" valign=\"middle\">" . formatMsInterval($data['fullyLoaded'], 3) . "</td>\n";
                         echo "<td id=\"requests\" valign=\"middle\">{$data['requests']}</td>\n";
                         echo "<td id=\"bytesIn\" valign=\"middle\">" . number_format($data['bytesIn'] / 1024, 0) . " KB</td>\n";
                         ?>
@@ -270,8 +271,8 @@ $page_description = "Website performance test details$testLabel";
                 <br>
                 <?php
                     InsertWaterfall($url, $requests, $id, $run, $cached);
-                    echo "<br><a href=\"/customWaterfall.php?width=930&test=$id&run=$run&cached=$cached\">customize waterfall</a> &#8226; ";
-                    echo "<a href=\"/pageimages.php?test=$id&run=$run&cached=$cached\">View all Images</a>";
+                    echo "<br><a href=\"".$GLOBALS['basePath']."customWaterfall.php?width=930&test=$id&run=$run&cached=$cached\">customize waterfall</a> &#8226; ";
+                    echo "<a href=\"".$GLOBALS['basePath']."pageimages.php?test=$id&run=$run&cached=$cached\">View all Images</a>";
                 ?>
                 <br>
                 <br>
@@ -318,7 +319,7 @@ $page_description = "Website performance test details$testLabel";
                     $extenstion = 'php';
                     if( FRIENDLY_URLS )
                         $extenstion = 'png';
-                    echo $GLOBALS['basePath']."/waterfall.$extenstion?type=connection&width=930&test=$id&run=$run&cached=$cached&mime=1";?>">
+                    echo $GLOBALS['basePath']."waterfall.$extenstion?type=connection&width=930&test=$id&run=$run&cached=$cached&mime=1";?>">
                 </div>
 		        <br><br> 
                 <?php include('./ads/details_middle.inc'); ?>

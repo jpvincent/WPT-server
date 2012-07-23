@@ -8,9 +8,15 @@ $embed = false;
 if( $_REQUEST['embed'] )
 {
     $embed = true;
-    header('Last-Modified: ' . date('r'));
+    header('Last-Modified: ' . gmdate('r'));
     header('Expires: '.gmdate('r', time() + 31536000));
 }
+$bgcolor = "black";
+if (array_key_exists('bgcolor', $_REQUEST))
+    $bgcolor = $_REQUEST['bgcolor'];
+$autoplay = 'false';
+if (array_key_exists('autoplay', $_REQUEST) && $_REQUEST['autoplay'])
+    $autoplay = 'true';
 
 $page_keywords = array('Video','comparison','Webpagetest','Website Speed Test');
 $page_description = "Side-by-side video comparison of website performance.";
@@ -26,20 +32,21 @@ $ini = null;
 $title = "WebPagetest - Visual Comparison";
 
 $dir = GetVideoPath($id, true);
-if( is_dir("./$dir") )
-{
+if( is_dir("./$dir") ) {
     $valid = true;
-    $ini = parse_ini_file("./$dir/video.ini");
-    if( isset($ini['completed']) )
-    {
-        $done = true;
-        GenerateVideoThumbnail("./$dir");
+    if (is_file("./$dir/video.mp4") || is_file("./$dir/video.ini")) {
+        $ini = parse_ini_file("./$dir/video.ini");
+        if( is_file("./$dir/video.mp4") || isset($ini['completed']) )
+        {
+            $done = true;
+            GenerateVideoThumbnail("./$dir");
+        }
     }
     
     // get the video time
-    $date = date("M j, Y", filemtime("./$dir"));
+    $date = gmdate("M j, Y", filemtime("./$dir"));
     if( is_file("./$dir/video.mp4")  )
-        $date = date("M j, Y", filemtime("./$dir/video.mp4"));
+        $date = gmdate("M j, Y", filemtime("./$dir/video.mp4"));
     $title .= " - $date";
 
     $labels = json_decode(file_get_contents("./$dir/labels.txt"), true);
@@ -71,6 +78,8 @@ if( is_dir("./$dir") )
             }
         }
     }
+} else {
+	trigger_error('Video directory does not exits : '.$dir, E_RECOVERABLE_ERROR);
 }
 
 if( $xml || $json )
@@ -84,8 +93,8 @@ if( $xml || $json )
 
             $host  = $_SERVER['HTTP_HOST'];
             $uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-            $videoUrl = "http://$host$uri/download.php?id=$id";
-            $embedUrl = "http://$host$uri/view.php?embed=1&id=$id";
+            $videoUrl = $GLOBALS['basePath'].'download.php?id='.$id;
+            $embedUrl = $GLOBALS['basePath'].'view.php?embed=1&id='.$id;
         }
         else
             $ret = 100;
@@ -185,10 +194,10 @@ else
             }
             <?php
             if( $embed )
-                echo 'body {background-color: black;}';
+                echo "body {background-color: $bgcolor; margin:0; padding: 0;}";
             ?>
         </style>
-        <script type="text/javascript" src="/video/player/flowplayer-3.2.6.min.js"></script>
+        <script type="text/javascript" src="<?= $GLOBALS['basePath'] ?>video/player/flowplayer-3.2.6.min.js"></script>
     </head>
     <body>
         <div class="page">
@@ -203,7 +212,7 @@ else
 
             if( $valid && ($done || $embed) )
             {
-                if (isset($location) && strlen($location)) {
+                if (isset($location) && strlen($location) && !$embed) {
                     echo "<div id=\"location\">Tested From: $location</div>";
                 }
 
@@ -232,7 +241,7 @@ else
                 <script>
                     flowplayer("player", 
                                     {
-                                        src: "/video/player/flowplayer-3.2.7.swf",
+                                        src: "<?= $GLOBALS['basePath'] ?>video/player/flowplayer-3.2.7.swf",
                                         cachebusting: false,
                                         version: [9, 115]
                                     } , 
@@ -244,11 +253,11 @@ else
                                             <?php
                                             if( $hasThumb )
                                             {
-                                                echo "{ url: '/$dir/video.png'} ,\n";
-                                                echo "{ url: '/$dir/video.mp4', autoPlay: false, autoBuffering: false}\n";
+                                                echo "{ url: '".$GLOBALS['basePath'].$dir."/video.png'} ,\n";
+                                                echo "{ url: '".$GLOBALS['basePath'].$dir."/video.mp4', autoPlay: $autoplay, autoBuffering: false}\n";
                                             }
                                             else
-                                                echo "{ url: '/$dir/video.mp4', autoPlay: false, autoBuffering: true}\n";
+                                                echo "{ url: '".$GLOBALS['basePath'].$dir."/video.mp4', autoPlay: $autoplay, autoBuffering: true}\n";
                                             ?>
                                         ],
                                         plugins: {
@@ -271,7 +280,7 @@ else
                 </script>
                 <?php                
                 if(!$embed)
-                    echo "<br><a class=\"link\" href=\"/video/download.php?id=$id\">Click here to download the video file...</a>\n";
+                    echo "<br><a class=\"link\" href=\"".$GLOBALS['basePath']."video/download.php?id=$id\">Click here to download the video file...</a>\n";
             }
             elseif( $valid && !$embed )
                 echo '<h1>Your video will be available shortly.  Please wait...</h1>';

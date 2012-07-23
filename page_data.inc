@@ -1,4 +1,5 @@
 <?php
+
 /**
 * Load the page results directly from the results files
 * 
@@ -7,7 +8,7 @@
 * @param mixed $run
 * @param mixed $cached
 */
-function loadAllPageData($testPath)
+function loadAllPageData($testPath, $options = null)
 {
     $ret = array();
     
@@ -19,14 +20,14 @@ function loadAllPageData($testPath)
     $fvonly = $ini['test']['fvonly'];
     for( $run = 1; $run <= $runs; $run++ )
     {
-        $data = loadPageRunData($testPath, $run, 0);
+        $data = loadPageRunData($testPath, $run, 0, $options);
         if( isset($data) )
             $ret[$run][0] = $data;
         
         if( !$fvonly )
         {
             unset( $data );
-            $data = loadPageRunData($testPath, $run, 1);
+            $data = loadPageRunData($testPath, $run, 1, $options);
             if( isset($data) )
                 $ret[$run][1] = $data;
         }
@@ -43,14 +44,14 @@ function loadAllPageData($testPath)
 * @param mixed $fv
 * @param mixed $rv
 */
-function loadPageRunData($testPath, $run, $cached)
+function loadPageRunData($testPath, $run, $cached, $options = null)
 {
     $ret = null;
 
     if( $cached )
-        $ret = loadPageData("$testPath/{$run}_Cached_IEWPG.txt");
+        $ret = loadPageData("$testPath/{$run}_Cached_IEWPG.txt", $options);
     else
-        $ret = loadPageData("$testPath/{$run}_IEWPG.txt");
+        $ret = loadPageData("$testPath/{$run}_IEWPG.txt", $options);
 
     return $ret;
 }
@@ -60,7 +61,7 @@ function loadPageRunData($testPath, $run, $cached)
 * 
 * @param mixed $file
 */
-function loadPageData($file)
+function loadPageData($file, $options = null)
 {
     $ret = null;
     $lines = gz_file($file);
@@ -73,51 +74,55 @@ function loadPageData($file)
             $fields = explode("\t", $parseLine);
             if( count($fields) > 34 && trim($fields[0]) != 'Date' )
             {
-                $ret = array(   'URL' => htmlspecialchars(trim($fields[3])),
+                $ret = array();
+                $ret = array(   'URL' => @htmlspecialchars(trim($fields[3])),
                                 // 'loadTime' => (int)$fields[4],
-                                'loadTime' => (int)$fields[32],
-                                'TTFB' => (int)$fields[5],
-                                'bytesOut' => (int)$fields[7],
-                                'bytesOutDoc' => (int)$fields[45],
-                                'bytesIn' => (int)$fields[8],
-                                'bytesInDoc' => (int)$fields[46],
-                                'connections' => (int)$fields[10],
-                                'requests' => (int)$fields[11],
-                                'requestsDoc' => (int)$fields[49],
-                                'result' => (int)$fields[17],
-                                'render' => (int)$fields[18],
-                                'fullyLoaded' => (int)$fields[22],
-                                'cached' => (int)$fields[27],
-                                'docTime' => (int)$fields[32],
-                                'domTime' => (int)$fields[34],
-                                'score_cache' => (int)$fields[36],
-                                'score_cdn' => (int)$fields[37],
-                                'score_gzip' => (int)$fields[39],
-                                'score_cookies' => (int)$fields[40],
-                                'score_keep-alive' => (int)$fields[41],
-                                'score_minify' => (int)$fields[43],
-                                'score_combine' => (int)$fields[44],
-                                'score_compress' => (int)$fields[55],
-                                'score_etags' => (int)$fields[58],
-                                'gzip_total' => (int)$fields[64],
-                                'gzip_savings' => (int)$fields[65],
-                                'minify_total' => (int)$fields[66],
-                                'minify_savings' => (int)$fields[67],
-                                'image_total' => (int)$fields[68],
-                                'image_savings' => (int)$fields[69],
-                                'optimization_checked' => (int)$fields[71],
-                                'aft' => (int)$fields[72],
-                                'domElements' => (int)$fields[73],
-                                'pageSpeedVersion' => trim($fields[74]),
-                                'title' => htmlspecialchars(trim($fields[75]),ENT_NOQUOTES,'UTF-8'),
-                                'titleTime' => (int)$fields[76],
-                                'loadEventStart' => (int)$fields[77],
-                                'loadEventEnd' => (int)$fields[78],
-                                'domContentLoadedEventStart' => (int)$fields[79],
-                                'domContentLoadedEventEnd' => (int)$fields[80],
-                                'visualComplete' => (int)$fields[81],
-                                'browser_name' => trim($fields[82]),
-                                'browser_version' => trim($fields[83])
+                                'loadTime' => @(int)$fields[32],
+                                'TTFB' => @(int)$fields[5],
+                                'bytesOut' => @(int)$fields[7],
+                                'bytesOutDoc' => @(int)$fields[45],
+                                'bytesIn' => @(int)$fields[8],
+                                'bytesInDoc' => @(int)$fields[46],
+                                'connections' => @(int)$fields[10],
+                                'requests' => @(int)$fields[11],
+                                'requestsDoc' => @(int)$fields[49],
+                                'responses_200' => @(int)$fields[12],
+                                'responses_404' => @(int)$fields[15],
+                                'responses_other' => @(int)$fields[16],
+                                'result' => @(int)$fields[17],
+                                'render' => @(int)$fields[18],
+                                'fullyLoaded' => @(int)$fields[22],
+                                'cached' => @(int)$fields[27],
+                                'docTime' => @(int)$fields[32],
+                                'domTime' => @(int)$fields[34],
+                                'score_cache' => @(int)$fields[36],
+                                'score_cdn' => @(int)$fields[37],
+                                'score_gzip' => @(int)$fields[39],
+                                'score_cookies' => @(int)$fields[40],
+                                'score_keep-alive' => @(int)$fields[41],
+                                'score_minify' => @(int)$fields[43],
+                                'score_combine' => @(int)$fields[44],
+                                'score_compress' => @(int)$fields[55],
+                                'score_etags' => @(int)$fields[58],
+                                'gzip_total' => @(int)$fields[64],
+                                'gzip_savings' => @(int)$fields[65],
+                                'minify_total' => @(int)$fields[66],
+                                'minify_savings' => @(int)$fields[67],
+                                'image_total' => @(int)$fields[68],
+                                'image_savings' => @(int)$fields[69],
+                                'optimization_checked' => @(int)$fields[71],
+                                'aft' => @(int)$fields[72],
+                                'domElements' => @(int)$fields[73],
+                                'pageSpeedVersion' => @trim($fields[74]),
+                                'title' => @htmlspecialchars(trim($fields[75]),ENT_NOQUOTES,'UTF-8'),
+                                'titleTime' => @(int)$fields[76],
+                                'loadEventStart' => @(int)$fields[77],
+                                'loadEventEnd' => @(int)$fields[78],
+                                'domContentLoadedEventStart' => @(int)$fields[79],
+                                'domContentLoadedEventEnd' => @(int)$fields[80],
+                                'visualComplete' => @(int)$fields[81],
+                                'browser_name' => @trim($fields[82]),
+                                'browser_version' => @trim($fields[83])
                             );
                 
                 $ret['date'] = strtotime(trim($fields[0]) . ' ' . trim($fields[1]));
@@ -130,20 +135,27 @@ function loadPageData($file)
     }
     
     // see if we have video files to calculate a visually complete time from
-    if( isset($ret) && (!array_key_exists('visualComplete', $ret) || !$ret['visualComplete']) )
+    if( isset($ret) )
     {
         $video_dir = dirname($file) . '/video_';
         $filename = basename($file);
         $video_dir .= (int)$filename;
+        $cached = 0;
         if (stripos($filename, 'Cached') !== false)
-            $video_dir .= '_cached';
-        if( is_dir($video_dir) ) {
+            $cached = 1;
+        if( is_dir($video_dir) && (!array_key_exists('visualComplete', $ret) || !$ret['visualComplete'])) {
             $frames = loadVideo($video_dir);
-            if( $frames && count($frames) )
-            {
+            if( $frames && count($frames) ) {
                 $last = end(array_keys($frames));
                 if( $last )
                     $ret['visualComplete'] = $last * 100;
+            }
+        }
+        if (isset($options) && array_key_exists('SpeedIndex', $options) && $options['SpeedIndex']) {
+            require_once('./video/visualProgress.inc.php');
+            $progress = GetVisualProgress(dirname($file), (int)$filename, $cached);
+            if (isset($progress) && is_array($progress) && array_key_exists('FLI', $progress)) {
+                $ret['SpeedIndex'] = $progress['FLI'];
             }
         }
     }
@@ -293,39 +305,38 @@ function calculatePageStats(&$pageData, &$fv, &$rv)
 * @param mixed $pageData
 * @param mixed $cached
 */
-function GetMedianRun(&$pageData, $cached)
-{
-    if( !$cached )
-        $cached = 0;
-        
+function GetMedianRun(&$pageData, $cached, $metric = 'loadTime') {
     $run = 0;
-    
+    $cached = $cached ? 1:0;
     $times = array();
     
     // try successful-only runs first
-    foreach( $pageData as $index => &$pageRun )
-        if( isset( $pageRun[$cached] ) && isset($pageRun[$cached]['result']) && ($pageRun[$cached]['result'] == 0 || $pageRun[$cached]['result'] == 99999) )
-            $times[$index] = $pageRun[$cached]['loadTime'];
+    foreach( $pageData as $index => &$pageRun ) {
+        if( array_key_exists($cached, $pageRun) && 
+            array_key_exists('result', $pageRun[$cached]) && 
+            array_key_exists($metric, $pageRun[$cached]) &&
+            ($pageRun[$cached]['result'] == 0 || $pageRun[$cached]['result'] == 99999) ) {
+            $times[$index] = $pageRun[$cached][$metric];
+        }
+    }
             
-    if( !count($times) )
-    {
+    if (!count($times)) {
         // include error runs
-        foreach( $pageData as $index => &$pageRun )
-            if( isset( $pageRun[$cached] ) )
-                $times[$index] = $pageRun[$cached]['loadTime'];
+        foreach( $pageData as $index => &$pageRun ) {
+            if( array_key_exists($cached, $pageRun) && array_key_exists($metric, $pageRun[$cached])) {
+                $times[$index] = $pageRun[$cached][$metric];
+            }
+        }
     }
     
     $count = count($times);
-    if( $count > 1 )
-    {
+    if( $count > 1 ) {
         asort($times);
         $medianIndex = (int)floor(((float)$count + 1.0) / 2.0);
         $current = 0;
-        foreach( $times as $index => $time )
-        {
+        foreach( $times as $index => $time ) {
             $current++;
-            if( $current == $medianIndex )
-            {
+            if( $current == $medianIndex ) {
                 $run = $index;
                 break;
             }
@@ -336,6 +347,11 @@ function GetMedianRun(&$pageData, $cached)
             $run = $index;
             break;
         }
+    }
+    
+    // fall back to loadTime if we failed to get a run with the specified metric
+    if (!$run && $metric != 'loadTime') {
+        $run = GetMedianRun($pageData, $cached);
     }
     
     return $run;
@@ -379,18 +395,15 @@ function CalculateAggregateStats(&$pageData, $cached, $metric, &$median, &$avg, 
     // first pass, calculate the average and array of values for grabbing the median
     $values = array();
     $sum = 0;
-    foreach( $pageData as &$run )
-    {
-        if( ($run[$cached]['result'] === 0 || $run[$cached]['result'] === 99999) && isset($run[$cached][$metric]) )
-        {
+    foreach( $pageData as &$run ) {
+        if( ($run[$cached]['result'] === 0 || $run[$cached]['result'] === 99999) && array_key_exists($metric, $run[$cached]) ) {
             $values[] = $run[$cached][$metric];
             $sum += $run[$cached][$metric];
             $count++;
         }
     }
     
-    if( $count )
-    {
+    if( $count ) {
         $avg = $sum / $count;
         sort($values, SORT_NUMERIC);
         $medianIndex = (int)($count / 2);

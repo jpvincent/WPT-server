@@ -120,7 +120,7 @@ else
                 $test['pageData'] = loadAllPageData($test['path']);
                 
                 if( !$test['run'] )
-                    $test['run'] = GetMedianRun($test['pageData']);
+                    $test['run'] = GetMedianRun($test['pageData'], 0, $median_metric);
                     
                 // figure out the real end time (in ms)
                 if( isset($test['end']) )
@@ -187,7 +187,7 @@ else
                 // try and create a deterministic id so multiple submissions of the same tests will result in the same id
                 if( strlen($_REQUEST['tests']) )
                 {
-                    $date = date('ymd_');
+                    $date = gmdate('ymd_');
                     $hashstr = $_REQUEST['tests'] . $_REQUEST['template'] . $version . trim($_REQUEST['end']) . $videoIdExtra;
                     if( $_REQUEST['slow'] )
                         $hashstr .= '.slow';
@@ -196,7 +196,7 @@ else
                     $id = $date . sha1($hashstr);
                 }
                 else
-                    $id = date('ymd_') . md5(uniqid(rand(), true));
+                    $id = gmdate('ymd_') . md5(uniqid(rand(), true));
             }
 
             $path = GetVideoPath($id);

@@ -358,9 +358,9 @@ function ScreenShotTable()
             if( $test['cached'] )
                 $cached = 'cached/';
             if( FRIENDLY_URLS )
-                echo "<a class=\"pagelink\" href=\"/result/{$test['id']}/{$test['run']}/details/$cached\">";
+                echo "<a class=\"pagelink\" href=\"".$GLOBALS['basePath']."result/{$test['id']}/{$test['run']}/details/$cached\">";
             else
-                echo "<a class=\"pagelink\" href=\"/details.php?test={$test['id']}&run={$test['run']}&cached={$test['cached']}\">";
+                echo "<a class=\"pagelink\" href=\"".$GLOBALS['basePath']."details.php?test={$test['id']}&run={$test['run']}&cached={$test['cached']}\">";
             echo WrapableString($test['name']);
             echo "</a></td></tr>\n";
         }
@@ -436,7 +436,7 @@ function ScreenShotTable()
                         if( $test['cached'] )
                             $cached = '_cached';
                         $imgPath = GetTestPath($test['id']) . "/video_{$test['run']}$cached/$path";
-                        echo "<a href=\"/$imgPath\">";
+                        echo "<a href=\"".$GLOBALS['basePath'].$imgPath."\">";
                         echo "<img title=\"{$test['name']}\"";
                         $class = 'thumb';
                         if( $lastThumb != $path )
@@ -454,7 +454,7 @@ function ScreenShotTable()
                         echo " width=\"$thumbSize\"";
                         if( $height )
                             echo " height=\"$height\"";
-                        echo " src=\"/thumbnail.php?test={$test['id']}&width=$thumbSize&file=video_{$test['run']}$cached/$path\"></a>";
+                        echo " src=\"".$GLOBALS['basePath']."/thumbnail.php?test={$test['id']}&width=$thumbSize&file=video_{$test['run']}$cached/$path\"></a>";
                         
                         if (isset($progress)) {
                             echo "<br>$progress%";
@@ -477,7 +477,7 @@ function ScreenShotTable()
         echo "</td></tr></table>\n";
         echo "<div id=\"image\">";
         $ival = $interval * 100;
-        echo "<a class=\"pagelink\" href=\"filmstrip.php?tests={$_REQUEST['tests']}&thumbSize=$thumbSize&ival=$ival&end=$endTime\">Export filmstrip as an image...</a>";
+        echo "<a class=\"pagelink\" href=\"".$GLOBALS['basePath']."filmstrip.php?tests={$_REQUEST['tests']}&thumbSize=$thumbSize&ival=$ival&end=$endTime\">Export filmstrip as an image...</a>";
         echo "</div>";
         echo '<div id="bottom"><input type="checkbox" name="slow" value="1"> Slow Motion<br><br>';
         echo "Select up to $maxCompare tests and <input id=\"SubmitBtn\" type=\"submit\" value=\"Create Video\">";

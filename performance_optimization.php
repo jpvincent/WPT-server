@@ -55,9 +55,9 @@ $page_description = "Website performance optimization recommendations$testLabel.
                 <?php
                     echo '<img alt="Optimization Checklist" id="image" src="';
                     if( FRIENDLY_URLS )
-                        echo substr($testPath, 1) . '/' . $run . $cachedText . '_optimization.png';
+                        echo $GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_optimization.png';
                     else
-                        echo "/optimizationChecklist.php?test=$id&run=$run&cached=$cached";
+                        echo $GLOBALS['basePath']."/optimizationChecklist.php?test=$id&run=$run&cached=$cached";
                     echo '">';
                 ?>
                 <br>
@@ -79,7 +79,7 @@ $page_description = "Website performance optimization recommendations$testLabel.
                 $haveLocations = false;
                 $requests = getRequests($id, $testPath, $run, $cached, $secure, $haveLocations, false);
 
-                dumpOptimizationReport($pageData, $requests, $id, $run, $test);
+                dumpOptimizationReport($pageData, $requests, $id, $run, $cached, $test);
                 echo '<p></p><br>';
                 include('./ads/optimization_bottom.inc');
                 echo '<br>';

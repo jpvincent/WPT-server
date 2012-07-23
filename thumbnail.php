@@ -43,16 +43,18 @@ else
         {
             tbnDrawChecklist($img);
         }
-        elseif( !strcasecmp( $type, 'jpg') )
-            $img = imagecreatefromjpeg("$testPath/$file");
-        elseif( !strcasecmp( $type, 'gif') )
-            $img = imagecreatefromgif("$testPath/$file");
-        else
-            $img = imagecreatefrompng("$testPath/$file");
+        elseif( is_file("$testPath/$file") ) {
+            if( !strcasecmp( $type, 'jpg') )
+                $img = imagecreatefromjpeg("$testPath/$file");
+            elseif( !strcasecmp( $type, 'gif') )
+                $img = imagecreatefromgif("$testPath/$file");
+            else
+                $img = imagecreatefrompng("$testPath/$file");
+        }
 
         if( $img )
         {
-            header('Last-Modified: ' . date('r'));
+            header('Last-Modified: ' . gmdate('r'));
             header('Expires: '.gmdate('r', time() + 31536000));
             GenerateThumbnail($img, $type);
             SendImage($img, $type);

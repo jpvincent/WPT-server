@@ -36,7 +36,7 @@ $page_description = "Website speed test custom waterfall$testLabel";
                 $extension = 'php';
                 if( FRIENDLY_URLS )
                     $extension = 'png';
-                echo "<img id=\"waterfallImage\" style=\"display: block; margin-left: auto; margin-right: auto;\" alt=\"Waterfall\" src=\"/waterfall.$extension?test=$id&run=$run&cached=$cached\">";
+                echo "<img id=\"waterfallImage\" style=\"display: block; margin-left: auto; margin-right: auto;\" alt=\"Waterfall\" src=\"".$GLOBALS['basePath']."/waterfall.$extension?test=$id&run=$run&cached=$cached\">";
             ?>
             
             <?php include('footer.inc'); ?>
@@ -93,7 +93,7 @@ $page_description = "Website speed test custom waterfall$testLabel";
                 echo "var extension='$extension';\n";
                 ?>
                 
-                var src = '/waterfall.' + extension + '?test=' + testId + '&run=' + testRun + '&cached=' + cached + '&max=' + max + '&width=' + width + '&type=' + type + '&cpu=' + showCPU + '&bw=' + showBW + '&dots=' + showDots + '&labels=' + showLabels + '&requests=' + requests;
+                var src = '<?= $GLOBALS['basePath'] ?>waterfall.' + extension + '?test=' + testId + '&run=' + testRun + '&cached=' + cached + '&max=' + max + '&width=' + width + '&type=' + type + '&cpu=' + showCPU + '&bw=' + showBW + '&dots=' + showDots + '&labels=' + showLabels + '&requests=' + requests;
                 $('#waterfallImage').attr("src", src);
             };
         </script>
