@@ -1,5 +1,0 @@
-<?php
-
-$feeds = array();
-
-?>
