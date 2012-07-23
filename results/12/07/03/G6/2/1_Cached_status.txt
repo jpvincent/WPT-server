@@ -1,0 +1,10 @@
+3	Waiting for http://braincracking.org/...
+2919	
+2960	Browser ReadyState changed to Interactive
+
+3160	Waiting for http://braincracking.org/...
+3555	Downloading picture http://static.jsconf.us/promotejsvs.png...
+3772	Done
+3789	Browser ReadyState changed to Complete
+
+4280	Done

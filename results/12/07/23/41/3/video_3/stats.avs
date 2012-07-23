@@ -1,0 +1,14 @@
+test_url="http://pluzz.francetv.fr/"
+test_loadTime=141
+test_TTFB=0
+test_startRender=0
+test_fullyLoaded=141
+test_documentComplete=141
+test_domTime=0
+test_bytesIn=0
+test_requests=1
+test_result=-2146697211
+test_cached=0
+test_syncStartRender=0
+test_syncDocumentComplete=141
+test_syncFullyLoaded=141

@@ -1,0 +1,39 @@
+Results for 'http://pluzz.francetv.fr/':
+
+Error loading page: -2146697211 (0x800C0005)
+Page load time: 0.145 seconds
+Time to first byte: 0.000 seconds
+Time to Start Render: 0.000 seconds
+Time to Document Complete: 0.145 seconds
+Time to Fully Loaded: 0.145 seconds
+Bytes sent out: 0.000 KB
+Bytes received: 0.000 KB
+DNS Lookups: 1
+Connections: 0
+Requests: 1
+   OK Requests:  0
+   Redirects:    0
+   Not Modified: 0
+   Not Found:    0
+   Other:        1 (12007)
+
+
+Request details:
+
+Request 1:
+      Action: GET
+      Url: http://pluzz.francetv.fr/
+      Host: pluzz.francetv.fr
+      Result code: 12007
+      Transaction time: 0.065 seconds
+      Time to first byte: 0.000 seconds
+      Document: 1
+      Socket: 0
+      Request size (out): 0 Bytes
+      Response size (in): 0 Bytes
+      Request Object Size (out): 0 Bytes
+      Response Object Size (in): -2 Bytes
+      Response Object Size (bodylen): 0 Bytes
+  Request Headers:
+  Response Headers:
+

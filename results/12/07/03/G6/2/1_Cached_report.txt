@@ -1,0 +1,198 @@
+Results for 'http://braincracking.org/':
+
+Page load time: 4.502 seconds
+Time to first byte: 2.916 seconds
+Time to Base Page Downloaded: 3.512 seconds
+Time to Start Render: 3.482 seconds
+Time to Document Complete: 3.789 seconds
+Time to Fully Loaded: 4.502 seconds
+Bytes sent out: 2.028 KB
+Bytes received: 52.038 KB
+DNS Lookups: 4
+Connections: 4
+Requests: 4
+   OK Requests:  3
+   Redirects:    0
+   Not Modified: 1
+   Not Found:    0
+   Other:        0
+Base Page Response: 200
+
+
+Request details:
+
+Request 1:
+      Action: GET
+      Url: http://braincracking.org/
+      Host: braincracking.org
+      Result code: 200
+      Transaction time: 3.512 seconds
+      Time to first byte: 2.780 seconds
+      Document: 1
+      Socket: 2
+      Request size (out): 562 Bytes
+      Response size (in): 48424 Bytes
+      Request Object Size (out): 0 Bytes
+      Response Object Size (in): 48068 Bytes
+      Response Object Size (bodylen): 48008 Bytes
+  Request Headers:
+      GET / HTTP/1.1
+      Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*
+      Accept-Language: en-US,en-gb;q=0.7,fr;q=0.3
+      UA-CPU: x86
+      Accept-Encoding: gzip, deflate
+      If-Modified-Since: Thu, 01 Jan 1970 00:00:00 GMT
+      User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; PTST 2.312)
+      Host: braincracking.org
+      Connection: Keep-Alive
+      Cookie: __utma=45835639.1040382118.1341322341.1341322341.1341322341.1; __utmb=45835639.1.10.1341322341; __utmz=45835639.1341322341.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)
+  Response Headers:
+      HTTP/1.1 200 OK
+      Date: Tue, 03 Jul 2012 13:32:33 GMT
+      Server: Apache/2.2.14 (Unix)
+      X-Powered-By: PHP/5.2.5
+      X-Pingback: http://braincracking.org/blog/xmlrpc.php
+      Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT
+      Content-Type: text/html; charset=UTF-8
+      Content-Language: fr
+      Keep-Alive: timeout=2, max=90
+      Connection: Keep-Alive
+      Transfer-Encoding: chunked
+
+Request 2:
+      Action: GET
+      Url: http://www.google-analytics.com/__utm.gif?utmwv=5.3.3&utms=2&utmn=2098939149&utmhn=braincracking.org&utmcs=utf-8&utmsr=1024x768&utmvp=1012x614&utmsc=32-bit&utmul=en-us&utmje=1&utmfl=11.1%20r102&utmdt=BrainCracking%2C%20veille%20technologique%20sur%20les%20applications%20Web%20et%20la%20performance%20Web&utmhid=1345615332&utmr=-&utmp=%2F&utmac=UA-17969534-1&utmcc=__utma%3D45835639.1040382118.1341322341.1341322341.1341322341.1%3B%2B__utmz%3D45835639.1341322341.1.1.utmcsr%3D(direct)%7Cutmccn%3D(direct)%7Cutmcmd%3D(none)%3B&aip=1&utmu=qAQ~
+      Host: www.google-analytics.com
+      Result code: 200
+      Transaction time: 0.376 seconds
+      Time to first byte: 0.081 seconds
+      Document: 1
+      Socket: 3
+      Request size (out): 798 Bytes
+      Response size (in): 376 Bytes
+      Request Object Size (out): 0 Bytes
+      Response Object Size (in): 35 Bytes
+      Response Object Size (bodylen): 35 Bytes
+  Request Headers:
+      GET /__utm.gif?utmwv=5.3.3&utms=2&utmn=2098939149&utmhn=braincracking.org&utmcs=utf-8&utmsr=1024x768&utmvp=1012x614&utmsc=32-bit&utmul=en-us&utmje=1&utmfl=11.1%20r102&utmdt=BrainCracking%2C%20veille%20technologique%20sur%20les%20applications%20Web%20et%20la%20performance%20Web&utmhid=1345615332&utmr=-&utmp=%2F&utmac=UA-17969534-1&utmcc=__utma%3D45835639.1040382118.1341322341.1341322341.1341322341.1%3B%2B__utmz%3D45835639.1341322341.1.1.utmcsr%3D(direct)%7Cutmccn%3D(direct)%7Cutmcmd%3D(none)%3B&aip=1&utmu=qAQ~ HTTP/1.1
+      Accept: */*
+      Referer: http://braincracking.org/
+      Accept-Language: en-US,en-gb;q=0.7,fr;q=0.3
+      UA-CPU: x86
+      Accept-Encoding: gzip, deflate
+      User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; PTST 2.312)
+      Host: www.google-analytics.com
+      Connection: Keep-Alive
+  Response Headers:
+      HTTP/1.1 200 OK
+      Date: Wed, 27 Jun 2012 23:27:58 GMT
+      Content-Length: 35
+      X-Content-Type-Options: nosniff
+      Pragma: no-cache
+      Expires: Wed, 19 Apr 2000 11:43:00 GMT
+      Last-Modified: Wed, 21 Jan 2004 19:51:30 GMT
+      Content-Type: image/gif
+      Cache-Control: private, no-cache, no-cache=Set-Cookie, proxy-revalidate
+      Age: 482678
+      Server: GFE/2.0
+
+Request 3:
+      Action: GET
+      Url: http://static.jsconf.us/promotejsvs.png
+      Host: static.jsconf.us
+      Result code: 304
+      Transaction time: 0.245 seconds
+      Time to first byte: 0.092 seconds
+      Document: 1
+      Socket: 4
+      Request size (out): 360 Bytes
+      Response size (in): 426 Bytes
+      Request Object Size (out): 0 Bytes
+      Response Object Size (in): 0 Bytes
+      Response Object Size (bodylen): 65687 Bytes
+  Request Headers:
+      GET /promotejsvs.png HTTP/1.1
+      Accept: */*
+      Referer: http://braincracking.org/
+      Accept-Language: en-US,en-gb;q=0.7,fr;q=0.3
+      UA-CPU: x86
+      Accept-Encoding: gzip, deflate
+      If-Modified-Since: Tue, 21 Sep 2010 18:46:35 GMT; length=65687
+      User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; PTST 2.312)
+      Host: static.jsconf.us
+      Connection: Keep-Alive
+  Response Headers:
+      HTTP/1.0 304 Not Modified
+      Date: Tue, 03 Jul 2012 13:32:36 GMT
+      ETag: "4d0f5918593ebe748210ecabdce639ec"
+      Last-Modified: Tue, 21 Sep 2010 18:46:35 GMT
+      Age: 25204
+      X-Cache: RefreshHit from cloudfront
+      X-Amz-Cf-Id: iIou69G5tV-5_apTV6ddh7faFS6qN_KHf1thSOCTctk6pVbFbfbkUQ==,zgf_cOfuFX1tqPiPn_1_lE8f4UADiup_RafgncmAeYLaAUPucOPpFg==
+      Via: 1.0 aea389c819998b86128cd019c1f5a9e8.cloudfront.net (CloudFront)
+      Connection: keep-alive
+  Cached Response Headers:
+      HTTP/1.0 200 OK
+      x-amz-id-2: 8aFBmWmScfq7uu8NNl+UBFiM+9XrdbFotWq7G8TCR4ccHc+V8MsCSWLaqc4a56Bq
+      x-amz-request-id: 4523D63B58BE3EF1
+      ETag: "4d0f5918593ebe748210ecabdce639ec"
+      Content-Type: image/png
+      Content-Length: 65687
+      X-Cache: Hit from cloudfront
+      X-Amz-Cf-Id: FTvmj84cszapvalGoKmc3x9vVvJPpkxVkKTlW_zsr0NOyAjw7rGY2Q==
+      Last-Modified: Tue, 21 Sep 2010 18:46:35 GMT
+
+Request 4:
+      Action: GET
+      Url: http://twitter.com/statuses/user_timeline/theystolemynick.json?callback=twitterCallback2&amp;count=9
+      Host: twitter.com
+      Result code: 200
+      Transaction time: 0.958 seconds
+      Time to first byte: 0.642 seconds
+      Document: 1
+      Socket: 5
+      Request size (out): 357 Bytes
+      Response size (in): 4061 Bytes
+      Request Object Size (out): 0 Bytes
+      Response Object Size (in): 2674 Bytes
+      Response Object Size (bodylen): 32928 Bytes
+  Request Headers:
+      GET /statuses/user_timeline/theystolemynick.json?callback=twitterCallback2&amp;count=9 HTTP/1.1
+      Accept: */*
+      Referer: http://braincracking.org/
+      Accept-Language: en-US,en-gb;q=0.7,fr;q=0.3
+      UA-CPU: x86
+      Accept-Encoding: gzip, deflate
+      User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; PTST 2.312)
+      Host: twitter.com
+      Connection: Keep-Alive
+  Response Headers:
+      HTTP/1.1 200 OK
+      Date: Tue, 03 Jul 2012 13:32:37 GMT
+      Status: 200 OK
+      ETag: "e24381656c963bec05cd13c7d08d6c2f"
+      X-Frame-Options: SAMEORIGIN
+      X-Transaction-Mask: a6183ffa5f8ca943ff1b53b5644ef11426e2a0a9
+      Cache-Control: no-cache, no-store, must-revalidate, pre-check=0, post-check=0
+      X-RateLimit-Remaining: 147
+      X-Content-Type-Options: nosniff
+      X-Transaction: 6169695e6e013d0b
+      Content-Type: application/javascript; charset=utf-8
+      X-RateLimit-Limit: 150
+      X-Runtime: 0.03027
+      Pragma: no-cache
+      Last-Modified: Tue, 03 Jul 2012 13:32:37 GMT
+      X-RateLimit-Reset: 1341325573
+      Expires: Tue, 31 Mar 1981 05:00:00 GMT
+      X-RateLimit-Class: api
+      X-MID: e797e89e50aebb5ada8de34e4d3f477bf208064b
+      Set-Cookie: k=10.35.62.137.1341322357207143; path=/; expires=Tue, 10-Jul-12 13:32:37 GMT; domain=.twitter.com
+      Set-Cookie: guest_id=v1%3A134132235758889827; domain=.twitter.com; path=/; expires=Fri, 04-Jul-2014 01:32:37 GMT
+      Set-Cookie: original_referer=LQtHfb3aVLjDExEO7ECefWwKHsWtQaZXq6m8hcA7O8s%3D; path=/
+      Set-Cookie: _twitter_sess=BAh7CCIKZmxhc2hJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNo%250ASGFzaHsABjoKQHVzZWR7ADoPY3JlYXRlZF9hdGwrCFbrCk04AToHaWQiJTBj%250AMTg2NzFhMjU1ZTViNTE5NDdhODM5MjE1YmRiZTY1--55970207c1b553e19cdacd9fdb94dce80116affe; domain=.twitter.com; path=/; HttpOnly
+      Vary: Accept-Encoding
+      Content-Encoding: gzip
+      X-XSS-Protection: 1; mode=block
+      Content-Length: 2674
+      Server: tfe
+

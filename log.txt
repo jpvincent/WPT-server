@@ -1,0 +1,9 @@
+2011/09/02 19:28:19 - Relay Test
+2011/09/02 19:28:19 - Job: Test ID=110902_CW_J
+url=http://aol.com
+type=Bytes
+runs=1
+
+2011/09/02 19:28:19 - testinfo: {"url":"http:\/\/aol.com","location":"Test_Relay","domElement":"","login":"","password":"","runs":1,"fvonly":0,"connections":0,"private":0,"web10":0,"ignoreSSL":0,"script":"","block":null,"authType":0,"notify":"","video":null,"label":"","industry":"","industry_page":"","median_video":0,"ip":null,"uid":null,"user":null,"priority":5,"bwIn":0,"bwOut":0,"latency":0,"testLatency":0,"plr":"","callback":null,"agent":null,"aft":0,"aftEarlyCutoff":"25","aftMinChanges":0,"tcpdump":0,"blockads":0,"sensitive":0,"type":"Bytes","noopt":"","noimages":"","noheaders":"","view":"","discard":0,"queue_limit":0,"batch":0,"owner":"c792a2a3ca97b7d840aedf58a13968fbb7667aff","vd":null,"vh":null,"key":"9700b3bfc2514486ba3c8aa1e3dab27b","locationText":"Relay IE9","workdir":".\/work\/jobs\/Test_Relay","remoteUrl":null,"remoteLocation":null,"path":".\/$base\/11\/09\/02\/CW\/J","job":"110902_CW_J.p5","relay":true}
+2011/09/02 20:52:07 - Test Path: ./$base/11/09/02/67/R
+2011/09/02 20:53:41 - Test Path: ./results/relay/9700b3bfc2514486ba3c8aa1e3dab27b/11/09/02/G5/S

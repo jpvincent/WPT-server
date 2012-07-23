@@ -1,0 +1,7 @@
+3	Waiting for http://pluzz.francetv.fr/...
+77	Done
+83	Waiting for res://ieframe.dll/dnserror.htm...
+89	
+141	Done
+144	Browser ReadyState changed to Complete
+
