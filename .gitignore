@@ -3,3 +3,7 @@
 /logs/*
 /work/jobs/*
 /work/video/*
+
+work/jobs/uniqueId.dat
+
+tmp/wpt_cron.dat
