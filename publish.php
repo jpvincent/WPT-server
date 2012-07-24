@@ -29,9 +29,9 @@ $page_description = "Publish test results to WebPagetest.";
             else
                 echo "There was an error publishing the results to $pub. Please try again later";
             if( FRIENDLY_URLS )
-                echo "</p><p><a href=\"/result/$id/\">Back to the test results</a></p>";
+                echo "</p><p><a href=\"".$GLOBALS['basePath']."result/$id/\">Back to the test results</a></p>";
             else
-                echo "</p><p><a href=\"/results.php?test=$id\">Back to the test results</a></p>";
+                echo "</p><p><a href=\"".$GLOBALS['basePath']."results.php?test=$id\">Back to the test results</a></p>";
             ?>
             
             <?php include('footer.inc'); ?>
