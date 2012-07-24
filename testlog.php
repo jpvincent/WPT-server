@@ -96,7 +96,7 @@ else
                 </form>
                 <h4>Clicking on an url will bring you to the results for that test</h4>
                 <?php
-                $action = '/video/compare.php';
+                $action = $GLOBALS['basePath'].'/video/compare.php';
                 echo "<form name=\"compare\" method=\"get\" action=\"$action\">";
                 ?>
 		        <table class="history" border="0" cellpadding="5px" cellspacing="0">
@@ -262,9 +262,9 @@ else
                                                     else
                                                         echo '<td class="uid"></td>';
                                                 }
-                                                $link = "/results.php?test=$guid";
+                                                $link = $GLOBALS['basePath']."results.php?test=$guid";
                                                 if( FRIENDLY_URLS )
-                                                    $link = "/result/$guid/";
+                                                    $link = $GLOBALS['basePath']."result/$guid/";
                                                 if( !strncasecmp($guid, 'http:', 5) || !strncasecmp($guid, 'https:', 6) )
                                                     $link = $guid;
                                                     

@@ -68,18 +68,21 @@ $GLOBALS['cdnPath'] = '';
 if (isset($settings['cdn']) && !$is_ssl) {
     $GLOBALS['cdnPath'] = $settings['cdn'];
 }
-
-$GLOBALS['basePath'] = '';
-if (isset($settings['basePath'])) {
-	$GLOBALS['basePath'] = 'http://10.130.0.245:8888/WPT/'; //$settings['basePath'];
-	if(empty($GLOBALS['cdnPath']))
-		$GLOBALS['cdnPath'] = $GLOBALS['basePath'];
-}
-
 $GLOBALS['ptotocol'] = 'http';
 if ($is_ssl) {
     $GLOBALS['ptotocol'] = 'https';
 }
+
+$GLOBALS['basePath'] = '';
+if (isset($settings['basePath'])) {
+	/*$protocol = strtolower( $_SERVER["SERVER_PROTOCOL"] );
+	$protocol = (stripos('https', $protocol) !== false)?'https':'http';
+	*/
+	$GLOBALS['basePath'] = $GLOBALS['ptotocol'].'://'.$_SERVER["HTTP_HOST"].$settings['basePath'];
+	if(empty($GLOBALS['cdnPath']))
+		$GLOBALS['cdnPath'] = $GLOBALS['basePath'];
+}
+
 $median_metric = 'loadTime';
 if (array_key_exists('medianMetric', $_REQUEST)) {
     $median_metric = $_REQUEST['medianMetric'];
@@ -404,7 +407,7 @@ function GetVideoPath($id, $find = false)
 */
 function GenerateVideoThumbnail($dir)
 {
-	print 'GenerateVideoThumbnail';
+	//print 'GenerateVideoThumbnail';
     $dir = realpath($dir);
     if( is_file("$dir/video.mp4") && !is_file("$dir/video.png") )
     {
