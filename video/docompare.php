@@ -48,7 +48,7 @@ if( count($ids) )
         $idStr .= $id;
     }
     
-    $compareUrl = 'http://' . $_SERVER['HTTP_HOST'] . "/video/compare.php?tests=$idStr";
+    $compareUrl = $GLOBALS['basePath']."video/compare.php?tests=$idStr";
     header("Location: $compareUrl");    
 }
 else

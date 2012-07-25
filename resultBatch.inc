@@ -140,7 +140,7 @@ else
             }
         </style>
         </style>
-        <script type="text/javascript" src="/video/player/flowplayer-3.2.6.min.js"></script>
+        <script type="text/javascript" src="<?= $GLOBALS['basePath'] ?>video/player/flowplayer-3.2.6.min.js"></script>
     </head>
     <body>
         <div class="page">
@@ -148,16 +148,16 @@ else
             $tab = 'Test Result';
             if( $view == 'pss' || $view == 'pss_path' )
             {
-                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? "/compare?pssid=$id" : "/pss.php?pssid=$id",
-                                    'Test Result' => FRIENDLY_URLS ? "/result/$id/" : "/results.php?test=$id",
+                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? $GLOBALS['basePath']."/compare?pssid=$id" : $GLOBALS['basePath']."/pss.php?pssid=$id",
+                                    'Test Result' => FRIENDLY_URLS ? $GLOBALS['basePath']."/result/$id/" : $GLOBALS['basePath']."/results.php?test=$id",
                                     'Page Speed Service Home' => 'http://code.google.com/speed/pss', 
                                     'Sample Tests' => 'http://code.google.com/speed/pss/gallery.html',
                                     'Sign Up!' => 'https://docs.google.com/a/google.com/spreadsheet/viewform?hl=en_US&formkey=dDdjcmNBZFZsX2c0SkJPQnR3aGdnd0E6MQ');
             }
             elseif ($view == 'blink')
             {
-                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? "/blink?bid=$id" : "/blink.php?bid=$id",
-                                    'Test Result' => FRIENDLY_URLS ? "/result/$id/" : "/results.php?test=$id");
+                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? $GLOBALS['basePath']."/blink?bid=$id" : $GLOBALS['basePath']."/blink.php?bid=$id",
+                                    'Test Result' => FRIENDLY_URLS ? $GLOBALS['basePath']."/result/$id/" : $GLOBALS['basePath']."/results.php?test=$id");
             }
             include 'header.inc';
             ?>
@@ -242,10 +242,10 @@ else
                             echo '<br>';
                         }
                         if( FRIENDLY_URLS )
-                            echo "<br>Download Combined Raw: <a href=\"/result/$id/{$id}_bulk_page_data.csv\">Page Data</a> - <a href=\"/result/$id/{$id}_bulk_requests.csv\">Object Data</a>";
+                            echo "<br>Download Combined Raw: <a href=\"".$GLOBALS['basePath']."result/$id/{$id}_bulk_page_data.csv\">Page Data</a> - <a href=\"".$GLOBALS['basePath']."result/$id/{$id}_bulk_requests.csv\">Object Data</a>";
                         else
-                            echo "<br>Download Combined Raw: <a href=\"/csv.php?test=$id\">Page Data</a> - <a href=\"/csv.php?test=$id&requests=1\">Object Data</a>";
-                        echo "<br><br><a href=\"/aggregate.php?test=$id\">Download Aggregate Statistics</a>";
+                            echo "<br>Download Combined Raw: <a href=\"".$GLOBALS['basePath']."csv.php?test=$id\">Page Data</a> - <a href=\"".$GLOBALS['basePath']."csv.php?test=$id&requests=1\">Object Data</a>";
+                        echo "<br><br><a href=\"".$GLOBALS['basePath']."aggregate.php?test=$id\">Download Aggregate Statistics</a>";
                     }
                 }
                 else
@@ -263,7 +263,7 @@ else
                         <?php
                     }
                     elseif( $view == 'bulk' )
-                        echo "<br><br><a href=\"/cancelTest.php?test=$id\">Cancel all pending tests</a>";
+                        echo "<br><br><a href=\"".$GLOBALS['basePath']."cancelTest.php?test=$id\">Cancel all pending tests</a>";
                 }
                 ?>
             </div>
@@ -329,7 +329,7 @@ function DisplayTests(&$tests)
     global $videoCaptured;
 
     if ($videoCaptured) {
-        echo "<form name=\"compare\" method=\"get\" action=\"/video/compare.php\">";
+        echo "<form name=\"compare\" method=\"get\" action=\"".$GLOBALS['basePath']."video/compare.php\">";
     }
     echo '<br><table class="batchResults" border="1" cellpadding="10" cellspacing="0">
         <tr>';
@@ -370,7 +370,7 @@ function DisplayTestsWithVariations(&$tests)
     global $videoCaptured;
 
     if ($videoCaptured) {
-        echo "<form name=\"compare\" method=\"get\" action=\"/video/compare.php\">";
+        echo "<form name=\"compare\" method=\"get\" action=\"".$GLOBALS['basePath']."video/compare.php\">";
     }
     echo '<br><table class="batchResults" border="1" cellpadding="10" cellspacing="0">
         <tr>';
@@ -428,9 +428,9 @@ function DisplayTest($id, $url, $label, $complete)
     $safeUrl = htmlspecialchars($url);
     $label = htmlspecialchars($label);
     if( FRIENDLY_URLS )
-        echo "<td><a href=\"/result/$id/\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
+        echo "<td><a href=\"".$GLOBALS['basePath']."result/$id/\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
     else
-        echo "<td><a href=\"/results.php?test=$id\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
+        echo "<td><a href=\"".$GLOBALS['basePath']."results.php?test=$id\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
     if( $complete )
     {
         $options = null;
@@ -459,15 +459,15 @@ function DisplayTest($id, $url, $label, $complete)
         }
         if( FRIENDLY_URLS )
         {
-            echo "<td><a href=\"/result/$id/{$id}_{$fileUrl}_page_data.csv\">Download Page Data</a></td>";
-            echo "<td><a href=\"/result/$id/{$id}_{$fileUrl}_requests.csv\">Download Object Data</a></td>";
+            echo "<td><a href=\"".$GLOBALS['basePath']."result/$id/{$id}_{$fileUrl}_page_data.csv\">Download Page Data</a></td>";
+            echo "<td><a href=\"".$GLOBALS['basePath']."result/$id/{$id}_{$fileUrl}_requests.csv\">Download Object Data</a></td>";
         }
         else
         {
-            echo "<td><a href=\"/csv.php?test=$id\">Download Page Data</a></td>";
-            echo "<td><a href=\"/csv.php?test=$id&requests=1\">Download Object Data</a></td>";
+            echo "<td><a href=\"".$GLOBALS['basePath']."csv.php?test=$id\">Download Page Data</a></td>";
+            echo "<td><a href=\"".$GLOBALS['basePath']."csv.php?test=$id&requests=1\">Download Object Data</a></td>";
         }
-        echo "<td><a href=\"/export.php?test=$id\">Download HAR</a></td>";
+        echo "<td><a href=\"".$GLOBALS['basePath']."export.php?test=$id\">Download HAR</a></td>";
     }
     else
     {
@@ -478,7 +478,7 @@ function DisplayTest($id, $url, $label, $complete)
         $status = GetTestStatus($id);
         echo $status['statusText'];
         if( $status['statusCode'] == 101 )
-            echo "( <a href=\"/cancelTest.php?test=$id\">Cancel Test</a> )";
+            echo "( <a href=\"".$GLOBALS['basePath']."cancelTest.php?test=$id\">Cancel Test</a> )";
         echo '</td>';
     }
     echo "</tr>\n";
@@ -799,7 +799,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
     {
         if ($baseDomainRedirect)
         {
-            $testUrl = '/compare?url=' . urlencode($basePage['host'] . $basePage['url']);
+            $testUrl = $GLOBALS['basePath'].'/compare?url=' . urlencode($basePage['host'] . $basePage['url']);
             echo '<div class="alert">';
             echo '<h1>Domain Redirect Detected</h1>';
             echo "It looks like <b>$testedHost</b> redirects to <b>$basePageHost</b> which prevented the optimization from being correctly measured.<br>Please <a href=\"$testUrl\">re-run the test</a> using <b>$basePageHost</b> instead.";
@@ -852,9 +852,9 @@ function DisplayPSS(&$tests, $video, &$dirty)
             $count = 0;
             foreach( $tests['urls'] as &$test )
             {
-                $testurl = "/results.php?test={$test['id']}";
+                $testurl = $GLOBALS['basePath']."/results.php?test={$test['id']}";
                 if( FRIENDLY_URLS )
-                    $testurl = "/result/{$test['id']}/";
+                    $testurl = $GLOBALS['basePath']."/result/{$test['id']}/";
                 $path = $test['path'];
                 $run = $test['fvMedian'];
                 echo "<td><a href=\"$testurl\" target=\"_blank\"><img class=\"progress pimg\" src=\"/thumbnail.php?test={$test['id']}&width=150&run=$run&file={$run}_screen.jpg\" img_src=\"/$path/{$run}_screen.jpg\"><br>view test</a></td>";
@@ -933,7 +933,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
         } else {
             if( $videoComplete )
             {
-                echo "<h2>Visual Comparison* (<a href=\"/video/compare.php?bare=1&tests={$tests['urls'][0]['id']},{$tests['urls'][1]['id']}\" target=\"_blank\">view filmstrip comparison</a>)</h2>";
+                echo "<h2>Visual Comparison* (<a href=\"".$GLOBALS['basePath']."video/compare.php?bare=1&tests={$tests['urls'][0]['id']},{$tests['urls'][1]['id']}\" target=\"_blank\">view filmstrip comparison</a>)</h2>";
                 VideoHtml($videoInfo['vID']);
             }
             else
@@ -1192,12 +1192,12 @@ function DisplayPSSPath(&$tests, $video, &$dirty)
             if( $videoComplete ) {
                 echo '<h2>First View Visual Comparison*</h2>';
                 VideoHtml($videoInfo['vID']);
-                echo "<br><a href=\"/video/view.php?bare=1&id={$videoInfo['vID']}\" target=\"_blank\">view stand-alone video</a>";
-                echo "<br><a href=\"/video/compare.php?bare=1&tests={$testData['Page']['Original']['id']},{$testData['Page']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
+                echo "<br><a href=\"".$GLOBALS['basePath']."video/view.php?bare=1&id={$videoInfo['vID']}\" target=\"_blank\">view stand-alone video</a>";
+                echo "<br><a href=\"".$GLOBALS['basePath']."video/compare.php?bare=1&tests={$testData['Page']['Original']['id']},{$testData['Page']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
                 echo '<br><br><h2>Site Navigation Visual Comparison*</h2>';
                 VideoHtml($videoInfo['vPathID']);
-                echo "<br><a href=\"/video/view.php?bare=1&id={$videoInfo['vPathID']}\" target=\"_blank\">view stand-alone video</a>";
-                echo "<br><a href=\"/video/compare.php?bare=1&tests={$testData['Path']['Original']['id']},{$testData['Path']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
+                echo "<br><a href=\"".$GLOBALS['basePath']."video/view.php?bare=1&id={$videoInfo['vPathID']}\" target=\"_blank\">view stand-alone video</a>";
+                echo "<br><a href=\"".$GLOBALS['basePath']."video/compare.php?bare=1&tests={$testData['Path']['Original']['id']},{$testData['Path']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
             } else {
                 echo '<h2>Please wait while the video comparison is created<br><span class="small">(This page will automatically update when the video is ready)</span></h2>';
                 echo "<script language=\"JavaScript\">\nsetTimeout( \"window.location.reload(true)\", 10000 );\n</script>";
@@ -1514,7 +1514,7 @@ function CreateVideo(&$tests, $end = null)
     if (!strlen($end))
         $end = 'docvisual';
     $host  = $_SERVER['HTTP_HOST'];
-    $request = "http://$host/video/create.php?f=json&force=1&end=$end&tests=";
+    $request = $GLOBALS['basePath']."video/create.php?f=json&force=1&end=$end&tests=";
 
     $count = 0;
     foreach( $tests as &$test )
@@ -1596,7 +1596,7 @@ function VideoHtml($id)
     echo "<script>\n
                     flowplayer(\"player$videoCount\", \n
                                     {\n
-                                        src: \"/video/player/flowplayer-3.2.7.swf\",\n
+                                        src: \"".$GLOBALS['basePath']."video/player/flowplayer-3.2.7.swf\",\n
                                         cachebusting: true,\n
                                         version: [9, 115]\n
                                     } , \n
@@ -1632,7 +1632,7 @@ function VideoHtml($id)
                                 ); \n
                 </script>\n
                 <br>* The video may extend past the measured load time if the page was still updating after it was technically loaded\n
-                <br><a class=\"link\" href=\"/video/download.php?id=$id\">Click here to download the video file...</a>\n";
+                <br><a class=\"link\" href=\"".$GLOBALS['basePath']."video/download.php?id=$id\">Click here to download the video file...</a>\n";
 }
 
 /**

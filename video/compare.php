@@ -324,7 +324,7 @@ function ScreenShotTable()
             if( $test['video']['end'] > $end )
                 $end = $test['video']['end'];
                 
-        echo '<br><form id="createForm" name="create" method="get" action="/video/create.php" onsubmit="return ValidateInput(this)">';
+        echo '<br><form id="createForm" name="create" method="get" action="'.$GLOBALS['basePath'].'video/create.php" onsubmit="return ValidateInput(this)">';
         echo "<input type=\"hidden\" name=\"end\" value=\"$endTime\">";
         echo '<table id="videoContainer"><tr>';
 
@@ -477,7 +477,7 @@ function ScreenShotTable()
         echo "</td></tr></table>\n";
         echo "<div id=\"image\">";
         $ival = $interval * 100;
-        echo "<a class=\"pagelink\" href=\"".$GLOBALS['basePath']."filmstrip.php?tests={$_REQUEST['tests']}&thumbSize=$thumbSize&ival=$ival&end=$endTime\">Export filmstrip as an image...</a>";
+        echo "<a class=\"pagelink\" href=\"".$GLOBALS['basePath']."video/filmstrip.php?tests={$_REQUEST['tests']}&thumbSize=$thumbSize&ival=$ival&end=$endTime\">Export filmstrip as an image...</a>";
         echo "</div>";
         echo '<div id="bottom"><input type="checkbox" name="slow" value="1"> Slow Motion<br><br>';
         echo "Select up to $maxCompare tests and <input id=\"SubmitBtn\" type=\"submit\" value=\"Create Video\">";
@@ -486,7 +486,7 @@ function ScreenShotTable()
         
         ?>
         <div id="layout">
-            <form id="layoutForm" name="layout" method="get" action="/video/compare.php">
+            <form id="layoutForm" name="layout" method="get" action="<?= $GLOBALS['basePath'] ?>video/compare.php">
             <?php
                 echo "<input type=\"hidden\" name=\"tests\" value=\"{$_REQUEST['tests']}\">\n";
             ?>

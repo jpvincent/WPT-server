@@ -65,7 +65,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
             }
             $dest = $dir . '/video.mp4';
             move_uploaded_file($_FILES['file']['tmp_name'], $dest);
-            @chmod($dest, 0666);
+            chmod($dest, 0666);
 
             // update the ini file
             $iniFile = $dir . '/video.ini';

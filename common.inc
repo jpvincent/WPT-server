@@ -1,16 +1,24 @@
 <?php
-
-//phpinfo();
-
 // shared initializiation/loading code
+
+
+/*ini_set('post_max_size', '30M');
+ini_set('upload_max_filesize', '30M');
+ini_set('post_max_filesize', '30M');
+
+phpinfo();
+*/
 set_time_limit(300);
-//if (!array_key_exists('debug', $_REQUEST) && (!isset($debug) || !$debug)) {
+if (!array_key_exists('debug', $_REQUEST) && (!isset($debug) || !$debug)) {
     error_reporting(0);
-//}
+} else {
+	error_reporting(-1);
+}
 umask(0);
 date_default_timezone_set('UTC');
 extract($_POST, EXTR_SKIP|EXTR_PREFIX_ALL|EXTR_REFS, 'req');
 extract($_GET, EXTR_SKIP|EXTR_PREFIX_ALL|EXTR_REFS, 'req');
+
 
 require_once('./logging.inc');
 
@@ -988,6 +996,7 @@ function ParseLocations(&$locations) {
 
     // see if they have a saved location from their cookie
     $currentLoc = GetLocationFromConfig($locations, $_COOKIE["cfg"] );
+
     if (!$currentLoc || !isset($loc['locations'][$currentLoc])) {
         // nope, try thee default
         $currentLoc = $locations['locations']['default'];

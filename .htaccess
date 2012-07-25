@@ -3,129 +3,133 @@
 #
 <IfModule mod_rewrite.c>
     # Tell PHP that the mod_rewrite module is ENABLED.
-    SetEnv HTTP_MOD_REWRITE On
+    SetEnv HTTP_MOD_REWRITE Off
     
     RewriteEngine on
 
     #main pages
-    RewriteRule ^about$ /WPT/about.php
-    RewriteRule ^traceroute$ /WPT/traceroute.php
-    RewriteRule ^mobile$ /WPT/mobile.php
-    RewriteRule ^tips$ /WPT/tips.php
-    RewriteRule ^pss$ /WPT/pss.php
-    RewriteRule ^compare$ /WPT/pss.php
-    RewriteRule ^blink$ /WPT/blink.php
+    RewriteRule ^about$ ./about.phps [L]
+    RewriteRule ^traceroute$ ./traceroute.php
+    RewriteRule ^mobile$ ./mobile.php
+    RewriteRule ^tips$ ./tips.php
+    RewriteRule ^pss$ ./pss.php
+    RewriteRule ^compare$ ./pss.php
+    RewriteRule ^blink$ ./blink.php
 
     #result paths
-    RewriteRule ^result/([a-zA-Z0-9_]+)$ /WPT/result/$1/ [R] 
-    RewriteRule ^result/([a-zA-Z0-9_]+)/$ /WPT/results.php?test=$1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall$ /WPT/result/$1/$2/details/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/$ /WPT/result/$1/$2/details/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/details/$ /WPT/details.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/cached$ /WPT/result/$1/$2/details/cached/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/cached/$ /WPT/result/$1/$2/details/cached/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/details/cached/$ /WPT/details.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization$ /WPT/result/$1/$2/performance_optimization/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization/$ /WPT/result/$1/$2/performance_optimization/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/performance_optimization/$ /WPT/performance_optimization.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization/cached$ /WPT/result/$1/$2/performance_optimization/cached/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization/cached/$ /WPT/result/$1/$2/performance_optimization/cached/ [R]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/performance_optimization/cached/$ /WPT/performance_optimization.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/screen_shot/$ /WPT/screen_shot.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/screen_shot/cached/$ /WPT/screen_shot.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/breakdown/$ /WPT/breakdown.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/breakdown/cached/$ /WPT/breakdown.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/domains/$ /WPT/domains.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/domains/cached/$ /WPT/domains.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization_report/$ /WPT/optimization_report.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization_report/cached/$ /WPT/optimization_report.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/pagespeed/$ /WPT/pagespeed.php?test=$1&run=$2 [qsa]
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/pagespeed/cached/$ /WPT/pagespeed.php?test=$1&run=$2&cached=1 [qsa]
-    RewriteRule ^testlog/([0-9]+)$ /WPT/testlog/$1/ [R] 
-    RewriteRule ^testlog/([0-9]+)/$ /WPT/testlog.php?days=$1 [qsa]
-    RewriteRule ^xmlResult/([a-zA-Z0-9_]+)/$ /WPT/xmlResult.php?test=$1 [qsa]
-    RewriteRule ^testlog.csv /WPT/testlog.php?f=csv [qsa]
-    RewriteRule ^waterfall.png /WPT/waterfall.php [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)$ ./result/$1/ [R] 
+    RewriteRule ^result/([a-zA-Z0-9_]+)/$ ./results.php?test=$1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall$ ./result/$1/$2/details/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/$ ./result/$1/$2/details/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/details/$ ./details.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/cached$ ./result/$1/$2/details/cached/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/cached/$ ./result/$1/$2/details/cached/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/details/cached/$ ./details.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization$ ./result/$1/$2/performance_optimization/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization/$ ./result/$1/$2/performance_optimization/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/performance_optimization/$ ./performance_optimization.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization/cached$ ./result/$1/$2/performance_optimization/cached/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization/cached/$ ./result/$1/$2/performance_optimization/cached/ [R]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/performance_optimization/cached/$ ./performance_optimization.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/screen_shot/$ ./screen_shot.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/screen_shot/cached/$ ./screen_shot.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/breakdown/$ ./breakdown.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/breakdown/cached/$ ./breakdown.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/domains/$ ./domains.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/domains/cached/$ ./domains.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization_report/$ ./optimization_report.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/optimization_report/cached/$ ./optimization_report.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/pagespeed/$ ./pagespeed.php?test=$1&run=$2 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/pagespeed/cached/$ ./pagespeed.php?test=$1&run=$2&cached=1 [qsa]
+    RewriteRule ^testlog/([0-9]+)$ ./testlog/$1/ [R] 
+    RewriteRule ^testlog/([0-9]+)/$ ./testlog.php?days=$1 [qsa]
+    RewriteRule ^xmlResult/([a-zA-Z0-9_]+)/$ ./xmlResult.php?test=$1 [qsa]
+    RewriteRule ^testlog.csv ./testlog.php?f=csv [qsa]
+    RewriteRule ^waterfall.png ./waterfall.php [qsa]
 
     #old direct path to images
-    RewriteRule ^results/([a-zA-Z0-9])([a-zA-Z0-9]+)/([a-zA-Z0-9_]+).png$ /WPT/results/old/_$1/$1$2/$3.png
-    RewriteRule ^results/([a-zA-Z0-9])([a-zA-Z0-9]+)/([a-zA-Z0-9_]+).jpg$ /WPT/results/old/_$1/$1$2/$3.jpg
-    RewriteRule ^results/old/_([a-zA-Z0-9])/([a-zA-Z0-9]+)/([a-zA-Z0-9_]+).png$ /WPT/results/old/$2/$3.png
+    RewriteRule ^results/([a-zA-Z0-9])([a-zA-Z0-9]+)/([a-zA-Z0-9_]+).png$ ./results/old/_$1/$1$2/$3.png
+    RewriteRule ^results/([a-zA-Z0-9])([a-zA-Z0-9]+)/([a-zA-Z0-9_]+).jpg$ ./results/old/_$1/$1$2/$3.jpg
+    RewriteRule ^results/old/_([a-zA-Z0-9])/([a-zA-Z0-9]+)/([a-zA-Z0-9_]+).png$ ./results/old/$2/$3.png
 
     #csv combined results
-    RewriteRule ^result/([a-zA-Z0-9_]+)/.*page_data.csv$ /WPT/csv.php?test=$1
-    RewriteRule ^result/([a-zA-Z0-9_]+)/.*requests.csv$ /WPT/csv.php?test=$1&requests=1
+    RewriteRule ^result/([a-zA-Z0-9_]+)/.*page_data.csv$ ./csv.php?test=$1
+    RewriteRule ^result/([a-zA-Z0-9_]+)/.*requests.csv$ ./csv.php?test=$1&requests=1
 
     #thumbnails
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_screen_thumb.jpg$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_screen.jpg
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_screen_thumb.jpg$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_screen.jpg
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_waterfall_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_waterfall.png
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_waterfall.png
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_optimization_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_optimization.png
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_optimization.png
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_screen_thumb.jpg$ ./thumbnail.php?test=$1&run=$2&file=$2_screen.jpg
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_screen_thumb.jpg$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_screen.jpg
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_waterfall_thumb.png$ ./thumbnail.php?test=$1&run=$2&file=$2_waterfall.png
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall_thumb.png$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_waterfall.png
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_optimization_thumb.png$ ./thumbnail.php?test=$1&run=$2&file=$2_optimization.png
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization_thumb.png$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_optimization.png
 
     #old direct thumbnail paths
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_screen_thumb.jpg$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_screen.jpg
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_screen_thumb.jpg$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_screen.jpg
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_waterfall.png
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_waterfall.png
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_optimization.png
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization_thumb.png$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_optimization.png
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall_thumb.gif$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_waterfall.gif
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall_thumb.gif$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_waterfall.gif
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization_thumb.gif$ /WPT/thumbnail.php?test=$1&run=$2&file=$2_optimization.gif
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization_thumb.gif$ /WPT/thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_optimization.gif
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_screen_thumb.jpg$ ./thumbnail.php?test=$1&run=$2&file=$2_screen.jpg
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_screen_thumb.jpg$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_screen.jpg
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall_thumb.png$ ./thumbnail.php?test=$1&run=$2&file=$2_waterfall.png
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall_thumb.png$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_waterfall.png
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization_thumb.png$ ./thumbnail.php?test=$1&run=$2&file=$2_optimization.png
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization_thumb.png$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_optimization.png
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall_thumb.gif$ ./thumbnail.php?test=$1&run=$2&file=$2_waterfall.gif
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall_thumb.gif$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_waterfall.gif
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization_thumb.gif$ ./thumbnail.php?test=$1&run=$2&file=$2_optimization.gif
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization_thumb.gif$ ./thumbnail.php?test=$1&run=$2&cached=1&file=$2_Cached_optimization.gif
 
     # waterfalls
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.png$ /WPT/waterfall.php?test=$1&run=$2
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.png$ /WPT/waterfall.php?test=$1&run=$2&cached=1
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.gif$ /WPT/waterfall.php?test=$1&run=$2
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.gif$ /WPT/waterfall.php?test=$1&run=$2&cached=1
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.png$ /WPT/waterfall.php?test=$1$2$3_$4&run=$5
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.png$ /WPT/waterfall.php?test=$1$2$3_$4_$5&run=$6
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.png$ /WPT/waterfall.php?test=$1$2$3_$4&run=$5&cached=1
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.png$ /WPT/waterfall.php?test=$1$2$3_$4_$5&run=$6&cached=1
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_connection.png$ /WPT/waterfall.php?test=$1$2$3_$4&run=$5&type=connection
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_connection.png$ /WPT/waterfall.php?test=$1$2$3_$4_$5&run=$6&type=connection
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_Cached_connection.png$ /WPT/waterfall.php?test=$1$2$3_$4&run=$5&cached=1&type=connection
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_Cached_connection.png$ /WPT/waterfall.php?test=$1$2$3_$4_$5&run=$6&cached=1&type=connection
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.png$ ./waterfall.php?test=$1&run=$2
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.png$ ./waterfall.php?test=$1&run=$2&cached=1
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.gif$ ./waterfall.php?test=$1&run=$2
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.gif$ ./waterfall.php?test=$1&run=$2&cached=1
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.png$ ./waterfall.php?test=$1$2$3_$4&run=$5
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_waterfall.png$ ./waterfall.php?test=$1$2$3_$4_$5&run=$6
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.png$ ./waterfall.php?test=$1$2$3_$4&run=$5&cached=1
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_Cached_waterfall.png$ ./waterfall.php?test=$1$2$3_$4_$5&run=$6&cached=1
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_connection.png$ ./waterfall.php?test=$1$2$3_$4&run=$5&type=connection
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_connection.png$ ./waterfall.php?test=$1$2$3_$4_$5&run=$6&type=connection
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_Cached_connection.png$ ./waterfall.php?test=$1$2$3_$4&run=$5&cached=1&type=connection
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_Cached_connection.png$ ./waterfall.php?test=$1$2$3_$4_$5&run=$6&cached=1&type=connection
 
     # optimization checklists
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization.png$ /WPT/optimizationChecklist.php?test=$1&run=$2
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.png$ /WPT/optimizationChecklist.php?test=$1&run=$2&cached=1
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization.gif$ /WPT/optimizationChecklist.php?test=$1&run=$2
-    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.gif$ /WPT/optimizationChecklist.php?test=$1&run=$2&cached=1
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_optimization.png$ /WPT/optimizationChecklist.php?test=$1$2$3_$4&run=$5
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_optimization.png$ /WPT/optimizationChecklist.php?test=$1$2$3_$4_$5&run=$6
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.png$ /WPT/optimizationChecklist.php?test=$1$2$3_$4&run=$5&cached=1
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.png$ /WPT/optimizationChecklist.php?test=$1$2$3_$4_$5&run=$6&cached=1
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization.png$ ./optimizationChecklist.php?test=$1&run=$2
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.png$ ./optimizationChecklist.php?test=$1&run=$2&cached=1
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_optimization.gif$ ./optimizationChecklist.php?test=$1&run=$2
+    RewriteRule ^results/old/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.gif$ ./optimizationChecklist.php?test=$1&run=$2&cached=1
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_optimization.png$ ./optimizationChecklist.php?test=$1$2$3_$4&run=$5
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_optimization.png$ ./optimizationChecklist.php?test=$1$2$3_$4_$5&run=$6
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.png$ ./optimizationChecklist.php?test=$1$2$3_$4&run=$5&cached=1
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([0-9]+)_Cached_optimization.png$ ./optimizationChecklist.php?test=$1$2$3_$4_$5&run=$6&cached=1
 
     #location cookie dropping
-    RewriteRule ^loc/([a-zA-Z0-9_]+)$ /WPT/util/setloc.php?location=$1 
-    RewriteRule ^loc/([a-zA-Z0-9_]+)$/ /WPT/util/setloc.php?location=$1 
+    RewriteRule ^loc/([a-zA-Z0-9_]+)$ ./util/setloc.php?location=$1 
+    RewriteRule ^loc/([a-zA-Z0-9_]+)$/ ./util/setloc.php?location=$1 
 
     #gzip compressed text result files
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+).(txt|csv)$ /WPT/gettext.php?test=$1$2$3_$4&file=$5.$6
-    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+).(txt|csv)$ /WPT/gettext.php?test=$1$2$3_$4_$5&file=$6.$7
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+).(txt|csv)$ ./gettext.php?test=$1$2$3_$4&file=$5.$6
+    RewriteRule ^results/([0-9][0-9])/([0-9][0-9])/([0-9][0-9])/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+)/([a-zA-Z0-9_]+).(txt|csv)$ ./gettext.php?test=$1$2$3_$4_$5&file=$6.$7
 
     #tcpdump capture files
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+).cap$ /WPT/getgzip.php?test=$1&file=$2.cap
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached.cap$ /WPT/getgzip.php?test=$1&file=$2_Cached.cap
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+).cap$ ./getgzip.php?test=$1&file=$2.cap
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached.cap$ ./getgzip.php?test=$1&file=$2_Cached.cap
 
     #page speed
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_pagespeed.txt$ /WPT/getgzip.php?test=$1&file=$2_pagespeed.txt
-    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_pagespeed.txt$ /WPT/getgzip.php?test=$1&file=$2_Cached_pagespeed.txt
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_pagespeed.txt$ ./getgzip.php?test=$1&file=$2_pagespeed.txt
+    RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)_Cached_pagespeed.txt$ ./getgzip.php?test=$1&file=$2_Cached_pagespeed.txt
     
     #embeddable video widget
-    RewriteRule ^video/embed/([a-zA-Z0-9_]+)$ /WPT/video/view.php?embed=1&id=$1
+    RewriteRule ^video/embed/([a-zA-Z0-9_]+)$ ./video/view.php?embed=1&id=$1
 
     #widgets
-    RewriteRule ^widgets/pagespeed/tree$ /WPT/widgets/pagespeed/tree.php [qsa]
+    RewriteRule ^widgets/pagespeed/tree$ ./widgets/pagespeed/tree.php [qsa]
 
     #old pages that were eliminated in the UI rewrite
     RewriteRule ^test$ / [R] 
 
 </IfModule>
+
+php_value post_max_size 30M
+php_value upload_max_filesize 30M
+php_value post_max_filesize 30M
 
 #
 #Caching for images

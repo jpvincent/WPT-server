@@ -98,7 +98,7 @@ $page_description = "Website performance test screen shots$testLabel.";
             <?php
                 if( is_dir("./$videoPath") )
                 {
-                    $createPath = $GLOBALS['basePath']."/video/create.php?tests=$id-r:$run-c:$cached&id={$id}.{$run}.{$cached}";
+                    $createPath = $GLOBALS['basePath']."video/create.php?tests=$id-r:$run-c:$cached&id={$id}.{$run}.{$cached}";
                     echo "<a href=\"$createPath\">Create Video</a> &#8226; ";
                     echo "<a href=\"".$GLOBALS['basePath']."/video/downloadFrames.php?test=$id&run=$run&cached=$cached\">Download Video Frames</a>";
                 }

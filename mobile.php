@@ -26,7 +26,7 @@ $page_description = "Run a free website speed test from around the globe using r
             <div id="test_box-container">
                 <ul class="ui-tabs-nav">
                     <li class="analytical_review"><a href="/">Analytical Review</a></li>
-                    <li class="visual_comparison"><a href="/video/">Visual Comparison</a></li>
+                    <li class="visual_comparison"><a href="<?= $GLOBALS['basePath'] ?>video/">Visual Comparison</a></li>
                     <li class="mobile_test ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#">Mobile</a></li>
                     <li class="traceroute"><a href="/traceroute">Traceroute</a></li>
                 </ul>

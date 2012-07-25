@@ -47,12 +47,12 @@ $page_description = "Import test results.";
             <div id="test_box-container">
                 <ul class="ui-tabs-nav">
                     <li class="analytical_review"><a href="/">Analytical Review</a></li>
-                    <li class="visual_comparison"><a href="/video/">Visual Comparison</a></li>
+                    <li class="visual_comparison"><a href="<?= $GLOBALS['basePath'] ?>video/">Visual Comparison</a></li>
                     <?php
                     if( $settings['mobile'] )
-                        echo '<li class="mobile_test"><a href="/mobile">Mobile</a></li>';
+                        echo '<li class="mobile_test"><a href="'.$GLOBALS['basePath'].'mobile">Mobile</a></li>';
                     ?>
-                    <li class="traceroute"><a href="/traceroute">Traceroute</a></li>
+                    <li class="traceroute"><a href="<?= $GLOBALS['basePath'] ?>traceroute">Traceroute</a></li>
                     <li class="import ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#">Import</a></li>
                 </ul>
                 <div id="analytical-review" class="test_box">

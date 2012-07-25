@@ -1,4 +1,7 @@
 <?php
+
+phpinfo();
+
 chdir('..');
 include 'common.inc';
 $id = $_REQUEST['id'];
@@ -79,7 +82,7 @@ if( is_dir("./$dir") ) {
         }
     }
 } else {
-	trigger_error('Video directory does not exits : '.$dir, E_RECOVERABLE_ERROR);
+	trigger_error('Video directory does not exits : '.$dir, E_WARNING);
 }
 
 if( $xml || $json )

@@ -108,10 +108,10 @@ function LocationChanged()
 
     var marker = locations[loc]['marker'];
     try{
-        marker.setIcon('/WPT/images/map_green.png');
+        marker.setIcon('/jpvincent/WPT/images/map_green.png');
     }catch(err){}
     try{
-        selectedMarker.setIcon('/WPT/images/map_red.png');
+        selectedMarker.setIcon('/jpvincent/WPT/images/map_red.png');
     }catch(err){}
     selectedMarker = marker;
     
@@ -501,13 +501,13 @@ function InitializeMap()
             var marker = new google.maps.Marker({
                 position: pos,
                 title:locations[loc]['label'],
-                icon:'/WPT/images/map_red.png',
+                icon:'/jpvincent/WPT/images/map_red.png',
                 map: map
             });
             
             if( loc == currentLoc )
             {
-                marker.setIcon('/WPT/images/map_green.png');
+                marker.setIcon('/jpvincent/WPT/images/map_green.png');
                 selectedMarker = marker;
             }
             
