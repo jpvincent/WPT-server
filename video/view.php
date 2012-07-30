@@ -1,7 +1,5 @@
 <?php
 
-phpinfo();
-
 chdir('..');
 include 'common.inc';
 $id = $_REQUEST['id'];

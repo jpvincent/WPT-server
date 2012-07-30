@@ -1,4 +1,15 @@
 <?php
+
+// if any query parameter includes a .., exit right away - likely a hack attempt
+foreach($_REQUEST as $key => $val) {
+    if (strlen($val) && strpos($val, '/../') !== false) {
+        header('HTTP/1.1 403 Forbidden');
+        echo "<html><body>Sorry, the request was blocked, please contact us for details";
+        echo "<br>" . htmlspecialchars($key) . " - " . htmlspecialchars($val) . "</body></html>";
+        exit(0);
+    }
+}
+
 // shared initializiation/loading code
 
 
@@ -424,7 +435,6 @@ function GenerateVideoThumbnail($dir)
         $command = "ffmpeg -i \"$dir/video.mp4\" -vframes 1 -ss 00:00:00 -f image2 \"$dir/video.png\"";
         $retStr = exec($command, $output, $result);
     }
-print $retStr;
 }
 
 /**
@@ -1230,8 +1240,10 @@ function RestoreTest($id)
             if( is_dir($testPath) && gz_is_file("$testPath/testinfo.json") )
             {
                 $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
-                if( $testInfo['restored'] && $testInfo['restoredDataOnly'] && !defined('RESTORE_DATA_ONLY') )
-                    $restore = true;
+				if( !is_array($testInfo) || 
+					!count($testInfo) || 
+					($testInfo['restored'] && $testInfo['restoredDataOnly'] && !defined('RESTORE_DATA_ONLY')) )
+					$restore = true;
             }
             else
                 $restore = true;

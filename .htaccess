@@ -8,7 +8,7 @@
     RewriteEngine on
 
     #main pages
-    RewriteRule ^about$ ./about.phps [L]
+    RewriteRule ^about$ ./about.php
     RewriteRule ^traceroute$ ./traceroute.php
     RewriteRule ^mobile$ ./mobile.php
     RewriteRule ^tips$ ./tips.php
@@ -121,6 +121,9 @@
 
     #widgets
     RewriteRule ^widgets/pagespeed/tree$ ./widgets/pagespeed/tree.php [qsa]
+    
+    # versioned path to timeline
+    RewriteRule ^timeline/[0-9]+/(.*)$ ./timeline/$1
 
     #old pages that were eliminated in the UI rewrite
     RewriteRule ^test$ / [R] 
