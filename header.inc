@@ -29,7 +29,7 @@
 ?>
 
 <div id="header">
-    <h1 class="logo"><a href="/">WebPageTest</a></h1>
+    <h1 class="logo"><a href="<?= $GLOBALS['basePath'] ?>/">WebPageTest</a></h1>
     <div class="headerAd">
     <?php
         if( !defined('BARE_UI') )

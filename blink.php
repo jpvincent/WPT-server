@@ -43,7 +43,7 @@ $page_description = "Comparison Test$testLabel.";
             else
             {
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PrepareBlinkTest(this)">
+            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PrepareBlinkTest(this)">
             
             <input type="hidden" name="private" value="1">
             <input type="hidden" name="view" value="blink">

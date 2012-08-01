@@ -23,7 +23,7 @@ $page_description = "Import test results.";
             $tab = 'Home';
             include 'header.inc';
             ?>
-            <form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
+            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
             
             <input type="hidden" name="type" value="traceroute">
             <input type="hidden" name="vo" value="<?php echo $owner;?>">
