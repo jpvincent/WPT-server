@@ -112,7 +112,7 @@ else
             if( FRIENDLY_URLS )
                 echo "<PageSpeedData>http://$host$uri/result/$id/{$fvMedian}_pagespeed.txt</PageSpeedData>\n";
             else
-                echo "<PageSpeedData>http://$host$uri//getgzip.php?test=$id&amp;file={$fvMedian}_pagespeed.txt</PageSpeedData>\n";
+                echo "<PageSpeedData>".$GLOBALS['basePath']."getgzip.php?test=$id&amp;file={$fvMedian}_pagespeed.txt</PageSpeedData>\n";
             xmlDomains($id, $testPath, $fvMedian, 0);
             xmlRequests($id, $testPath, $fvMedian, 0);
             echo "</firstView>\n";
@@ -139,7 +139,7 @@ else
                     if( FRIENDLY_URLS )
                         echo "<PageSpeedData>http://$host$uri/result/$id/{$rvMedian}_Cached_pagespeed.txt</PageSpeedData>\n";
                     else
-                        echo "<PageSpeedData>http://$host$uri//getgzip.php?test=$id&amp;file={$rvMedian}_Cached_pagespeed.txt</PageSpeedData>\n";
+                        echo "<PageSpeedData>".$GLOBALS['basePath']."getgzip.php?test=$id&amp;file={$rvMedian}_Cached_pagespeed.txt</PageSpeedData>\n";
                     xmlDomains($id, $testPath, $fvMedian, 1);
                     xmlRequests($id, $testPath, $fvMedian, 1);
                     echo "</repeatView>\n";
@@ -187,19 +187,27 @@ else
                     }
                     else
                     {
-                        echo "<details>http://$host$uri/details.php?test=$id&amp;run=$i</details>\n";
-                        echo "<checklist>http://$host$uri/performance_optimization.php?test=$id&amp;run=$i</checklist>\n";
-                        echo "<breakdown>http://$host$uri/breakdown.php?test=$id&amp;run=$i</breakdown>\n";
-                        echo "<domains>http://$host$uri/domains.php?test=$id&amp;run=$i</domains>\n";
-                        echo "<screenShot>http://$host$uri/screen_shot.php?test=$id&amp;run=$i</screenShot>\n";
+                        echo "<details>".$GLOBALS['basePath']."details.php?test=$id&amp;run=$i</details>\n";
+                        echo "<checklist>".$GLOBALS['basePath']."performance_optimization.php?test=$id&amp;run=$i</checklist>\n";
+                        echo "<breakdown>".$GLOBALS['basePath']."breakdown.php?test=$id&amp;run=$i</breakdown>\n";
+                        echo "<domains>".$GLOBALS['basePath']."domains.php?test=$id&amp;run=$i</domains>\n";
+                        echo "<screenShot>".$GLOBALS['basePath']."screen_shot.php?test=$id&amp;run=$i</screenShot>\n";
                     }
                     echo "</pages>\n";
                     
                     // urls for the relevant images
                     echo "<thumbnails>\n";
-                    echo "<waterfall>http://$host$uri/result/$id/{$i}_waterfall_thumb.png</waterfall>\n";
-                    echo "<checklist>http://$host$uri/result/$id/{$i}_optimization_thumb.png</checklist>\n";
-                    echo "<screenShot>http://$host$uri/result/$id/{$i}_screen_thumb.jpg</screenShot>\n";
+					if(FRIENDLY_URLS) {
+						echo "<waterfall>http://$host$uri/result/$id/{$i}_waterfall_thumb.png</waterfall>\n";
+	                    echo "<checklist>http://$host$uri/result/$id/{$i}_optimization_thumb.png</checklist>\n";
+	                    echo "<screenShot>http://$host$uri/result/$id/{$i}_screen_thumb.jpg</screenShot>\n";
+						
+					} else  {
+				echo '<waterfall>'.$GLOBALS['basePath'].'thumbnail.php?test='.$id.'&amp;run='.$i.'&amp;file='.$i.'_waterfall_thumb.png</waterfall>'."\n";
+				echo '<checklist>'.$GLOBALS['basePath'].'thumbnail.php?test='.$id.'&amp;run='.$i.'&amp;file='.$i.'_optimization_thumb.png</checklist>'."\n";
+				echo '<screenShot>'.$GLOBALS['basePath'].'thumbnail.php?test='.$id.'&amp;run='.$i.'&amp;file='.$i.'_screen.jpg</screenShot>'."\n";
+					}
+                    
                     echo "</thumbnails>\n";
 
                     echo "<images>\n";
@@ -207,22 +215,39 @@ else
                     echo "<connectionView>http://$host$uri$path/{$i}_connection.png</connectionView>\n";
                     echo "<checklist>http://$host$uri$path/{$i}_optimization.png</checklist>\n";
                     echo "<screenShot>http://$host$uri$path/{$i}_screen.jpg</screenShot>\n";
-                    if( is_file("$testPath/{$i}_screen.png") )
+                    if( is_file("$testPath/{$i}_screen.png") ) {
+	//			./thumbnail.php?test=$1&run=$2&file=$2_screen.jpg
                         echo "<screenShotPng>http://$host$uri$path/{$i}_screen.png</screenShotPng>\n";
+					}
                     echo "</images>\n";
 
                     // raw results
                     echo "<rawData>";
-                    echo "<headers>http://$host$uri$path/{$i}_report.txt</headers>\n";
+					if( FRIENDLY_URLS ) {
+                    	echo "<headers>http://$host$uri$path/{$i}_report.txt</headers>\n";
+					} else {
+						echo '<headers>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_report.txt</headers>'."\n";
+					}
                     if (array_key_exists('bodies', $test['testinfo']) && $test['testinfo']['bodies']) {
-                        echo "<bodies>http://$host$uri$path/{$i}_bodies.zip</bodies>\n";
+						if( FRIENDLY_URLS ) {
+							echo "<bodies>http://$host$uri$path/{$i}_bodies.zip</bodies>\n";
+						} else {
+							echo '<bodies>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_bodies.zip</bodies>'."\n";
+						}
                     }
-                    echo "<pageData>http://$host$uri$path/{$i}_IEWPG.txt</pageData>\n";
-                    echo "<requestsData>http://$host$uri$path/{$i}_IEWTR.txt</requestsData>\n";
-                    echo "<utilization>http://$host$uri$path/{$i}_progress.csv</utilization>\n";
-                    echo "<PageSpeedData>http://$host$uri/result/$id/{$i}_pagespeed.txt</PageSpeedData>\n";
-                    echo "</rawData>\n";
-                    
+					if( FRIENDLY_URLS )
+                    {
+						echo "<pageData>http://$host$uri$path/{$i}_IEWPG.txt</pageData>\n";
+						echo "<requestsData>http://$host$uri$path/{$i}_IEWTR.txt</requestsData>\n";
+						echo "<utilization>http://$host$uri$path/{$i}_progress.csv</utilization>\n";
+						echo "<PageSpeedData>http://$host$uri/result/$id/{$i}_pagespeed.txt</PageSpeedData>\n";
+					} else {
+						echo '<pageData>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_IEWPG.txt</pageData>'."\n";
+						echo '<requestsData>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_IEWTR.txt</requestsData>'."\n";
+						echo '<utilization>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_progress.csv</utilization>'."\n";
+						echo '<PageSpeedData>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_pagespeed.txt</PageSpeedData>'."\n";
+					}
+					echo "</rawData>\n";
                     // video frames
                     if( $test['test']['video'])
                     {

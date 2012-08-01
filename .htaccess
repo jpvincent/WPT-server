@@ -18,7 +18,7 @@
 
     #result paths
     RewriteRule ^result/([a-zA-Z0-9_]+)$ ./result/$1/ [R] 
-    RewriteRule ^result/([a-zA-Z0-9_]+)/$ ./results.php?test=$1 [qsa]
+    RewriteRule ^result/([a-zA-Z0-9_]+)$ ./results.php?test=$1 [qsa]
     RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall$ ./result/$1/$2/details/ [R]
     RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/waterfall/$ ./result/$1/$2/details/ [R]
     RewriteRule ^result/([a-zA-Z0-9_]+)/([0-9]+)/details/$ ./details.php?test=$1&run=$2 [qsa]

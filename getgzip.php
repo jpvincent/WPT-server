@@ -1,6 +1,7 @@
 <?php
+
 include('common.inc');
-$file = "$testPath/{$_GET['file']}";
+$file = "$testPath/{$_GET['file']}".'.gz';
 
 if( isset($_GET['file']) && 
     strlen($_GET['file']) && 
