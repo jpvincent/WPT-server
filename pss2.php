@@ -35,7 +35,7 @@ $page_description = "Comparison Test$testLabel.";
             $tab = 'New Comparison';
             include 'header.inc';
             ?>
-            <form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PreparePSSTest(this)">
+            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PreparePSSTest(this)">
             
             <input type="hidden" name="private" value="1">
             <input type="hidden" name="view" value="pss_path">
