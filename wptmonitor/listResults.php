@@ -176,6 +176,7 @@ try
   $q->orderBy('r.WPTResultId');
   $pager = new Doctrine_Pager( $q, $resultsCurrentPage, $resultsPerPage );
   $result = $pager->execute();
+
   $smarty->assign( 'wptResultURL', $wptResult );
   $smarty->assign( 'currentPage', $resultsCurrentPage );
   $smarty->assign( 'maxpages', $pager->getLastPage() );
@@ -192,6 +193,9 @@ catch ( Exception $e )
   print 'Exception : ' . $e->getMessage();
 }
 unset( $pager );
+
+//print_r( $q->fetchOne() );
+
 unset( $result );
 $smarty->display( 'job/listResults.tpl' );
 

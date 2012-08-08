@@ -696,8 +696,12 @@ function processResultsForAll( $resultId = null ) {
         $headers = file_get_contents($headersLocation);
         $pageDataLocation = $xml->data->run[0]->firstView->rawData->pageData;
         $pageData = file_get_contents($pageDataLocation);
-        $pageDataLocationRepeatView = $xml->data->run[0]->repeatView->rawData->pageData;
-        $pageDataRepeatView = file_get_contents($pageDataLocationRepeatView );
+		
+		if(property_exists($xml->data->run[0], 'repeatView') === true) {
+			$pageDataLocationRepeatView = $xml->data->run[0]->repeatView->rawData->pageData;
+			//$pageDataRepeatView = file_get_contents($pageDataLocationRepeatView );
+		}
+        	
 
         if ( $pageData ){
           $lines = explode("\n",$pageData);
@@ -745,20 +749,28 @@ function processResultsForAll( $resultId = null ) {
 //          $avgFV = $xml->data->average->firstView;
 //          $avgRV = $xml->data->average->repeatView;
           $requestDataLocation = $xml->data->run[$avgRun-1]->firstView->rawData->requestsData;
-          $requestDataLocationRepeatView = $xml->data->run[$avgRun-1]->repeatView->rawData->requestsData;
+			if(property_exists($xml->data->run[$avgRun-1], 'repeatView') === true) {
+				$requestDataLocationRepeatView = $xml->data->run[$avgRun-1]->repeatView->rawData->requestsData;
+			}
           $pageDataLocation = $xml->data->run[$avgRun-1]->firstView->rawData->pageData;
           // TODO: Not sure if this was left out as a copy paste error 1/8/2012
-          $pageDataLocationRepeatView = $xml->data->run[$avgRun-1]->repeatView->rawData->pageData;
+			if(property_exists($xml->data->run[$avgRun-1], 'repeatView') === true) {
+				$pageDataLocationRepeatView = $xml->data->run[$avgRun-1]->repeatView->rawData->pageData;
+			}
         } else {
 //          $avgFV = $xml->data->run[$runToUse - 1]->firstView->results;
 //          $avgRV = $xml->data->run[$runToUse - 1]->repeatView->results;
           $requestDataLocation = $xml->data->run[$runToUse-1]->firstView->rawData->requestsData;
-          $requestDataLocationRepeatView = $xml->data->run[$runToUse-1]->repeatView->rawData->requestsData;
+			if(property_exists($xml->data->run[$avgRun-1], 'repeatView') === true) {
+				$requestDataLocationRepeatView = $xml->data->run[$runToUse-1]->repeatView->rawData->requestsData;
+			}
           // TODO: Not sure if this was left out as a copy paste error 1/8/2012
           $pageDataLocation = $xml->data->run[$runToUse-1]->firstView->rawData->pageData;
           // TODO: Not sure if this was a copy paste error 1/8/2012
           //$pageDataLocationRepeatView = $xml->data->run[$avgRun-1]->repeatView->rawData->pageData;
-          $pageDataLocationRepeatView = $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
+			if(property_exists($xml->data->run[$avgRun-1], 'repeatView') === true) {
+				$pageDataLocationRepeatView = $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
+			}
        }
         $result['DialerId']=$dialerId;
 
@@ -768,10 +780,13 @@ function processResultsForAll( $resultId = null ) {
 	
           $pageData = file_get_contents(trim($pageDataLocation));
           $pageDataArray = delimitedToArray($pageData,"\t",false);
-
-		logOutput('[LOG] will process pageDataArrayRepeatView:'.$pageDataLocationRepeatView);
-          $pageDataRepeatView = file_get_contents(trim($pageDataLocationRepeatView));
-          $pageDataArrayRepeatView = delimitedToArray($pageDataRepeatView,"\t",false);
+			
+			if(!empty($pageDataLocationRepeatView)) {
+				logOutput('[LOG] will process pageDataArrayRepeatView:'.$pageDataLocationRepeatView);
+		          $pageDataRepeatView = file_get_contents(trim($pageDataLocationRepeatView));
+		          $pageDataArrayRepeatView = delimitedToArray($pageDataRepeatView,"\t",false);
+				
+			}
 		logOutput('[LOG] ended  pageDataArrayRepeatView');
         } catch (Exception $ex){
           logOutput("[WARN] [ProcessResults] Exception processing page data. Message: ".$ex->getMessage());
@@ -813,8 +828,9 @@ logOutput('[LOG] will process pageDataArray ');
              $result['AvgRepeatViewFullyLoadedBytesIn'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Bytes In'));
              $result['AvgRepeatViewFirstByte'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Time to Repeat Byte (ms)'));
              $result['AvgRepeatViewStartRender'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Time to Start Render (ms)'));
-             $result->save();
-           }
+             
+           	}
+			$result->save();
           }
           
 		/*if ( sizeof($pageDataArray) < 2 ){

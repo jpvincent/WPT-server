@@ -165,8 +165,9 @@ Options -Indexes
 
 #
 # Block access to .inc and .ini files
-#
-<Files ~ "\.(inc|ini|gz)$">
+# JPV removed gz as I was having errors like [Thu Aug 02 11:05:01 2012] [error] [client 94.23.51.58] client denied by server configuration: /home/www/jpvincent/WPT/results/12/08/02/RM/2b8369cfca684f79adc6c731fbb56fc0/3_Cached_IEWPG.txt.gz
+
+<Files ~ "\.(inc|ini)$">
     order allow,deny
     deny from all
 </Files>
