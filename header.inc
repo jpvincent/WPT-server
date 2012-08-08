@@ -253,7 +253,11 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader )
             $cTxt2 = '_Cached';
         if( gz_is_file("$testPath/$run{$cTxt2}_pagespeed.txt") )
             $tabs['Page Speed'] = FRIENDLY_URLS ? $GLOBALS['basePath']."/result/$id/$run/pagespeed/$cTxt" : $GLOBALS['basePath']."/pagespeed.php?test=$id&run=$run&cached=$cached";
-
+		
+		//if(file_exists($testPath.'/'.$run.'_progress.csv'))
+			$tabs['User Experience'] = $GLOBALS['basePath']."/front-experience.php?test=$id&run=$run&cached=$cached";
+			//$tabs['Frontend'] = $testPath.'/'.$run.'_progress.csv';
+		
         $tabs['Content Breakdown'] = FRIENDLY_URLS ? $GLOBALS['basePath']."result/$id/$run/breakdown/$cTxt" : $GLOBALS['basePath']."breakdown.php?test=$id&run=$run&cached=$cached";
         $tabs['Domains'] = FRIENDLY_URLS ? $GLOBALS['basePath']."/result/$id/$run/domains/$cTxt" : $GLOBALS['basePath']."/domains.php?test=$id&run=$run&cached=$cached";
         
