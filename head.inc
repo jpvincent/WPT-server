@@ -12,9 +12,10 @@ if( strlen($page_description) )
 
 <link rel="shortcut icon" href="<?= $GLOBALS['basePath'] ?>/images/favicon.ico" type="image/vnd.microsoft.icon">
 <link rel="icon" href="<?= $GLOBALS['basePath'] ?>/images/favicon.png" type="image/png">
-<link rel="stylesheet" href="<?php echo $GLOBALS['cdnPath']; ?>/pagestyle.css?v=<?php echo VER_CSS;?>" type="text/css">
+<link rel="stylesheet" href="<?= $GLOBALS['basePath'] ?>makeCSS.php?page=<?= $gaTemplate ?>" type="text/css">
 
 <?php 
+
     if(extension_loaded('newrelic'))
         echo @newrelic_get_browser_timing_header();
     if (is_file('./settings/customhead.inc.php')) {
@@ -80,4 +81,3 @@ function html2rgb($color)
 
     return array($r, $g, $b);
 }
-?>

@@ -8,86 +8,13 @@ $data = loadPageRunData($testPath, $run, $cached, array('SpeedIndex' => true));
 $page_keywords = array('Performance Test','Details','Webpagetest','Website Speed Test','Page Speed');
 $page_description = "Website performance test details$testLabel";
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE HTML>
 <html>
     <head>
         <title>WebPagetest Test Details<?php echo $testLabel; ?></title>
-        <?php $gaTemplate = 'Details'; include ('head.inc'); ?>
-        <style type="text/css">
-        div.bar {
-			height:12px; 
-			margin-top:auto; 
-			margin-bottom:auto;
-		}
-		
-		.left {text-align:left;}
-		.center {text-align:center;}
-
-		.indented1 {padding-left: 40pt;}
-		.indented2 {padding-left: 80pt;}
-		
-        td {
-			white-space:nowrap; 
-			text-align:left; 
-			vertical-align:middle; 
-		}
-		
-        td.center {
-			text-align:center;
-		}
-
-		table.details {
-		  margin-left:auto; margin-right:auto;
-		  background: whitesmoke;
-		  border-collapse: collapse;
-		}
-		table.details th, table.details td {
-		  border: 1px silver solid;
-		  padding: 0.2em;
-		  text-align: center;
-		  font-size: smaller;
-		}
-		table.details th {
-		  background: gainsboro;
-		}
-		table.details caption {
-		  margin-left: inherit;
-		  margin-right: inherit;
-		  background: whitesmoke;
-		}
-		table.details th.reqUrl, table.details td.reqUrl {
-		  text-align: left;
-		  width: 30em; 
-		  word-wrap: break-word;
-		}
-		table.details td.even {
-		  background: gainsboro;
-		}
-		table.details td.odd {
-		  background: whitesmoke;
-		}
-		table.details td.evenRender {
-		  background: #dfffdf;
-		}
-		table.details td.oddRender {
-		  background: #ecffec;
-		}
-		table.details td.evenDoc {
-		  background: #dfdfff;
-		}
-		table.details td.oddDoc {
-		  background: #ececff;
-		}
-		table.details td.warning {
-		  background: #ffff88;
-		}
-		table.details td.error {
-		  background: #ff8888;
-		}
-        <?php
-        include "waterfall.css";
-        ?>
-        </style>
+        <?php $gaTemplate = 'Details'; 
+		$pageId = 'details';
+		include ('head.inc'); ?>
     </head>
     <body>
         <div class="page">
