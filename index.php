@@ -401,7 +401,7 @@ $loc = ParseLocations($locations);
                                     </div></div>
                                 </div>
                                 
-                                <input type="checkbox" name="video" id="videoCheck" class="checkbox before_label">
+                                <input type="checkbox" checked name="video" id="videoCheck" class="checkbox before_label">
                                 <label for="videoCheck" class="auto_width">Capture Video</label>
                                 <br>
                                 <br>
