@@ -1,8 +1,11 @@
 <?php
+if(extension_loaded('newrelic')) { 
+    newrelic_add_custom_tracer('RestoreTest');
+}
 
 // if any query parameter includes a .., exit right away - likely a hack attempt
 foreach($_REQUEST as $key => $val) {
-    if (strlen($val) && strpos($val, '/../') !== false) {
+    if (is_string($val) && strlen($val) && strpos($val, '/../') !== false) {
         header('HTTP/1.1 403 Forbidden');
         echo "<html><body>Sorry, the request was blocked, please contact us for details";
         echo "<br>" . htmlspecialchars($key) . " - " . htmlspecialchars($val) . "</body></html>";
@@ -11,25 +14,29 @@ foreach($_REQUEST as $key => $val) {
 }
 
 // shared initializiation/loading code
-
-
-/*ini_set('post_max_size', '30M');
-ini_set('upload_max_filesize', '30M');
-ini_set('post_max_filesize', '30M');
-
-phpinfo();
-*/
 set_time_limit(300);
 if (!array_key_exists('debug', $_REQUEST) && (!isset($debug) || !$debug)) {
     error_reporting(0);
-} else {
-	error_reporting(-1);
 }
 umask(0);
 date_default_timezone_set('UTC');
 extract($_POST, EXTR_SKIP|EXTR_PREFIX_ALL|EXTR_REFS, 'req');
 extract($_GET, EXTR_SKIP|EXTR_PREFIX_ALL|EXTR_REFS, 'req');
 
+// set up a global curl context that can be used for keep-alive connections (particularly when doing bulk relays)
+if (function_exists('curl_init')) {
+    $CURL_CONTEXT = curl_init();
+    if ($CURL_CONTEXT !== false) {
+        curl_setopt($CURL_CONTEXT, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($CURL_CONTEXT, CURLOPT_FAILONERROR, true);
+        curl_setopt($CURL_CONTEXT, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($CURL_CONTEXT, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($CURL_CONTEXT, CURLOPT_DNS_CACHE_TIMEOUT, 600);
+        curl_setopt($CURL_CONTEXT, CURLOPT_MAXREDIRS, 10);
+        curl_setopt($CURL_CONTEXT, CURLOPT_TIMEOUT, 600);
+    }
+} else
+    $CURL_CONTEXT = false;
 
 require_once('./logging.inc');
 
@@ -46,9 +53,9 @@ else
 
 // constants
 define('VER_WEBPAGETEST', '2.2.1');   // webpagetest version
-define('VER_CSS', 58);           // version of the sitewide css file
-define('VER_JS', 20);            // version of the sitewide javascript file
-define('VER_JS_TEST', 20);       // version of the javascript specific to the test pages
+define('VER_CSS', 59);           // version of the sitewide css file
+define('VER_JS', 28);            // version of the sitewide javascript file
+define('VER_JS_TEST', 21);       // version of the javascript specific to the test pages
 define('VER_JS_RUNNING', 1);     // version of the javascript specific to the test running status page
 define('VER_TIMELINE', 1);       // version of the timeline javascript
 define('UNKNOWN_TIME', -1);      // Value used as a flag for an unknown time.
@@ -66,17 +73,26 @@ if (!is_dir($tempDir))
 $tempDir .= '/';
 define('PCLZIP_TEMPORARY_DIR', $tempDir);
 
-if (isset($req_bare)) {
+if (isset($req_embed)) {
+    define('EMBED', true);
+    define('BARE_UI', true);
+} elseif (isset($req_bare)) {
     define('BARE_UI', true);
 }
 // load the install-specific settings
 $settings = parse_ini_file('./settings/settings.ini');
-if (!isset($settings) || !is_array($settings)) {
+if (!isset($settings) || !is_array($settings))
     $settings = array();
-}
-if (!array_key_exists('nogzip', $settings)) {
+if (!array_key_exists('nogzip', $settings))
     $settings['nogzip'] = false;
-}
+if (!array_key_exists('nolinks', $settings))
+    $settings['nolinks'] = 0;
+if (!array_key_exists('shardTests', $settings))
+    $settings['shard_tests'] = 0;
+
+$privateInstall = true;
+if( stristr($_SERVER['HTTP_HOST'] , '.webpagetest.org') !== false )
+    $privateInstall = false;
 
 // override some settings from the URI
 if (isset($req_bulk)) {
@@ -91,17 +107,6 @@ $GLOBALS['ptotocol'] = 'http';
 if ($is_ssl) {
     $GLOBALS['ptotocol'] = 'https';
 }
-
-$GLOBALS['basePath'] = '';
-if (isset($settings['basePath'])) {
-	/*$protocol = strtolower( $_SERVER["SERVER_PROTOCOL"] );
-	$protocol = (stripos('https', $protocol) !== false)?'https':'http';
-	*/
-	$GLOBALS['basePath'] = $GLOBALS['ptotocol'].'://'.$_SERVER["HTTP_HOST"].$settings['basePath'];
-	if(empty($GLOBALS['cdnPath']))
-		$GLOBALS['cdnPath'] = $GLOBALS['basePath'];
-}
-
 $median_metric = 'loadTime';
 if (array_key_exists('medianMetric', $_REQUEST)) {
     $median_metric = $_REQUEST['medianMetric'];
@@ -199,6 +204,7 @@ if (strlen($id)) {
     }
     $cached = @(int)$req_cached;  // define a global used in other files
     $cachedText = $cached ? '_Cached' : '';
+    $test = array();
     if (is_file("$testPath/testinfo.ini")) {
         $test = parse_ini_file("$testPath/testinfo.ini",true);
         touch("$testPath/testinfo.ini");
@@ -303,24 +309,20 @@ function GetTestPath($id)
 {
     global $settings;
     $base = 'results';
-    $testPath = "$base/$id";
     // see if it is a relay test (includes the key)
-    if( strpos($id, '.') !== false )
-    {
+    if( strpos($id, '.') !== false ) {
         $parts = explode('.', $id);
-        if( count($parts) == 2 )
-        {
+        if( count($parts) == 2 ) {
             $key = trim($parts[0]);
-            if( strlen($key) )
-            {
+            if( strlen($key) ) {
                 $base .= "/relay/$key";
                 $id = trim($parts[1]);
             }
         }
     }
     
-    if( strpos($id, '_') == 6 )
-    {
+    $testPath = "$base/$id";
+    if( strpos($id, '_') == 6 ) {
         $parts = explode('_', $id);
         
         // see if we have an extra level of hashing
@@ -329,9 +331,7 @@ function GetTestPath($id)
             $dir .= '/' . $parts[2];
         
         $testPath = "$base/" . substr($parts[0], 0, 2) . '/' . substr($parts[0], 2, 2) . '/' . substr($parts[0], 4, 2) . '/' . $dir;
-    }
-    elseif( strlen($settings['olddir']) )
-    {
+    } elseif( strlen($settings['olddir']) ) {
         if( $settings['oldsubdir'] )
             $testPath = "$base/{$settings['olddir']}/_" . strtoupper(substr($id, 0, 1)) . "/$id";
         else
@@ -426,7 +426,6 @@ function GetVideoPath($id, $find = false)
 */
 function GenerateVideoThumbnail($dir)
 {
-	//print 'GenerateVideoThumbnail';
     $dir = realpath($dir);
     if( is_file("$dir/video.mp4") && !is_file("$dir/video.png") )
     {
@@ -1005,8 +1004,9 @@ function ParseLocations(&$locations) {
     }
 
     // see if they have a saved location from their cookie
-    $currentLoc = GetLocationFromConfig($locations, $_COOKIE["cfg"] );
-
+    $currentLoc = null;
+    if (array_key_exists('cfg', $_COOKIE))
+        $currentLoc = GetLocationFromConfig($locations, $_COOKIE["cfg"] );
     if (!$currentLoc || !isset($loc['locations'][$currentLoc])) {
         // nope, try thee default
         $currentLoc = $locations['locations']['default'];
@@ -1039,7 +1039,7 @@ function ParseLocations(&$locations) {
 
     // default to the browser from their saved cookie
     $currentBrowser = '';
-    if ($_COOKIE["cfg"] && isset($locations[$_COOKIE["cfg"]])) {
+    if (array_key_exists('cfg', $_COOKIE) && array_key_exists($_COOKIE["cfg"], $locations)) {
         $currentBrowser = str_replace(' ', '', $locations[$_COOKIE["cfg"]]['browser']);
         $currentConfig = $_COOKIE["cfg"];
     }
@@ -1146,8 +1146,9 @@ function GetTestInfoHtml($includeScript = true)
     global $login;
     global $settings;
     global $admin;
+    global $privateInstall;
     $html = '';
-    if( $admin && isset($test['testinfo']['tester']) )
+    if( ($admin || $privateInstall) && isset($test['testinfo']['tester']) )
         $html .= 'Tester: ' . $test['testinfo']['tester'] . '<br>';
     if( $dom ) 
         $html .= 'DOM Element: <b>' . $dom . '</b><br>';
@@ -1155,7 +1156,7 @@ function GetTestInfoHtml($includeScript = true)
         $html .= '<b>First View only</b><br>';
     if( (int)$test['test']['runs'] > 1 ) 
         $html .= 'Test runs: <b>' . $test['test']['runs'] . '</b><br>';
-    if( (int)$test['test']['authenticated'] == 1) 
+    if( array_key_exists('authenticated', $test['test']) && (int)$test['test']['authenticated'] == 1) 
         $html .= '<b>Authenticated: ' . $login . '</b><br>';
     if( isset($test['testinfo']) && !strcasecmp($test['testinfo']['connectivity'], 'custom') )
     {
@@ -1240,10 +1241,13 @@ function RestoreTest($id)
             if( is_dir($testPath) && gz_is_file("$testPath/testinfo.json") )
             {
                 $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
-				if( !is_array($testInfo) || 
-					!count($testInfo) || 
-					($testInfo['restored'] && $testInfo['restoredDataOnly'] && !defined('RESTORE_DATA_ONLY')) )
-					$restore = true;
+                if( !is_array($testInfo) || 
+                    !count($testInfo) || 
+                    (array_key_exists('restored', $testInfo) && 
+                    $testInfo['restored'] && 
+                    array_key_exists('restoredDataOnly', $testInfo) &&
+                    $testInfo['restoredDataOnly']) )
+                    $restore = true;
             }
             else
                 $restore = true;
@@ -1374,8 +1378,7 @@ function GetTesterCount($location)
 function AddJobFile($workDir, $file, $priority, $queue_limit = 0)
 {
     $ret = false;
-    if( LoadJobQueue($workDir, $queue) )
-    {
+    if (LoadJobQueue($workDir, $queue)) {
         if( !$queue_limit || count($queue[$priority]) < $queue_limit )
             if( array_push($queue[$priority], $file) )
                 $ret = SaveJobQueue($workDir, $queue);
@@ -1384,33 +1387,45 @@ function AddJobFile($workDir, $file, $priority, $queue_limit = 0)
 }
 
 /**
+* Add a job to the front of the work queue (assume it is locked)
+*/
+function AddJobFileHead($workDir, $file, $priority, $atFront = false)
+{
+    $ret = false;
+    if (LoadJobQueue($workDir, $queue)) {
+        // we actually want to insert it as the second test if there is already a queue
+        if (!$atFront && count($queue[$priority]))
+            $first = array_shift($queue[$priority]);
+        if (array_unshift($queue[$priority], $file)) {
+            if (!$atFront && isset($first) && strlen($first))
+                array_unshift($queue[$priority], $first);
+            $ret = SaveJobQueue($workDir, $queue);
+        }
+    }
+    return $ret;
+}
+
+/**
 * Get a job from the given work queue (assume it is locked)
 */
-function GetJobFile($workDir)
-{
+function GetJobFile($workDir, &$priority) {
     $file = null;
     $modified = false;
     
-    if( LoadJobQueue($workDir, $queue) )
-    {
+    if (LoadJobQueue($workDir, $queue)) {
         $priority = 0;
-        while( !isset($file) && $priority <= 9 )
-        {
+        while (!isset($file) && $priority <= 9) {
             $file = array_shift($queue[$priority]);
             if (isset($file)) {
                 $modified = true;
             }
             if (isset($file) && !is_file("$workDir/$file")) {
                 unset($file);
-            } else {
+            } else if (!isset($file)) {
                 $priority++;
             }
         }
 
-        if( isset($file) ) {
-            $file = "$workDir/$file";
-        }
-        
         if ($modified) {
             SaveJobQueue($workDir, $queue);
         }
@@ -1458,67 +1473,66 @@ function FindJobPosition($workDir, $testId)
 function LoadJobQueue($workDir, &$queue)
 {
     $ret = true;
-    
-    $queue = null;
-    $queueName = sha1($workDir);
-    $queueFile = "./tmp/$queueName.queue";
-    if( is_file($queueFile) ) {
-        $queue = json_decode(file_get_contents($queueFile), true);
-        // re-scan the directory if the queue is empty
-        if (isset($queue)) {
-            if (is_array($queue)) {
-                $empty = true;
-                foreach ($queue as &$p) {
-                    if (count($p)) {
-                        $empty = false;
-                        break;
+    if (isset($workDir) && strlen($workDir)) {
+        $queue = null;
+        $queueName = sha1($workDir);
+        $queueFile = "./tmp/$queueName.queue";
+        if( is_file($queueFile) ) {
+            $queue = json_decode(file_get_contents($queueFile), true);
+            // re-scan the directory if the queue is empty
+            if (isset($queue)) {
+                if (is_array($queue)) {
+                    $empty = true;
+                    foreach ($queue as &$p) {
+                        if (count($p)) {
+                            $empty = false;
+                            break;
+                        }
                     }
-                }
-                if ($empty) {
+                    if ($empty) {
+                        unset($queue);
+                    }
+                } else {
                     unset($queue);
                 }
-            } else {
-                unset($queue);
-            }
-        }
-    }
-
-    if (!isset($queue)) {
-        // build the queue from disk
-        $files = array();
-        $f = scandir($workDir);
-        foreach( $f as $file )
-        {
-            if( is_file("$workDir/$file") )
-            {
-                $fileTime = filemtime("$workDir/$file");
-                if( $fileTime && !isset($files[$fileTime]) )
-                    $files[$fileTime] = $file;
-                else
-                    $files[] = $file;
             }
         }
 
-        // sort it by time
-        ksort($files);
-        
-        // now add them to the various priority queues
-        $queue = array();
-        for($priority = 0; $priority <= 9; $priority++)
-            $queue[$priority] = array();
+        if (!isset($queue)) {
+            // build the queue from disk
+            $files = array();
+            $f = scandir($workDir);
+            if ($f !== false) {
+                foreach( $f as $file ) {
+                    if( is_file("$workDir/$file") ) {
+                        $fileTime = filemtime("$workDir/$file");
+                        if( $fileTime && !isset($files[$fileTime]) )
+                            $files[$fileTime] = $file;
+                        else
+                            $files[] = $file;
+                    }
+                }
+            }
+
+            // sort it by time
+            ksort($files);
             
-        foreach($files as $file)
-        {
-            if ( stripos($file, '.url') )
-                $queue[0][] = $file;
-            else if (preg_match('/\.p([1-9])/i', $file, $matches))
-            {
-                $priority = (int)$matches[1];
-                $queue[$priority][] = $file;
+            // now add them to the various priority queues
+            $queue = array();
+            for($priority = 0; $priority <= 9; $priority++)
+                $queue[$priority] = array();
+                
+            foreach($files as $file) {
+                if ( stripos($file, '.url') )
+                    $queue[0][] = $file;
+                else if (preg_match('/\.p([1-9])/i', $file, $matches)) {
+                    $priority = (int)$matches[1];
+                    $queue[$priority][] = $file;
+                }
             }
+            
+            SaveJobQueue($workDir, $queue);
         }
-        
-        SaveJobQueue($workDir, $queue);
     }
     
     return $ret;
@@ -1566,7 +1580,7 @@ function GetTesters($locationId)
             {
                 if( !$tester['offline'] )
                 {
-                    $entry = array('pc' => $tester['pc'], 'ec2' => $tester['ec2'], 'ip' => $tester['ip'], 'version' => $tester['ver'], 'freedisk' => $tester['freedisk']);
+                    $entry = array('pc' => $tester['pc'], 'ec2' => $tester['ec2'], 'ip' => $tester['ip'], 'version' => $tester['ver'], 'freedisk' => $tester['freedisk'], 'ie' => $tester['ie'], 'dns' => $tester['dns']);
                     
                     // last time it checked in
                     if( isset($tester['updated']) )
@@ -1726,7 +1740,7 @@ function ValidateTestId(&$id) {
         }
     }
 
-    if (preg_match('/^[a-zA-Z0-9_]+$/', @$testId)) {
+    if (preg_match('/^(?:[a-zA-Z0-9_]+\.?)+$/', @$testId)) {
         $valid = true;
     } else {
         $id = '';
@@ -1780,4 +1794,107 @@ function SecureDir($path) {
     }
 }
 
+/**
+* Update the list of testers and the last contact time for the given tester
+* 
+* @param mixed $location
+* @param mixed $tester
+* @param mixed $testerInfo
+*/
+function UpdateTester($location, $tester, $testerInfo = null) {
+    if ($lock = LockLocation("testers-$location")) {
+        $testers = json_decode(file_get_contents("./tmp/$location.tm"), true);
+        if( !count($testers) )
+            $testers = array();
+        if( !isset($testers[$tester]) )
+            $testers[$tester] = array();
+        elseif( !is_array($testers[$tester]) )
+        {
+            unset($testers[$tester]);
+            $testers[$tester] = array();
+        }
+        $now = time();
+        $testers[$tester]['updated'] = $now;
+        if (!array_key_exists('first_contact', $testers[$tester])) {
+            $testers[$tester]['first_contact'] = $now;
+        }
+        if (isset($testerInfo) && is_array($testerInfo)) {
+            // keep track of the FIRST idle request as the last work time so we can have an accurate "idle time"
+            if (array_key_exists('test', $testerInfo) && 
+                (strlen($testerInfo['test']) || 
+                 (array_key_exists('test', $testers[$tester]) &&
+                  strlen($testers[$tester]['test'])))) {
+                $testers[$tester]['last'] = $now;
+            }
+            // update any other data passed in for the tester
+            foreach ($testerInfo as $key => $value) {
+                $testers[$tester][$key] = $value;
+            }
+        }
+        // delete any testers in this location that haven't checked in in over an hour
+        foreach( $testers as $name => &$data ) {
+            if( $now > $data['updated'] ) {
+                $elapsed = $now - $data['updated'];
+                if( $elapsed > 3600 )
+                    unset( $testers[$name] );
+            }
+        }
+                
+        file_put_contents("./tmp/$location.tm", json_encode($testers));
+        UnlockLocation($lock);
+    }
+}
+
+/**
+* Wrapper function that will use CURL or file_get_contents to retrieve the contents of an URL
+* 
+* @param mixed $url
+*/
+function http_fetch($url) {
+    $ret = null;
+    global $CURL_CONTEXT;
+    if ($CURL_CONTEXT !== false) {
+        curl_setopt($CURL_CONTEXT, CURLOPT_URL, $url);
+        $ret = curl_exec($CURL_CONTEXT);
+    } else {
+        $context = stream_context_create(array('http' => array('header'=>'Connection: close', 'timeout' => 600)));
+        $ret = file_get_contents($url, false, $context);
+    }
+    return $ret;
+}
+
+/**
+* Generate a shard key to better spread out the test results
+* 
+*/
+function ShardKey($test_num) {
+    global $settings;
+    $key = '';
+
+    if( array_key_exists('bucket_size', $settings) && $settings['bucket_size'] > 0 ) {
+        // group the tests sequentially
+        $bucket_size = (int)$settings['bucket_size'];
+        $bucket = $test_num / $bucket_size;
+        $key = NumToString($bucket) . '_';
+    } else {
+        // default to a 2-digit shard (1024-way shard)
+        $size = 2;
+        if( array_key_exists('shard', $settings) )
+            $size = (int)$settings['shard'];
+        
+        if( $size > 0 && $size < 20 )
+        {
+            $digits = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+            $digitCount = strlen($digits) - 1;
+            while( $size )
+            {
+                $key .= substr($digits, rand(0, $digitCount), 1);
+                $size--;
+            }
+            $key .= '_';
+        }
+    }
+    
+    return $key;
+}
 ?>

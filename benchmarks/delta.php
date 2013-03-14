@@ -32,10 +32,14 @@ else {
 }
 $metrics = array('docTime' => 'Load Time (onload)', 
                 'SpeedIndex' => 'Speed Index',
+                'SpeedIndexDT' => 'Speed Index (Dev Tools)',
                 'TTFB' => 'Time to First Byte', 
                 'titleTime' => 'Time to Title', 
                 'render' => 'Time to Start Render', 
+                'visualComplete' => 'Time to Visually Complete', 
+                'VisuallyCompleteDT' => 'Time to Visually Complete (Dev Tools)', 
                 'fullyLoaded' => 'Load Time (Fully Loaded)', 
+                'server_rtt' => 'Estimated RTT to Server',
                 'domElements' => 'Number of DOM Elements', 
                 'connections' => 'Connections', 
                 'requests' => 'Requests (Fully Loaded)', 
@@ -76,7 +80,7 @@ if (array_key_exists('metric', $_REQUEST)) {
         <meta name="description" content="Speed up the performance of your web pages with an automated analysis">
         <meta name="author" content="Patrick Meenan">
         <?php $gaTemplate = 'About'; include ('head.inc'); ?>
-        <script type="text/javascript" src="<?= $GLOBALS['basePath'] ?>js/dygraph-combined.js"></script>
+        <script type="text/javascript" src="/js/dygraph-combined.js"></script>
         <style type="text/css">
         .chart-container { clear: both; width: 875px; height: 350px; margin-left: auto; margin-right: auto; padding: 0;}
         .benchmark-chart { float: left; width: 700px; height: 350px; }
@@ -152,8 +156,12 @@ if (array_key_exists('metric', $_REQUEST)) {
                         ?>
                         var index = p.yval.toFixed(5);
                         var menu = '<div><h4>View test for ' + data[index].url + '</h4>';
-                        menu += '<a href="'.$GLOBALS['basePath'].'result/' + data[index].ref + '/?medianMetric=' + medianMetric + '">' + ref + '</a><br>';
-                        menu += '<a href="'.$GLOBALS['basePath'].'result/' + data[index].cmp + '/?medianMetric=' + medianMetric + '">' + cmp + '</a><br>';
+                        menu += '<a href="/result/' + data[index].ref + '/?medianMetric=' + medianMetric + '" target="_blank">' + ref + '</a><br>';
+                        menu += '<a href="/result/' + data[index].cmp + '/?medianMetric=' + medianMetric + '" target="_blank">' + cmp + '</a><br>';
+                        var compare = "/video/compare.php?ival=100&medianMetric=" + medianMetric + "&tests=";
+                        compare += encodeURIComponent(data[index].ref + "-l:" + ref.replace("-","").replace(":",""));
+                        compare += "," + encodeURIComponent(data[index].cmp + "-l:" + cmp.replace("-","").replace(":",""));
+                        menu += '<br><a href="' + compare + '">Filmstrip Comparison</a>';
                         menu += '</div>';
                         $.modal(menu, {overlayClose:true});
                     }
@@ -196,7 +204,7 @@ if (array_key_exists('metric', $_REQUEST)) {
                                         $cached = '';
                                         if ($test['cached'])
                                             $cached = 'cached/';
-                                        echo "<a href=\"".$GLOBALS['basePath']."result/{$test['id']}/{$test['run']}/details/$cached\">{$test['error']}</a>";
+                                        echo "<a href=\"/result/{$test['id']}/{$test['run']}/details/$cached\">{$test['error']}</a>";
                                     }
                                     echo "</li>";
                                 }

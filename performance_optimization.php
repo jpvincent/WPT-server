@@ -55,9 +55,9 @@ $page_description = "Website performance optimization recommendations$testLabel.
                 <?php
                     echo '<img alt="Optimization Checklist" id="image" src="';
                     if( FRIENDLY_URLS )
-                        echo $GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_optimization.png';
+                        echo substr($testPath, 1) . '/' . $run . $cachedText . '_optimization.png';
                     else
-                        echo $GLOBALS['basePath']."/optimizationChecklist.php?test=$id&run=$run&cached=$cached";
+                        echo "/optimizationChecklist.php?test=$id&run=$run&cached=$cached";
                     echo '">';
                 ?>
                 <br>

@@ -22,6 +22,10 @@ if (!isset($settings['maxruns'])) {
 if (isset($_REQUEST['map'])) {
     $settings['map'] = 1;
 }
+$headless = false;
+if (array_key_exists('headless', $settings) && $settings['headless']) {
+    $headless = true;
+}
 // load the secret key (if there is one)
 $secret = '';
 if (is_file('./settings/keys.ini')) {
@@ -54,7 +58,7 @@ $locations = LoadLocations();
 $loc = ParseLocations($locations);
 
 ?>
-<!DOCTYPE HTML>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
     <head>
         <title>WebPagetest - Website Performance and Optimization Test</title>
@@ -65,8 +69,9 @@ $loc = ParseLocations($locations);
             <?php
             $tab = 'Home';
             include 'header.inc';
+            if (!$headless) {
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
+            <form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
             
             <?php
             echo "<input type=\"hidden\" name=\"vo\" value=\"$owner\">\n";
@@ -95,16 +100,16 @@ $loc = ParseLocations($locations);
             <div id="test_box-container">
                 <ul class="ui-tabs-nav">
                     <li class="analytical_review ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#">Analytical Review</a></li>
-                    <li class="visual_comparison"><a href="<?= $GLOBALS['basePath'] ?>video/">Visual Comparison</a></li>
+                    <li class="visual_comparison"><a href="/video/">Visual Comparison</a></li>
                     <?php
                     if (isset($settings['mobile']))
-                        echo '<li class="mobile_test"><a href="'.$GLOBALS['basePath'].'mobile">Mobile</a></li>';
+                        echo '<li class="mobile_test"><a href="/mobile">Mobile</a></li>';
                     ?>
-                    <li class="traceroute"><a href="<?= $GLOBALS['basePath'] ?>traceroute">Traceroute</a></li>
+                    <li class="traceroute"><a href="/traceroute">Traceroute</a></li>
                 </ul>
                 <div id="analytical-review" class="test_box">
                     <ul class="input_fields">
-                        <li><input type="text" name="url" id="url" <?= (empty( $req_url ) ? '': 'value="'.$url.'"') ?> class="text large" placeholder="<?= $url ?>"></li>
+                        <li><input type="text" name="url" id="url" value="<?php echo $url; ?>" class="text large" onfocus="if (this.value == this.defaultValue) {this.value = '';}" onblur="if (this.value == '') {this.value = this.defaultValue;}"></li>
                         <li>
                             <label for="location">Test Location</label>
                             <select name="where" id="location">
@@ -181,6 +186,7 @@ $loc = ParseLocations($locations);
                                 <li><a href="#auth">Auth</a></li>
                                 <li><a href="#script">Script</a></li>
                                 <li><a href="#block">Block</a></li>
+                                <li><a href="#spof">SPOF</a></li>
                                 <?php if (isset($settings['enableVideo'])) { ?>
                                 <li><a href="#video">Video</a></li>
                                 <?php } ?>
@@ -230,8 +236,7 @@ $loc = ParseLocations($locations);
                                         $runs = (int)$_COOKIE["runs"];
                                         if( isset($req_runs) )
                                             $runs = (int)$req_runs;
-                                        if( $runs < 1 || $runs > $settings['maxruns'] )
-                                            $runs = 1;
+                                        $runs = max(1, min($runs, $settings['maxruns']));
                                         ?>
                                         <input id="number_of_tests" type="text" class="text short" name="runs" value=<?php echo "\"$runs\""; ?>>
                                     </li>
@@ -241,6 +246,9 @@ $loc = ParseLocations($locations);
                                         </label>
                                         <?php
                                         $fvOnly = (int)$_COOKIE["testOptions"] & 2;
+                                        if (array_key_exists('fvonly', $_REQUEST)) {
+                                            $fvOnly = (int)$_REQUEST['fvonly'];
+                                        }
                                         ?>
                                         <input id="viewBoth" type="radio" name="fvonly" <?php if( !$fvOnly ) echo 'checked=checked'; ?> value="0">First View and Repeat View
                                         <input id="viewFirst" type="radio" name="fvonly" <?php if( $fvOnly ) echo 'checked=checked'; ?> value="1">First View Only
@@ -265,10 +273,23 @@ $loc = ParseLocations($locations);
                                         </label>
                                     </li>
                                     <li>
+                                        <input type="checkbox" name="noscript" id="noscript" class="checkbox" style="float: left;width: auto;">
+                                        <label for="noscript" class="auto_width">
+                                            Disable Javascript
+                                        </label>
+                                    </li>
+                                    <li>
                                         <input type="checkbox" name="ignoreSSL" id="ignore_ssl_cerificate_errors" class="checkbox" style="float: left;width: auto;">
                                         <label for="ignore_ssl_cerificate_errors" class="auto_width">
                                             Ignore SSL Certificate Errors<br>
                                             <small>e.g. Name mismatch, Self-signed certificates, etc.</small>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="standards" id="force_standards_mode" class="checkbox" style="float: left;width: auto;">
+                                        <label for="force_standards_mode" class="auto_width">
+                                            Disable Compatibility View (IE Only)<br>
+                                            <small>Forces all pages to load in standards mode</small>
                                         </label>
                                     </li>
                                     <li>
@@ -287,6 +308,12 @@ $loc = ParseLocations($locations);
                                         <input type="checkbox" name="netlog" id="netlog" class="checkbox" style="float: left;width: auto;">
                                         <label for="netlog" class="auto_width">
                                             Capture Network Log (Chrome Only)
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="spdy3" id="spdy3" class="checkbox" style="float: left;width: auto;">
+                                        <label for="spdy3" class="auto_width">
+                                            Force Spdy version 3 (Chrome Only)
                                         </label>
                                     </li>
                                     <li>
@@ -370,10 +397,20 @@ $loc = ParseLocations($locations);
                                     <textarea name="script" id="enter_script" cols="0" rows="0"></textarea>
                                 </div>
                                 <br>
-                                <input type="checkbox" name="sensitive" id="sensitive" class="checkbox" style="float: left;width: auto;">
-                                <label for="sensitive" class="auto_width">
-                                    Script includes sensitive data<br><small>The script will be discarded and the http headers will not be available in the results</small>
-                                </label>
+                                <ul class="input_fields">
+                                    <li>
+                                        <input type="checkbox" name="sensitive" id="sensitive" class="checkbox" style="float: left;width: auto;">
+                                        <label for="sensitive" class="auto_width">
+                                            Script includes sensitive data<br><small>The script will be discarded and the http headers will not be available in the results</small>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="noheaders" id="noheaders" class="checkbox" style="float: left;width: auto;">
+                                        <label for="noheaders" class="auto_width">
+                                            Discard all HTTP headers
+                                        </label>
+                                    </li>
+                                </ul>
                             </div>
 
                             <div id="block" class="test_subbox ui-tabs-hide">
@@ -393,6 +430,23 @@ $loc = ParseLocations($locations);
                                 <textarea name="block" id="block_requests_containing" cols="0" rows="0"></textarea>
                             </div>
 
+                            <div id="spof" class="test_subbox ui-tabs-hide">
+                                <p>
+                                    Simulate failure of specified domains.  This is done by re-routing all requests for 
+                                    the domains to <a href="http://blog.patrickmeenan.com/2011/10/testing-for-frontend-spof.html">blackhole.webpagetest.org</a> which will silently drop all requests.
+                                </p>
+                                <p>
+                                    <label for="spof_hosts" class="full_width">
+                                        Hosts to fail (one host per line)...
+                                    </label>
+                                </p>
+                                <textarea name="spof" id="spof_hosts" cols="0" rows="0"><?php
+                                    if (array_key_exists('spof', $_REQUEST)) {
+                                        echo htmlspecialchars(str_replace(',', "\r\n", $_REQUEST['spof']));
+                                    }
+                                ?></textarea>
+                            </div>
+                            
                             <?php if($settings['enableVideo']) { ?>
                             <div id="video" class="test_subbox ui-tabs-hide">
                                 <div class="notification-container">
@@ -400,8 +454,13 @@ $loc = ParseLocations($locations);
                                         Video will appear in the Screenshot page of your results
                                     </div></div>
                                 </div>
-                                
-                                <input type="checkbox" checked name="video" id="videoCheck" class="checkbox before_label">
+                                <?php
+                                $video = 0;
+                                if (array_key_exists('video', $_REQUEST)) {
+                                    $video = (int)$_REQUEST['video'];
+                                }
+                                ?>
+                                <input type="checkbox" name="video" id="videoCheck" class="checkbox before_label" <?php if( $video ) echo 'checked=checked'; ?>>
                                 <label for="videoCheck" class="auto_width">Capture Video</label>
                                 <br>
                                 <br>
@@ -483,6 +542,7 @@ $loc = ParseLocations($locations);
             <?php
             if( is_file('settings/intro.inc') )
                 include('settings/intro.inc');
+            } // $headless
             ?>
 
             <?php include('footer.inc'); ?>
@@ -525,7 +585,6 @@ $loc = ParseLocations($locations);
 function LoadLocations()
 {
     $locations = parse_ini_file('./settings/locations.ini', true);
-//print_r($locations);
     FilterLocations( $locations );
     
     // strip out any sensitive information
@@ -542,7 +601,10 @@ function LoadLocations()
             unset( $loc['key'] );
         if( isset($loc['remoteDir']) )
             unset( $loc['remoteDir'] );
+        if( isset($loc['notify']) )
+            unset( $loc['notify'] );
     }
     
     return $locations;
 }
+?>

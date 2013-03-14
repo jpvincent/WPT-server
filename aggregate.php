@@ -38,7 +38,8 @@ if( isset($test['test']) && $test['test']['batch'] )
                             'bytesInDoc' => 'Bytes In (Doc)',
                             'requestsDoc' => 'Requests (Doc)',
                             'loadEventStart' => 'Load Event Start',
-                            'SpeedIndex' => 'Speed Index' );
+                            'SpeedIndex' => 'Speed Index',
+                            'SpeedIndexDT' => 'Speed IndexDT' );
         
         // generate the header row of stats
         echo '"Test","URL","FV Successful Tests",';
@@ -96,7 +97,7 @@ if( isset($test['test']) && $test['test']['batch'] )
             $label = $test['l'];
             $url = $test['u'];
             $testPath = './' . GetTestPath($test['id']);
-            $pageData = loadAllPageData($testPath, array('SpeedIndex' => true));
+            $pageData = loadAllPageData($testPath);
             if( count($pageData) )
             {
                 echo "\"$label\",\"$url\",";

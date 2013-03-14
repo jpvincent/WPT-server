@@ -34,10 +34,14 @@ else {
 $series = GetSeriesLabels($benchmark);
 $metrics = array('docTime' => 'Load Time (onload)', 
                 'SpeedIndex' => 'Speed Index',
+                'SpeedIndexDT' => 'Speed Index (Dev Tools)',
                 'TTFB' => 'Time to First Byte', 
                 'titleTime' => 'Time to Title', 
                 'render' => 'Time to Start Render', 
+                'visualComplete' => 'Time to Visually Complete', 
+                'VisuallyCompleteDT' => 'Time to Visually Complete (Dev Tools)', 
                 'fullyLoaded' => 'Load Time (Fully Loaded)', 
+                'server_rtt' => 'Estimated RTT to Server',
                 'domElements' => 'Number of DOM Elements', 
                 'connections' => 'Connections', 
                 'requests' => 'Requests (Fully Loaded)', 
@@ -81,7 +85,7 @@ if (array_key_exists('f', $_REQUEST)) {
         <meta name="description" content="Speed up the performance of your web pages with an automated analysis">
         <meta name="author" content="Patrick Meenan">
         <?php $gaTemplate = 'About'; include ('head.inc'); ?>
-        <script type="text/javascript" src="<?= $GLOBALS['basePath'] ?>js/dygraph-combined.js"></script>
+        <script type="text/javascript" src="/js/dygraph-combined.js"></script>
         <style type="text/css">
         .chart-container { clear: both; width: 875px; height: 350px; margin-left: auto; margin-right: auto; padding: 0;}
         .benchmark-chart { float: left; width: 700px; height: 350px; }
@@ -167,10 +171,16 @@ if (array_key_exists('f', $_REQUEST)) {
                             echo "var medianMetric=\"$median_metric\";\n";
                         ?>
                         var menu = '<div><h4>View test for ' + url + '</h4>';
+                        var compare = "/video/compare.php?ival=100&medianMetric=" + medianMetric + "&tests=";
                         for( i = 0; i < tests.length; i++ ) {
-                            menu += '<a href="'.$GLOBALS['basePath'].'/result/' + tests[i] + '/?medianMetric=' + medianMetric + '">' + seriesData[i].name + '</a><br>';
+                            menu += '<a href="/result/' + tests[i] + '/?medianMetric=' + medianMetric + '" target="_blank">' + seriesData[i].name + '</a><br>';
+                            if (i) {
+                                compare += ",";
+                            }
+                            compare += encodeURIComponent(tests[i] + "-l:" + seriesData[i].name.replace("-","").replace(":",""));
                         }
                         menu += '<br><a href="trendurl.php?benchmark=' + encodeURIComponent(benchmark) + '&url=' + encodeURIComponent(url) + '">Trend over time</a>';
+                        menu += '<br><a href="' + compare + '">Filmstrip Comparison</a>';
                         menu += '</div>';
                         $.modal(menu, {overlayClose:true});
                     }
@@ -229,7 +239,7 @@ if (array_key_exists('f', $_REQUEST)) {
                                             $cached = '';
                                             if ($test['cached'])
                                                 $cached = 'cached/';
-                                            echo "<a href=\"".$GLOBALS['basePath']."result/{$test['id']}/{$test['run']}/details/$cached\">{$test['error']}</a>";
+                                            echo "<a href=\"/result/{$test['id']}/{$test['run']}/details/$cached\">{$test['error']}</a>";
                                         }
                                         echo "</li>";
                                     }

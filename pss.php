@@ -13,6 +13,13 @@ $connectivity = parse_ini_file('./settings/connectivity.ini', true);
 $locations = LoadLocations();
 $loc = ParseLocations($locations);
 
+$preview = false;
+if( strlen($_GET['preview']) && $_GET['preview'] )
+    $preview = true;
+$mps = false;
+if (array_key_exists('mps', $_REQUEST))
+    $mps = true;
+
 $page_keywords = array('Comparison','Webpagetest','Website Speed Test','Page Speed');
 $page_description = "Comparison Test$testLabel.";
 ?>
@@ -29,30 +36,43 @@ $page_description = "Comparison Test$testLabel.";
             $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? '/compare' : '/pss.php' );
             if( strlen($_GET['pssid']) )
                 $navTabs['Test Result'] = FRIENDLY_URLS ? "/result/{$_GET['pssid']}/" : "/results.php?test={$_GET['pssid']}";
-            $navTabs += array(  'Page Speed Service Home' => 'http://code.google.com/speed/pss', 
+            $navTabs += array(  'PageSpeed Service Home' => 'http://code.google.com/speed/pss', 
                                 'Sample Tests' => 'http://code.google.com/speed/pss/gallery.html',
                                 'Sign Up!' => 'https://docs.google.com/a/google.com/spreadsheet/viewform?hl=en_US&formkey=dDdjcmNBZFZsX2c0SkJPQnR3aGdnd0E6MQ');
             $tab = 'New Comparison';
             include 'header.inc';
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PreparePSSTest(this)">
+            <form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PreparePSSTest(this)">
             
             <input type="hidden" name="private" value="1">
             <input type="hidden" name="view" value="pss">
             <input type="hidden" name="label" value="">
             <input type="hidden" name="video" value="1">
+            <input type="hidden" name="shard" value="1">
             <input type="hidden" name="priority" value="0">
+            <input type="hidden" name="timeline" value="1">
             <input type="hidden" name="mv" value="1">
-            <input type="hidden" name="web10" value="1">
+            <?php
+                if ($mps || (array_key_exists('origin', $_GET) && strlen($_GET['origin']))) {
+                    echo '<input type="hidden" name="web10" value="0">';
+                } else {
+                    echo '<input type="hidden" name="web10" value="1">';
+                }
+            ?>
+            <input type="hidden" name="fvonly" value="1">
             <input type="hidden" name="sensitive" value="1">
             <?php
-            if( strlen($_GET['origin']) )
-            {
+            if ($mps) {
+                echo "<input type=\"hidden\" name=\"script\" value=\"addHeader&#09;ModPagespeed:off&#09;%HOST_REGEX%&#10;navigate&#09;%URL%\">\n";
+                echo "<input type=\"hidden\" name=\"runs\" value=\"7\">\n";
+            } elseif ($preview) {
+                echo "<input type=\"hidden\" name=\"script\" value=\"if&#09;run&#09;1&#10;if&#09;cached&#09;0&#10;addHeader&#09;X-PSA-Blocking-Rewrite: pss_blocking_rewrite&#09;%HOST_REGEX%&#10;endif&#10;endif&#10;setCookie&#09;http://%HOSTR%&#09;_GPSSPRVW=1&#10;navigate&#09;%URL%\">\n";
+                echo "<input type=\"hidden\" name=\"runs\" value=\"8\">\n";
+                echo "<input type=\"hidden\" name=\"discard\" value=\"1\">\n";
+            } elseif( strlen($_GET['origin']) ) {
                 echo "<input type=\"hidden\" name=\"script\" value=\"setDnsName&#09;%HOSTR%&#09;{$_GET['origin']}&#10;navigate&#09;%URL%\">\n";
                 echo "<input type=\"hidden\" name=\"runs\" value=\"5\">\n";
-            }
-            else
-            {
+            } else {
                 echo "<input type=\"hidden\" name=\"script\" value=\"if&#09;run&#09;1&#10;if&#09;cached&#09;0&#10;addHeader&#09;X-PSA-Blocking-Rewrite: pss_blocking_rewrite&#09;%HOST_REGEX%&#10;endif&#10;endif&#10;setDnsName&#09;%HOSTR%&#09;ghs.google.com&#10;overrideHost&#09;%HOSTR%&#09;psa.pssdemos.com&#10;navigate&#09;%URL%\">\n";
                 echo "<input type=\"hidden\" name=\"runs\" value=\"8\">\n";
                 echo "<input type=\"hidden\" name=\"discard\" value=\"1\">\n";
@@ -73,10 +93,14 @@ $page_description = "Comparison Test$testLabel.";
               $hmac = sha1($hashStr);
               echo "<input type=\"hidden\" name=\"vh\" value=\"$hmac\">\n";
               
-              if( strlen($_GET['origin']) )
-                echo '<h2 class="cufon-dincond_black"><small>Measure performance of original site vs optimized by <a href="http://code.google.com/speed/pss">Page Speed Service</a></small></h2>';
+              if ($mps) {
+                echo '<h2 class="cufon-dincond_black"><small>Compare your currently optimized site to it\'s unoptimized version</a></small></h2>';
+              } elseif ($preview) {
+                echo '<h2 class="cufon-dincond_black"><small>Preview optimization changes for your site hosted on <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
+              } elseif( strlen($_GET['origin']) )
+                echo '<h2 class="cufon-dincond_black"><small>Measure performance of original site vs optimized by <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
               else
-                echo '<h2 class="cufon-dincond_black"><small>Measure your site performance when optimized by <a href="http://code.google.com/speed/pss">Page Speed Service</a></small></h2>';
+                echo '<h2 class="cufon-dincond_black"><small>Measure your site performance when optimized by <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
             }
             ?>
 
@@ -174,8 +198,8 @@ $page_description = "Comparison Test$testLabel.";
                         {
                         ?>
                         <li>
-                            <label for="shard">Shard Domains</label>
-                            <select name="shard" id="shard">
+                            <label for="shardDomains">Shard Domains</label>
+                            <select name="shardDomains" id="shardDomains">
                                 <option value="1" selected>1 domain (default)</option>
                                 <option value="2">2 domains</option>
                                 <option value="3">3 domains</option>
@@ -184,15 +208,51 @@ $page_description = "Comparison Test$testLabel.";
                         </li>
                         <?php
                         } else {
-                            echo "<input type=\"hidden\" name=\"shard\" value=\"1\">\n";
+                            echo "<input type=\"hidden\" name=\"shardDomains\" value=\"1\">\n";
                         }
                         ?>
                         <li>
                             <label for="bodies">Save Response Bodies<br><small>Text resources only</small></label>
                             <input type="checkbox" name="bodies" id="save_bodies" class="checkbox">
                         </li>
+                        <li>
+                            <?php
+                            if (!$mps) {
+                            ?>
+                                <label for="pss_advanced"><a style="color:#fff;" href="https://developers.google.com/speed/docs/pss/PrioritizeAboveTheFold">Advanced Rewriters</a></label>
+                                <?php
+                                $checked = '';
+                                if (array_key_exists('option', $_GET) && $_GET['option'] == 'prioritize_visible_content') {
+                                    $checked = ' checked="checked"';
+                                }
+                                echo "<input type=\"checkbox\" name=\"pss_advanced\" id=\"pss_advanced\" class=\"checkbox\"$checked>\n";
+                            } else {
+                                echo "<input type=\"hidden\" name=\"pss_advanced\" id=\"pss_advanced\" value=\"0\">\n";
+                            } // $mps
+                            ?>
+                        </li>
                     </ul>
                     <ul class="input_fields">
+                        <li>
+                            <?php
+                            if (!$mps && !$preview && (!array_key_exists('origin', $_GET) || !strlen($_GET['origin']))) {
+                            ?>
+                            <label for="backend">Optimization Settings</label>
+                            <select name="backend" id="backend">
+                                <option value="prod" selected>Default (Safe)</option>
+                                <option value="aggressive">Aggressive</option>
+                                <?php
+                                if( !$supportsAuth || ($admin || strpos($_COOKIE['google_email'], '@google.com') !== false) ) {
+                                    echo '<option value="staging">Staging</option>';
+                                }                                    
+                                ?>
+                            </select>
+                            <?php
+                            } else {
+                            echo "<input type=\"hidden\" name=\"backend\" id=\"backend\" value=\"prod\">\n";
+                            }
+                            ?>
+                        </li>
                         <li>
                             <label for="wait">Expected Wait</label>
                             <span id="wait"></span>
@@ -202,19 +262,14 @@ $page_description = "Comparison Test$testLabel.";
                         {
                         ?>
                         <li>
-                            <label for="backend">Back-End</label>
-                            <select name="backend" id="backend">
-                                <option value="prod" selected>Production - default rewriters</option>
-                                <option value="staging">Staging - aggressive rewriters</option>
-                            </select>
+                            <label for="timeline">Record Timeline<br><small>(Chrome Only)</small></label>
+                            <input type="checkbox" name="timeline" id="timeline" class="checkbox">
                         </li>
                         <li>
                             <label for="addheaders">Custom HTTP Headers<br><br><small>One header per line in the format Header: Value.  i.e.<br><br>ModPagespeedDomainShardCount: 2<br>X-MyOtherHeader: yes</small></label>
                             <textarea name="addheaders" id="addheaders" cols="0" rows="0"></textarea>
                         </li>
                         <?php
-                        } else {
-                            echo "<input type=\"hidden\" name=\"backend\" value=\"prod\">\n";
                         }
                         ?>
                     </ul>
@@ -292,11 +347,11 @@ $page_description = "Comparison Test$testLabel.";
                     return false;
                 }
                 
-                form.label.value = 'Page Speed Service Comparison for ' + url;
+                form.label.value = 'PageSpeed Service Comparison for ' + url;
                 
                 <?php
                 // build the psuedo batch-url list
-                if( strlen($_GET['origin']) )
+                if( $mps || strlen($_GET['origin']) )
                     echo 'var batch = "Original=" + url + "\nOptimized=" + url + " noscript";' . "\n";
                 else
                     echo 'var batch = "Original=" + url + " noscript\nOptimized=" + url;' . "\n";
@@ -304,7 +359,7 @@ $page_description = "Comparison Test$testLabel.";
 
                 form.bulkurls.value=batch;
                 
-                var shard = form.shard.value;
+                var shard = form.shardDomains.value;
                 var script = '';
                 if (shard != 1)
                 {
@@ -312,12 +367,24 @@ $page_description = "Comparison Test$testLabel.";
                     script = "addHeader\tModPagespeedDomainShardCount: " + shard + "\n" + script;
                     form.script.value = script;
                 }
+                
+                if (form.pss_advanced.checked) {
+                    form.web10.value = 0;
+                    script = form.script.value;
+                    script = "addHeader\tModPagespeedFilters:+prioritize_visible_content\t%HOST_REGEX%\n" + script;
+                    form.script.value = script;
+                }
 
                 <?php
-                if (!array_key_exists('origin', $_GET) || !strlen($_GET['origin'])) {
+                if (!$preview && (!array_key_exists('origin', $_GET) || !strlen($_GET['origin']))) {
                 ?>
                 var backend = form.backend.value;
-                if (backend == 'staging') {
+                if (backend == 'aggressive') {
+                    script = form.script.value;
+                    script = "addHeader\tModPagespeedFilters:combine_css,rewrite_css,inline_import_to_link,extend_cache,combine_javascript,rewrite_javascript,resize_images,move_css_to_head,rewrite_style_attributes_with_url,convert_png_to_jpeg,convert_jpeg_to_webp,recompress_images,convert_jpeg_to_progressive,convert_meta_tags,inline_css,inline_images,inline_javascript,lazyload_images,flatten_css_imports,inline_preview_images,defer_javascript,defer_iframe,add_instrumentation,flush_subresources,fallback_rewrite_css_urls,insert_dns_prefetch\t%HOST_REGEX%\n" + script;
+                    form.script.value = script;
+                    form.web10.value = 0;
+                } else if (backend == 'staging') {
                     script = form.script.value;
                     script = script.replace(/psa\.pssdemos\.com/g, 'demo.pssplayground.com');
                     script = script.replace(/pss_blocking_rewrite/g, 'pss_staging');

@@ -6,12 +6,18 @@ require_once('common.inc');
 
 $breakdown = array();
 $video = false;
-if( $test['test']['Capture Video'] || $test['test']['Video'] || $test['test']['video'] )
+if( (array_key_exists('Capture Video', $test['test']) && $test['test']['Capture Video']) ||
+    (array_key_exists('Video', $test['test']) && $test['test']['Video']) ||
+    (array_key_exists('video', $test['test']) && $test['test']['video']))
     $video = true;
 $testComplete = true;
 $status = GetTestStatus($id, false);
 if( $status['statusCode'] < 200 ) 
     $testComplete = false;
+$headless = false;
+if (array_key_exists('headless', $settings) && $settings['headless']) {
+    $headless = true;
+}
 
 $page_keywords = array('Results','Webpagetest','Website Speed Test','Page Speed');
 $page_description = "Website performance test result$testLabel.";
@@ -28,13 +34,12 @@ $page_description = "Website performance test result$testLabel.";
             if( window.location.host.length && wpt_host.length && window.location.host != wpt_host )
                 window.location = document.location.protocol + '//' + wpt_host + window.location.pathname;
         </script>
-        <?php if( !$testComplete ) { ?>
+        <?php if( !$testComplete ) { 
+                $autoRefresh = true;
+        ?>
         <noscript>
         <meta http-equiv="refresh" content="30" />
         </noscript>
-        <script language="JavaScript">
-        setTimeout( "window.location.reload(true)", 30000 );
-        </script>
         <?php } ?>
         <?php $gaTemplate = 'Test Result'; include ('head.inc'); ?>
     </head>
@@ -53,14 +58,26 @@ $page_description = "Website performance test result$testLabel.";
                 <p class="left">
                 <br>
                 <?php 
-                    echo "Url: <a rel=\"nofollow\" href=\"$url\">$url</a><br>\n";
+                    if ($settings['nolinks']) {
+                        echo "Url: $url<br>\n";
+                    } else {
+                        echo "Url: <a rel=\"nofollow\" href=\"$url\">$url</a><br>\n";
+                    }
                     echo "From: {$test['test']['location']}<br>\n";
                     echo GetTestInfoHtml();
                 ?>
                 </p>
                 <?php 
-                $runs = max(array_keys($pageData));
-                echo "<h3>Test is partially complete ($runs of {$test['test']['runs']} runs).<br>This page will refresh every 30 seconds until the full test is complete.</h3>";
+                $expected = $test['test']['runs'];
+                if (!$test['testinfo']['fvonly'])
+                    $expected *= 2;
+                $available = 0;
+                foreach($pageData as &$data)
+                    $available += count($data);
+                echo "<h3>Test is partially complete ($available of $expected tests).<br>This page will refresh as tests complete.</h3>";
+                echo "<script>\n";
+                echo "var availableTests=$available;\n";
+                echo "</script>\n";
             }
             else 
             { 
@@ -68,8 +85,11 @@ $page_description = "Website performance test result$testLabel.";
             <div id="download">
                 <div id="testinfo">
                     <?php
+                    $show_sensitive = false;
                     echo GetTestInfoHtml();
-                    if( gz_is_file("$testPath/testinfo.json") )
+                    if( !$headless && gz_is_file("$testPath/testinfo.json") 
+                        && !array_key_exists('published', $test['testinfo'])
+                        && ($isOwner || !$test['testinfo']['sensitive']) )
                     {
                         // load the secret key (if there is one)
                         $secret = '';
@@ -77,7 +97,7 @@ $page_description = "Website performance test result$testLabel.";
                         if( $keys && isset($keys['server']) && isset($keys['server']['secret']) )
                           $secret = trim($keys['server']['secret']);
 
-                        echo '<form name="urlEntry" action="'.$GLOBALS['basePath'].'runtest.php" method="POST" enctype="multipart/form-data">';
+                        echo '<form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data">';
                         echo "\n<input type=\"hidden\" name=\"resubmit\" value=\"$id\">\n";
                         echo "<input type=\"hidden\" name=\"vo\" value=\"$owner\">\n";
                         if( strlen($secret) ){
@@ -102,21 +122,21 @@ $page_description = "Website performance test result$testLabel.";
                     $fileUrl = GetFileUrl($url);
                     if( FRIENDLY_URLS )
                     {
-                        echo "<a href=\"".$GLOBALS['basePath']."result/$id/{$id}_{$fileUrl}_page_data.csv\">Raw page data</a> - ";
-                        echo "<a href=\"".$GLOBALS['basePath']."result/$id/{$id}_{$fileUrl}_requests.csv\">Raw object data</a>";
+                        echo "<a href=\"/result/$id/{$id}_{$fileUrl}_page_data.csv\">Raw page data</a> - ";
+                        echo "<a href=\"/result/$id/{$id}_{$fileUrl}_requests.csv\">Raw object data</a>";
                     }
                     else
                     {
-                        echo "<a href=\"".$GLOBALS['basePath']."csv.php?test=$id\">Raw page data</a> - ";
-                        echo "<a href=\"".$GLOBALS['basePath']."csv.php?test=$id&requests=1\">Raw object data</a>";
+                        echo "<a href=\"/csv.php?test=$id\">Raw page data</a> - ";
+                        echo "<a href=\"/csv.php?test=$id&requests=1\">Raw object data</a>";
                     }
-                    echo '<br><a href="'.$GLOBALS['basePath'].'export.php?test=' . $id . '">Export HTTP Archive (.har)</a>';
-                    if( $test['testinfo']['showslow'] && strlen($settings['showslow']) )
+                    echo '<br><a href="/export.php?test=' . $id . '">Export HTTP Archive (.har)</a>';
+                    if( array_key_exists('showslow', $test['testinfo']) && $test['testinfo']['showslow'] && strlen($settings['showslow']) )
                         echo '<br><a href="'.$settings['showslow'].'/details/?url='.urlencode(FixUrlSlash($url)).'#webpagetest' . '">See in ShowSlow</a>';
 		            if( is_dir('./google') && $settings['enable_google_csi'] )
-			            echo '<br><a href="'.$GLOBALS['basePath'].'google/view_csi.php?test=' . $id . '">View CSI data</a>';
-                    if( $settings['publishTo'] )
-                        echo "<br><a href=\"".$GLOBALS['basePath']."publish.php?test=$id\">Publish to {$settings['publishTo']}</a>";
+			            echo '<br><a href="/google/view_csi.php?test=' . $id . '">View CSI data</a>';
+                    if( array_key_exists('publishTo', $settings) && $settings['publishTo'] )
+                        echo "<br><a href=\"/publish.php?test=$id\">Publish to {$settings['publishTo']}</a>";
                 ?>
             </div>
             <div class="cleared"></div>
@@ -124,8 +144,13 @@ $page_description = "Website performance test result$testLabel.";
                 <?php 
                 $fvMedian = GetMedianRun($pageData, 0, $median_metric);
                 $rvMedian = GetMedianRun($pageData, 1, $median_metric);
-                
-                if( $fvMedian )
+                $is_test_error = false;
+                if (array_key_exists('testinfo', $test) && 
+                    array_key_exists('test_error', $test['testinfo']) &&
+                    strlen($test['testinfo']['test_error'])) {
+                    $is_test_error = true;
+                }
+                if( $fvMedian && !$is_test_error )
                 {
                     if( count($pageData) > 1) 
                         echo '<h2>Performance Results (Median Run)</h2>';
@@ -134,13 +159,14 @@ $page_description = "Website performance test result$testLabel.";
                     <tr>
                         <?php
                         $cols = 3;
-                        if((float)$pageData[$fvMedian][0]['domTime'] > 0.0)
+                        if (array_key_exists('domTime', $pageData[$fvMedian][0]) && (float)$pageData[$fvMedian][0]['domTime'] > 0.0)
                             $cols++;
-                        if( $test['test']['aft'] )
+                        if (array_key_exists('aft', $test['test']) && $test['test']['aft'] )
                             $cols++;
-                        if($pageData[$fvMedian][0]['domElements'] > 0)
+                        if (array_key_exists('domElements', $pageData[$fvMedian][0]) && $pageData[$fvMedian][0]['domElements'] > 0)
                             $cols++;
-                        if(array_key_exists('SpeedIndex', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndex'] > 0)
+                        if((array_key_exists('SpeedIndex', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndex'] > 0) ||
+                           (array_key_exists('SpeedIndexDT', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndexDT'] > 0))
                             $cols++;
                         ?>
                         <th align="center" class="empty" valign="middle" style="border:1px white solid;"></th>
@@ -158,13 +184,14 @@ $page_description = "Website performance test result$testLabel.";
                         <?php if( $test['test']['aft'] ) { ?>
                         <th align="center" valign="middle">Above the Fold</th>
                         <?php } ?>
-                        <?php if(array_key_exists('SpeedIndex', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndex'] > 0) { ?>
+                        <?php if((array_key_exists('SpeedIndex', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndex'] > 0) || 
+                                 (array_key_exists('SpeedIndexDT', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndexDT'] > 0)){ ?>
                         <th align="center" valign="middle"><a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a></th>
                         <?php } ?>
-                        <?php if((float)$pageData[$fvMedian][0]['domTime'] > 0.0) { ?>
+                        <?php if(array_key_exists('domTime', $pageData[$fvMedian][0]) && (float)$pageData[$fvMedian][0]['domTime'] > 0.0) { ?>
                         <th align="center" valign="middle">DOM Element</th>
                         <?php } ?>
-                        <?php if($pageData[$fvMedian][0]['domElements'] > 0) { ?>
+                        <?php if(array_key_exists('domElements', $pageData[$fvMedian][0]) && $pageData[$fvMedian][0]['domElements'] > 0) { ?>
                         <th align="center" valign="middle">DOM Elements</th>
                         <?php } ?>
 
@@ -190,11 +217,17 @@ $page_description = "Website performance test result$testLabel.";
                                 $aft = 'N/A';
                             echo "<td id=\"fvAFT\" valign=\"middle\">$aft</th>";
                         }
-                        if(array_key_exists('SpeedIndex', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndex'] > 0)
-                            echo "<td id=\"fvVisual\" valign=\"middle\">{$pageData[$fvMedian][0]['SpeedIndex']}</td>\n";
-                        if((float)$pageData[$fvMedian][0]['domTime'] > 0.0)
+                        if(array_key_exists('SpeedIndex', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndex'] > 0) {
+                            if(array_key_exists('SpeedIndexCustom', $pageData[$fvMedian][0]))
+                                echo "<td id=\"fvVisual\" valign=\"middle\">{$pageData[$fvMedian][0]['SpeedIndexCustom']}</td>\n";
+                            else
+                                echo "<td id=\"fvVisual\" valign=\"middle\">{$pageData[$fvMedian][0]['SpeedIndex']}</td>\n";
+                        } elseif(array_key_exists('SpeedIndexDT', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndexDT'] > 0) {
+                            echo "<td id=\"fvVisual\" valign=\"middle\">{$pageData[$fvMedian][0]['SpeedIndexDT']}</td>\n";
+                        }
+                        if(array_key_exists('domTime', $pageData[$fvMedian][0]) && (float)$pageData[$fvMedian][0]['domTime'] > 0.0)
                             echo "<td id=\"fvDomElement\" valign=\"middle\">" . number_format($pageData[$fvMedian][0]['domTime'] / 1000.0, 3) . "s</td>\n";
-                        if($pageData[$fvMedian][0]['domElements'] > 0)
+                        if(array_key_exists('domElements', $pageData[$fvMedian][0]) && $pageData[$fvMedian][0]['domElements'] > 0)
                             echo "<td id=\"fvDomElements\" valign=\"middle\">{$pageData[$fvMedian][0]['domElements']}</td>\n";
 
                         echo "<td id=\"fvDocComplete\" class=\"border\" valign=\"middle\">" . formatMsInterval($pageData[$fvMedian][0]['docTime'], 3) . "</td>\n";
@@ -226,10 +259,15 @@ $page_description = "Website performance test result$testLabel.";
                             if(array_key_exists('SpeedIndex', $pageData[$rvMedian][1]) && (int)$pageData[$rvMedian][1]['SpeedIndex'] > 0)
                                 $disp = $pageData[$rvMedian][1]['SpeedIndex'];
                             echo "<td id=\"rvVisual\" class=\"even\" valign=\"middle\">$disp</td>\n";
+                        } elseif (array_key_exists('SpeedIndexDT', $pageData[$fvMedian][0]) && (int)$pageData[$fvMedian][0]['SpeedIndexDT'] > 0) {
+                            $disp = '-';
+                            if(array_key_exists('SpeedIndexDT', $pageData[$rvMedian][1]) && (int)$pageData[$rvMedian][1]['SpeedIndexDT'] > 0)
+                                $disp = $pageData[$rvMedian][1]['SpeedIndexDT'];
+                            echo "<td id=\"rvVisual\" class=\"even\" valign=\"middle\">$disp</td>\n";
                         }
-                        if((float)$pageData[$fvMedian][0]['domTime'] > 0.0)
+                        if(array_key_exists('domTime', $pageData[$fvMedian][0]) && (float)$pageData[$fvMedian][0]['domTime'] > 0.0)
                             echo "<td id=\"rvDomElement\" class=\"even\" valign=\"middle\">" . number_format($pageData[$rvMedian][1]['domTime'] / 1000.0, 3) . "s</td>\n";
-                        if($pageData[$fvMedian][0]['domElements'] > 0)
+                        if(array_key_exists('domElements', $pageData[$fvMedian][0]) && $pageData[$fvMedian][0]['domElements'] > 0)
                             echo "<td id=\"rvDomElements\" class=\"even\" valign=\"middle\">{$pageData[$rvMedian][1]['domElements']}</td>\n";
 
                         echo "<td id=\"rvDocComplete\" class=\"even border\" valign=\"middle\">" . formatMsInterval($pageData[$rvMedian][1]['docTime'], 3) . "</td>\n";
@@ -245,7 +283,7 @@ $page_description = "Website performance test result$testLabel.";
                     </table>
                     <?php
                     if (count($pageData) > 1) {
-                        echo "<a href=\"".$GLOBALS['basePath']."graph_page_data.php?test=$id&medianMetric=$median_metric\">Plot Full Results</a>";
+                        echo "<a href=\"/graph_page_data.php?test=$id&medianMetric=$median_metric\">Plot Full Results</a>";
                     }
                     ?>
                     <br>
@@ -302,8 +340,30 @@ $page_description = "Website performance test result$testLabel.";
 		<?php
 		    }
                 }
-                else
-                    echo '<h3>The test completed but there were no successful results.</h3>';
+                else {
+                    $error = 'The test completed but there were no successful results.';
+                    $detail = null;
+                    if ($is_test_error) {
+                        $error = 'The test failed to run.';
+                        $detail = $test['testinfo']['test_error'];
+                    } elseif(array_key_exists('testinfo', $test) &&
+                             array_key_exists('errors', $test['testinfo'])) {
+                        // just grab the first error we find from an individual run
+                        foreach($test['testinfo']['errors'] as &$error_run) {
+                            foreach($error_run as &$error_str) {
+                                if (strlen($error_str)) {
+                                    $error = 'The testing completed but failed.';
+                                    $detail = $error_str;
+                                    break 2;
+                                }
+                            }
+                        }
+                    }
+                    echo '<h3>' . htmlspecialchars($error) . '</h3>';
+                    if (isset($detail)) {
+                        echo '<h4>' . htmlspecialchars($detail) . '</h4>';
+                    }
+                }
                 ?>
             </div>
             <?php } ?>
@@ -312,28 +372,47 @@ $page_description = "Website performance test result$testLabel.";
             if( count($pageData) > 1) 
                 echo '<h3 style="text-align:center;">Test Results</h3>';
 
-            $runs = max(array_keys($pageData));
+            $runs = $test['test']['runs'];
             $fvonly = 1;
             if( isset($rv) )
                 $fvonly = 0;
             for( $run = 1; $run <= $runs; $run++)
             {
+                $error_str = null;
+                if (array_key_exists('testinfo', $test) && 
+                    array_key_exists('errors', $test['testinfo']) && 
+                    array_key_exists($run, $test['testinfo']['errors']) && 
+                    strlen($test['testinfo']['errors'][$run])) {
+                    $error_str = 'Test Error: ' . $test['testinfo']['errors'][$run];
+                } elseif (!isset($pageData) || !is_array($pageData) || !array_key_exists($run, $pageData)) {
+                    if ($testComplete)
+                        $error_str = 'Test Error: Data is missing.';
+                    else
+                        $error_str = 'Waiting for test result...';
+                }
                 if( $runs > 1 )
                     echo '<h4><a name="run' . $run. '">Run ' . $run . ':</a></h4>';
+                if (isset($error_str)) {
+                    echo '<p>' . htmlspecialchars($error_str) . '</p>';
+                } else {
             ?>
                 <table id="table<?php echo $run;?>" class="pretty result" align="center" border="1" cellpadding="20" cellspacing="0">
                 <tr>
                     <th align="center" class="empty" valign="middle"></th>
                     <th align="center" valign="middle">Waterfall</th>
                     <?php
-                    if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
+                    $table_columns = 2;
+                    if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] ) {
                         echo '<th align="center" valign="middle">Screen Shot</th>';
-                    if($video)
+                        $table_columns++;
+                    }
+                    if($video) {
                         echo '<th align="center" valign="middle">Video</th>';
-                    ?>
-                </tr>
-                <tr>
-                    <td align="left" valign="middle">First View<?php 
+                        $table_columns++;
+                    }
+                echo '</tr><tr>';
+                    if (array_key_exists($run, $pageData) && array_key_exists(0, $pageData[$run]) && count($pageData[$run][0])) {
+                        echo '<td align="left" valign="middle">First View';
                         if( isset($pageData[$run][0]['result']) && $pageData[$run][0]['result'] !== 0 && $pageData[$run][0]['result'] !== 99999 )
                             echo '<br>(Error: ' . LookupError($pageData[$run][0]['result']) . ')';
                         else if( isset($pageData[$run][0]['loadTime']) )
@@ -345,47 +424,64 @@ $page_description = "Website performance test result$testLabel.";
                         }
                         if( gz_is_file("$testPath/{$run}.cap") )
                         {
+                            $tcpdump_url = "/getgzip.php?test=$id&file=$run.cap";
                             if( FRIENDLY_URLS )
-                                echo "<br><br><a href=\"".$GLOBALS['basePath']."result/$id/{$run}.cap\" title=\"Download tcpdump session capture\">tcpdump</a>";
-                            else
-                                echo "<br><br><a href=\"".$GLOBALS['basePath']."getgzip.php?test=$id&file=$run.cap\" title=\"Download tcpdump session capture\">tcpdump</a>";
+                                $tcpdump_url = "/result/$id/{$run}.cap";
+                            echo "<br><br><a href=\"$tcpdump_url\" title=\"Download tcpdump session capture\">tcpdump</a>";
+                            if (array_key_exists('tcpdump_view', $settings) && strlen($settings['tcpdump_view'])) {
+                                $view_url = $settings['tcpdump_view'] . urlencode("http://$wpt_host$tcpdump_url");
+                                echo " - (<a href=\"$view_url\" title=\"View tcpdump session capture\">view</a>)";
+                            }
                         }
                         if( gz_is_file("$testPath/{$run}_timeline.json") ) {
-                            echo "<br><br><a href=\"".$GLOBALS['basePath']."getgzip.php?test=$id&file={$run}_timeline.json\" title=\"Download Chrome Dev Tools Timeline\">Timeline</a>";
-                            echo " (<a href=\"".$GLOBALS['basePath']."timeline/" . VER_TIMELINE . "/timeline.html?url=%2Fgetgzip.php%3Ftest%3D{$id}%26file%3D{$run}_timeline.json\" title=\"View Chrome Dev Tools Timeline\">view</a>)";
+                            echo "<br><br><a href=\"/getgzip.php?test=$id&file={$run}_timeline.json\" title=\"Download Chrome Dev Tools Timeline\">Timeline</a>";
+                            echo " (<a href=\"/timeline/" . VER_TIMELINE . "/timeline.html?url=%2Fgetgzip.php%3Ftest%3D{$id}%26file%3D{$run}_timeline.json\" title=\"View Chrome Dev Tools Timeline\">view</a>)";
                         }
                         if( gz_is_file("$testPath/{$run}_netlog.txt") ) {
-                            echo "<br><br><a href=\"".$GLOBALS['basePath']."getgzip.php?test=$id&file={$run}_netlog.txt\" title=\"Download Network Log\">Net Log</a>";
+                            echo "<br><br><a href=\"/getgzip.php?test=$id&file={$run}_netlog.txt\" title=\"Download Network Log\">Net Log</a>";
                         }
-                    ?></td>
-                    <td align="center" valign="middle"><a href="<?php echo FRIENDLY_URLS ? $GLOBALS['basePath']."result/$id/$run/details/" : $GLOBALS['basePath']."/details.php?test=$id&run=$run"; ?>"><img class="progress" width=250 src="<?php echo FRIENDLY_URLS ? $GLOBALS['basePath']."result/$id/{$run}_waterfall_thumb.png" : $GLOBALS['basePath']."thumbnail.php?test=$id&run=$run&file={$run}_waterfall.png"; ?>"></a></td>
-                    <?php
-                    if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
-                    {
-                        if( FRIENDLY_URLS )
-                            echo "<td align=\"center\" valign=\"middle\"><a href=\"".$GLOBALS['basePath']."result/$id/$run/screen_shot/\"><img class=\"progress\" width=250 src=\"".$GLOBALS['basePath']."result/$id/{$run}_screen_thumb.jpg\"></a></td>";
-                        else
-                            echo "<td align=\"center\" valign=\"middle\"><a href=\"".$GLOBALS['basePath']."screen_shot.php?test=$id&run=$run\"><img class=\"progress\" width=250 src=\"".$GLOBALS['basePath']."thumbnail.php?test=$id&run=$run&file={$run}_screen.jpg\"></a></td>";
-                    }
-                    if($video) 
-                    {
+                        if( gz_is_file("$testPath/{$run}_trace.json") ) {
+                            echo "<br><br><a href=\"/getgzip.php?test=$id&file={$run}_trace.json\" title=\"Download Trace\">Trace</a>";
+                        }
+                        echo "</td>\n";
                         echo '<td align="center" valign="middle">';
-                        if( is_dir("$testPath/video_$run") )
-                        {
-                            echo "<a href=\"".$GLOBALS['basePath']."video/compare.php?tests=$id-r:$run-c:0\">Filmstrip View</a><br>-<br>";
-                            echo "<a href=\"".$GLOBALS['basePath']."video/create.php?tests=$id-r:$run-c:0&id={$id}.{$run}.0\">Watch Video</a><br>-<br>";
-                            echo "<a href=\"".$GLOBALS['basePath']."video/?tid=$id&run=$run&cached=0\">Compare to</a>";
+                        $testUrl = "/details.php?test=$id&run=$run";
+                        if ($run == $fvMedian && array_key_exists('end', $_REQUEST))
+                            $testUrl .= "&end={$_REQUEST['end']}";
+                        elseif (FRIENDLY_URLS)
+                            $testUrl = "/result/$id/$run/details/";
+                        echo "<a href=\"$testUrl\">";
+                        echo "<img class=\"progress\" width=250 src=\"/thumbnail.php?test=$id&run=$run&file={$run}_waterfall.png\"></a></td>\n";
+                        if (!isset($test['testinfo']) || !$test['testinfo']['noimages']) {
+                            if( FRIENDLY_URLS )
+                                echo "<td align=\"center\" valign=\"middle\"><a href=\"/result/$id/$run/screen_shot/\"><img class=\"progress\" width=250 src=\"/result/$id/{$run}_screen_thumb.jpg\"></a></td>";
+                            else
+                                echo "<td align=\"center\" valign=\"middle\"><a href=\"/screen_shot.php?test=$id&run=$run\"><img class=\"progress\" width=250 src=\"/thumbnail.php?test=$id&run=$run&file={$run}_screen.jpg\"></a></td>";
                         }
-                        else
-                            echo "not available";
-                        echo '</td>';
+                        if($video) {
+                            echo '<td align="center" valign="middle">';
+                            if (is_dir("$testPath/video_$run")) {
+                                $end = '';
+                                $endId = '';
+                                if ($run == $fvMedian && array_key_exists('end', $_REQUEST)) {
+                                    $end = "-e:{$_REQUEST['end']}";
+                                    $endId = "-e{$_REQUEST['end']}";
+                                }
+                                echo "<a href=\"/video/compare.php?tests=$id-r:$run-c:0$end\">Filmstrip View</a><br>-<br>";
+                                echo "<a href=\"/video/create.php?tests=$id-r:$run-c:0$end&id={$id}.{$run}.0$endId\">Watch Video</a>";
+                                //echo "<br>-<br><a href=\"/video/?tid=$id&run=$run&cached=0\">Compare to</a>";
+                            } else
+                                echo "not available";
+                            echo '</td>';
+                        }
+                    } else {
+                        echo "<td colspan=\"$table_columns\" align=\"left\" valign=\"middle\">First View: Test Data Missing</td>";
                     }
-                    ?>
-                </tr>
-
-                <?php if( isset($pageData[$run][1]) ) { ?>
-                <tr>
-                    <td align="left" class="even" valign="middle">Repeat View<?php 
+                echo '</tr>';
+                if( isset($pageData[$run][1]) ) { 
+                    echo '<tr>';
+                    if (array_key_exists($run, $pageData) && array_key_exists(1, $pageData[$run]) && count($pageData[$run][1])) {
+                        echo '<td align="left" class="even" valign="middle">Repeat View';
                         if( isset($pageData[$run][1]['result']) && $pageData[$run][1]['result'] !== 0 && $pageData[$run][1]['result'] !== 99999 )
                             echo '<br>(Error: ' . LookupError($pageData[$run][1]['result']) . ')';
                         else if( isset($pageData[$run][1]['loadTime']) )
@@ -397,55 +493,59 @@ $page_description = "Website performance test result$testLabel.";
                         }
                         if( gz_is_file("$testPath/{$run}_Cached.cap") )
                         {
+                            $tcpdump_url = "/getgzip.php?test=$id&file={$run}_Cached.cap";
                             if( FRIENDLY_URLS )
-                                echo "<br><br><a href=\"".$GLOBALS['basePath']."result/$id/{$run}_Cached.cap\" title=\"Download tcpdump session capture\">tcpdump</a>";
-                            else
-                                echo "<br><br><a href=\"".$GLOBALS['basePath']."getgzip.php?test=$id&file={$run}_Cached.cap\" title=\"Download tcpdump session capture\">tcpdump</a>";
+                                $tcpdump_url = "/result/$id/{$run}_Cached.cap";
+                            echo "<br><br><a href=\"$tcpdump_url\" title=\"Download tcpdump session capture\">tcpdump</a>";
+                            if (array_key_exists('tcpdump_view', $settings) && strlen($settings['tcpdump_view'])) {
+                                $view_url = $settings['tcpdump_view'] . urlencode("http://$wpt_host$tcpdump_url");
+                                echo " - (<a href=\"$view_url\" title=\"View tcpdump session capture\">view</a>)";
+                            }
                         }
                         if( gz_is_file("$testPath/{$run}_Cached_timeline.json") ) {
-                            echo "<br><br><a href=\"".$GLOBALS['basePath']."getgzip.php?test=$id&file={$run}_Cached_timeline.json\" title=\"Download Chrome Dev Tools Timeline\">Timeline</a>";
-                            echo " (<a href=\"".$GLOBALS['basePath']."timeline/" . VER_TIMELINE . "/timeline.html?url=%2Fgetgzip.php%3Ftest%3D{$id}%26file%3D{$run}_Cached_timeline.json\" title=\"View Chrome Dev Tools Timeline\">view</a>)";
+                            echo "<br><br><a href=\"/getgzip.php?test=$id&file={$run}_Cached_timeline.json\" title=\"Download Chrome Dev Tools Timeline\">Timeline</a>";
+                            echo " (<a href=\"/timeline/" . VER_TIMELINE . "/timeline.html?url=%2Fgetgzip.php%3Ftest%3D{$id}%26file%3D{$run}_Cached_timeline.json\" title=\"View Chrome Dev Tools Timeline\">view</a>)";
                         }
                         if( gz_is_file("$testPath/{$run}_Cached_netlog.txt") ) {
-                            echo "<br><br><a href=\"".$GLOBALS['basePath']."getgzip.php?test=$id&file={$run}_Cached_netlog.txt\" title=\"Download Network Log\">Net Log</a>";
+                            echo "<br><br><a href=\"/getgzip.php?test=$id&file={$run}_Cached_netlog.txt\" title=\"Download Network Log\">Net Log</a>";
                         }
-                    echo '</td>';
-                    if( FRIENDLY_URLS )
-                        echo "<td align=\"center\" class=\"even\" valign=\"middle\"><a href=\"".$GLOBALS['basePath']."result/$id/$run/details/cached/\"><img class=\"progress\" width=250 src=\"".$GLOBALS['basePath']."result/$id/{$run}_Cached_waterfall_thumb.png\"></a></td>";
-                    else
-                        echo "<td align=\"center\" class=\"even\" valign=\"middle\"><a href=\"".$GLOBALS['basePath']."details.php?test=$id&run=$run&cached=1\"><img class=\"progress\" width=250 src=\"".$GLOBALS['basePath']."thumbnail.php?test=$id&run=$run&cached=1&file={$run}_Cached_waterfall.png\"></a></td>";
-
-                    if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
-                    {
-                        if( FRIENDLY_URLS )
-                            echo "<td align=\"center\" class=\"even\" valign=\"middle\"><a href=\"".$GLOBALS['basePath']."result/$id/$run/screen_shot/cached/\"><img class=\"progress\" width=250 src=\"".$GLOBALS['basePath']."result/$id/{$run}_Cached_screen_thumb.jpg\"></a></td>";
-                        else
-                            echo "<td align=\"center\" valign=\"middle\"><a href=\"".$GLOBALS['basePath']."screen_shot.php?test=$id&run=$run&cached=1\"><img class=\"progress\" width=250 src=\"".$GLOBALS['basePath']."thumbnail.php?test=$id&run=$run&cached=1&file={$run}_Cached_screen.jpg\"></a></td>";
-                    }
-                    if($video) 
-                    {
-                        echo '<td align="center" valign="middle">';
-                        if( is_dir("$testPath/video_{$run}_cached") )
-                        {
-                            echo "<a href=\"".$GLOBALS['basePath']."video/compare.php?tests=$id-r:$run-c:1\">Filmstrip View</a><br>-<br>";
-                            echo "<a href=\"".$GLOBALS['basePath']."video/create.php?tests=$id-r:$run-c:1&id={$id}.{$run}.1\">Watch Video</a>";
+                        if( gz_is_file("$testPath/{$run}_Cached_trace.json") ) {
+                            echo "<br><br><a href=\"/getgzip.php?test=$id&file={$run}_Cached_trace.json\" title=\"Download Trace\">Trace</a>";
                         }
-                        else
-                            echo "not available";
                         echo '</td>';
-                    } 
-                    ?>
-                </tr>
-                <?php } ?>
-                
-                <?php if( $testComplete && $run == $fvMedian ) { 
+                        if( FRIENDLY_URLS )
+                            echo "<td align=\"center\" class=\"even\" valign=\"middle\"><a href=\"/result/$id/$run/details/cached/\"><img class=\"progress\" width=250 src=\"/result/$id/{$run}_Cached_waterfall_thumb.png\"></a></td>";
+                        else
+                            echo "<td align=\"center\" class=\"even\" valign=\"middle\"><a href=\"/details.php?test=$id&run=$run&cached=1\"><img class=\"progress\" width=250 src=\"/thumbnail.php?test=$id&run=$run&cached=1&file={$run}_Cached_waterfall.png\"></a></td>";
+
+                        if (!isset($test['testinfo']) || !$test['testinfo']['noimages']) {
+                            if( FRIENDLY_URLS )
+                                echo "<td align=\"center\" class=\"even\" valign=\"middle\"><a href=\"/result/$id/$run/screen_shot/cached/\"><img class=\"progress\" width=250 src=\"/result/$id/{$run}_Cached_screen_thumb.jpg\"></a></td>";
+                            else
+                                echo "<td align=\"center\" valign=\"middle\"><a href=\"/screen_shot.php?test=$id&run=$run&cached=1\"><img class=\"progress\" width=250 src=\"/thumbnail.php?test=$id&run=$run&cached=1&file={$run}_Cached_screen.jpg\"></a></td>";
+                        }
+                        if ($video) {
+                            echo '<td align="center" valign="middle">';
+                            if (is_dir("$testPath/video_{$run}_cached")) {
+                                echo "<a href=\"/video/compare.php?tests=$id-r:$run-c:1\">Filmstrip View</a><br>-<br>";
+                                echo "<a href=\"/video/create.php?tests=$id-r:$run-c:1&id={$id}.{$run}.1\">Watch Video</a>";
+                            } else
+                                echo "not available";
+                            echo '</td>';
+                        } 
+                    } else {
+                        echo "<td colspan=\"$table_columns\" align=\"left\" valign=\"middle\">Repeat View: Test Data Missing</td>";
+                    }
+                echo '</tr>';
+                }
+                if( $testComplete && $run == $fvMedian ) { 
                     $b = getBreakdown($id, $testPath, $run, 0, $requests);
                     if (is_array($b)) {
                         $breakdown[] = array('run' => $run, 'data' => $b);
                     }
                 ?>
                 <tr>
-                    <td align="left" valign="middle"><a href="<?= $GLOBALS['basePath'] ?>result/<?php echo "$id/$run/breakdown/"; ?>">Content Breakdown</a></td>
+                    <td align="left" valign="middle"><a href="/result/<?php echo "$id/$run/breakdown/"; ?>">Content Breakdown</a></td>
                         <?php
                         $span = 2;
                         if($pageData[$run][0]['optimization_checked'])
@@ -467,6 +567,7 @@ $page_description = "Website performance test result$testLabel.";
                 
                 </table><br>
             <?php
+                }   // $error_str
             }
             ?>
             </div>
@@ -531,6 +632,50 @@ $page_description = "Website performance test result$testLabel.";
                 requestsChart.draw(requests, requestsOptions);
             }
           }
+        <?php
+        if( !$testComplete ) {
+            echo "testId = '$id';\n";
+        ?>
+            var pollingInterval = 15000;
+            function UpdateStatus(){
+                try {
+                  var xhr = new XMLHttpRequest();
+                  xhr.open('GET', '/testStatus.php?f=json&pos=1&test=' + testId, true);
+                  xhr.onreadystatechange = function() {
+                    if (xhr.readyState != 4)
+                      return;
+                    var reload = false;
+                    var interval = pollingInterval;
+                    if (xhr.status == 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response['statusCode'] != undefined) {
+                            if (response['statusCode'] == 100) {
+                                if (response['data'] != undefined &&
+                                    availableTests != undefined &&
+                                    response.data['testsCompleted'] != undefined &&
+                                    response.data['testsCompleted'] > availableTests)
+                                    reload = true;
+                            } else
+                                reload = true;
+                        }
+                    }
+                    if (reload)
+                        window.location.reload(true);
+                    else
+                        setTimeout('UpdateStatus()', pollingInterval);
+                  };
+                  xhr.onerror = function() {
+                    setTimeout('UpdateStatus()', pollingInterval);
+                  };
+                  xhr.send();
+                } catch (err) {
+                    setTimeout('UpdateStatus()', pollingInterval);
+                }
+            }
+            setTimeout('UpdateStatus()', pollingInterval);
+        <?php
+        }
+        ?>
         </script>
     </body>
 </html>

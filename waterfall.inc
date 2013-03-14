@@ -162,7 +162,11 @@ function _GetMapOrImage($rows, $url, $page_events, $options, $is_image_map) {
         $cached = ((bool)@$options['is_cached']) ? '_Cached' : '';
         $perf_file = ("{$options['path']}/" .
                       "{$options['run_id']}{$cached}_progress.csv");
-        $perfs = LoadPerfData($perf_file, $use_cpu, $use_bw);
+        $max_bw = 0;
+        if (isset($options) && array_key_exists('max_bw', $options)) {
+            $max_bw = $options['max_bw'];
+        }
+        $perfs = LoadPerfData($perf_file, $use_cpu, $use_bw, false, $max_bw);
         if ($is_thumbnail) {
             $perf_height = 16;
         } else {
@@ -303,7 +307,7 @@ function _GetMapOrImage($rows, $url, $page_events, $options, $is_image_map) {
         // Draw performance backgrounds, labels, and borders.
         if (isset($perfs) && is_array($perfs)) {
             foreach ($perfs as $key => $p) {
-                if (array_key_exists('count', $p)) {
+                if (array_key_exists('count', $p) && $p['count'] > 0) {
                     if (!$is_thumbnail && $show_labels) {
                         DrawPerfLabel($im, $key, $p, $font, $black);
                     }
@@ -641,8 +645,8 @@ class XScaler
     }
 
     public function __invoke($value) {
-        return $this->x_start + (int)((double)$this->x_width * (double)$value /
-                                      $this->value_max);
+        return $this->value_max ? $this->x_start + (int)((double)$this->x_width * (double)$value /
+                                      $this->value_max) : 0;
     }
 }
 
@@ -881,12 +885,14 @@ function AddBarIfValid(&$bars, $key, $request, $x_scaler, $y1, $y2) {
 * 
 */
 function InsertWaterfall($url, &$requests, $id, $run, $cached, $waterfall_options = '') {
+    global $settings;
+    
     // create the image map (this is for fallback when Javascript isn't enabled
     // but also gives us the position for each request)
     echo '<map name="waterfall_map">';
     $options = array(
         'id' => $id,
-        'path' => $testPath,
+        'path' => './' . GetTestPath($id),
         'run_id' => $run,
         'is_cached' => @$_GET['cached'],
         'use_cpu' => true,
@@ -897,7 +903,7 @@ function InsertWaterfall($url, &$requests, $id, $run, $cached, $waterfall_option
     foreach($map as $entry) {
         if (isset($entry['request'])) {
             $index = $entry['request'] + 1;
-            $title = $index . ': ' . $entry['url'];
+            $title = $index . ': ' . htmlspecialchars($entry['url']);
             echo '<area href="#request' . $index . '" alt="' . $title . '" title="' . $title . '" shape=RECT coords="' . $entry['left'] . ',' . $entry['top'] . ',' . $entry['right'] . ',' . $entry['bottom'] . '">' . "\n";
         } elseif (isset($entry['url'])) {
             echo '<area href="#request" alt="' . $entry['url'] . '" title="' . $entry['url'] . '" shape=RECT coords="' . $entry['left'] . ',' . $entry['top'] . ',' . $entry['right'] . ',' . $entry['bottom'] . '">' . "\n";
@@ -909,7 +915,7 @@ function InsertWaterfall($url, &$requests, $id, $run, $cached, $waterfall_option
     
     // main container for the waterfall
     echo '<div class="waterfall-container">';
-    echo "<img class=\"waterfall-image\" alt=\"\" usemap=\"#waterfall_map\" id=\"waterfall\" src=\"".$GLOBALS['basePath']."waterfall.php?test=$id&run=$run&cached=$cached$waterfall_options\">";
+    echo "<img class=\"waterfall-image\" alt=\"\" usemap=\"#waterfall_map\" id=\"waterfall\" src=\"/waterfall.php?test=$id&run=$run&cached=$cached$waterfall_options\">";
 
     // draw div's over each of the waterfall elements (use the image map as a reference)
     foreach($map as $entry) {
@@ -958,6 +964,7 @@ function InsertWaterfall($url, &$requests, $id, $run, $cached, $waterfall_option
     echo "<script type=\"text/javascript\">\n";
     echo "var wptRequestCount=" . count($requests) . ";\n";
     echo "var wptRequestData=" . json_encode($requests) . ";\n";
+    echo "var wptNoLinks={$settings['nolinks']};\n";
     echo "</script>";
 }
 

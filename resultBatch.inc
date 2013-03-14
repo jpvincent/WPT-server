@@ -62,11 +62,18 @@ if( $test['test']['fvonly'] )
 $videoCaptured = false;
 if ($test['test']['video'])
     $videoCaptured = true;
-$showSpeedIndex = false;
+$showExperimental = false;
 if( $videoCaptured && (!$supportsAuth || ($admin || strpos($_COOKIE['google_email'], '@google.com') !== false)) )
-    $showSpeedIndex = true;
+    $showExperimental = true;
 
-    
+
+$testIds = array();
+foreach( $tests['urls'] as &$testData ) {
+    $testIds[] = $testData['id'];
+    foreach( $test['v'] as $variationId )
+        $testIds[] = $variationId;
+}
+
 // run a quick check to see if the tests are complete
 $dirty = false;
 $complete = CheckTests($tests, $dirty);
@@ -115,13 +122,11 @@ else
         <?php
         if( !$complete )
         {
+            $autoRefresh = true;
             ?>
             <noscript>
-            <meta http-equiv="refresh" content="30" />
+            <meta http-equiv="refresh" content="5" />
             </noscript>
-            <script language="JavaScript">
-            setTimeout( "window.location.reload(true)", 30000 );
-            </script>
             <?php
         }
         $gaTemplate = 'Bulk Result';
@@ -138,9 +143,13 @@ else
                 display: none;
                 position: absolute;
             }
+            #filmstrip {
+                width: 100%;
+                height: 380px;
+            }
         </style>
         </style>
-        <script type="text/javascript" src="<?= $GLOBALS['basePath'] ?>video/player/flowplayer-3.2.6.min.js"></script>
+        <script type="text/javascript" src="/video/player/flowplayer-3.2.6.min.js"></script>
     </head>
     <body>
         <div class="page">
@@ -148,16 +157,19 @@ else
             $tab = 'Test Result';
             if( $view == 'pss' || $view == 'pss_path' )
             {
-                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? $GLOBALS['basePath']."/compare?pssid=$id" : $GLOBALS['basePath']."/pss.php?pssid=$id",
-                                    'Test Result' => FRIENDLY_URLS ? $GLOBALS['basePath']."/result/$id/" : $GLOBALS['basePath']."/results.php?test=$id",
-                                    'Page Speed Service Home' => 'http://code.google.com/speed/pss', 
+                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? "/compare?pssid=$id" : "/pss.php?pssid=$id",
+                                    'Test Result' => FRIENDLY_URLS ? "/result/$id/" : "/results.php?test=$id",
+                                    'PageSpeed Service Home' => 'http://code.google.com/speed/pss', 
                                     'Sample Tests' => 'http://code.google.com/speed/pss/gallery.html',
                                     'Sign Up!' => 'https://docs.google.com/a/google.com/spreadsheet/viewform?hl=en_US&formkey=dDdjcmNBZFZsX2c0SkJPQnR3aGdnd0E6MQ');
+                if (array_key_exists('testinfo', $test) && array_key_exists('pss_advanced', $test['testinfo']) && $test['testinfo']['pss_advanced']) {                
+                    $navTabs['New Comparison'] = FRIENDLY_URLS ? "/compare?pssid=$id&option=prioritize_visible_content" : "/pss.php?pssid=$id&option=prioritize_visible_content";
+                }
             }
             elseif ($view == 'blink')
             {
-                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? $GLOBALS['basePath']."/blink?bid=$id" : $GLOBALS['basePath']."/blink.php?bid=$id",
-                                    'Test Result' => FRIENDLY_URLS ? $GLOBALS['basePath']."/result/$id/" : $GLOBALS['basePath']."/results.php?test=$id");
+                $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? "/blink?bid=$id" : "/blink.php?bid=$id",
+                                    'Test Result' => FRIENDLY_URLS ? "/result/$id/" : "/results.php?test=$id");
             }
             include 'header.inc';
             ?>
@@ -185,7 +197,7 @@ else
                     if (strlen($test['testinfo']['label']))
                     {
                         $label = $test['testinfo']['label'];
-                        $label = str_replace('PSS Comparison for', 'Page Speed Service Comparison for', $label);
+                        $label = str_replace('PSS Comparison for', 'PageSpeed Service Comparison for', $label);
                         echo "<h2>$label<br><span class=\"small\">(You can bookmark this page to come back or share the results with others)</span></h2>";
                     }
 
@@ -202,7 +214,7 @@ else
                     if( $view != 'bulk' )
                         DisplayProgress($tests);
                 }
-
+                
                 if( $view == 'bulk' )
                 {
                     if( count($tests['variations']) )
@@ -242,10 +254,10 @@ else
                             echo '<br>';
                         }
                         if( FRIENDLY_URLS )
-                            echo "<br>Download Combined Raw: <a href=\"".$GLOBALS['basePath']."result/$id/{$id}_bulk_page_data.csv\">Page Data</a> - <a href=\"".$GLOBALS['basePath']."result/$id/{$id}_bulk_requests.csv\">Object Data</a>";
+                            echo "<br>Download Combined Raw: <a href=\"/result/$id/{$id}_bulk_page_data.csv\">Page Data</a> - <a href=\"/result/$id/{$id}_bulk_requests.csv\">Object Data</a>";
                         else
-                            echo "<br>Download Combined Raw: <a href=\"".$GLOBALS['basePath']."csv.php?test=$id\">Page Data</a> - <a href=\"".$GLOBALS['basePath']."csv.php?test=$id&requests=1\">Object Data</a>";
-                        echo "<br><br><a href=\"".$GLOBALS['basePath']."aggregate.php?test=$id\">Download Aggregate Statistics</a>";
+                            echo "<br>Download Combined Raw: <a href=\"/csv.php?test=$id\">Page Data</a> - <a href=\"/csv.php?test=$id&requests=1\">Object Data</a>";
+                        echo "<br><br><a href=\"/aggregate.php?test=$id\">Download Aggregate Statistics</a>";
                     }
                 }
                 else
@@ -256,19 +268,92 @@ else
                         <div class="left" style="width: 630px; margin-left: auto; margin-right: auto;">
                         <p>Here are some resources you can browse while you wait for testing to complete (all open in new browser tabs):</p>
                         <ul class="bullet_list">
-                        <li><a href="http://code.google.com/speed/pss" target="_blank">Page Speed Service home page</a> - information about the service</li>
-                        <li><a href="http://code.google.com/speed/pss/gallery.html" target="_blank">Sample Tests</a> - Tests for common types of sites optimized by the Page Speed Service</li>
+                        <li><a href="http://code.google.com/speed/pss" target="_blank">PageSpeed Service home page</a> - information about the service</li>
+                        <li><a href="http://code.google.com/speed/pss/gallery.html" target="_blank">Sample Tests</a> - Tests for common types of sites optimized by the PageSpeed Service</li>
                         </ul>
                         </div>
                         <?php
                     }
                     elseif( $view == 'bulk' )
-                        echo "<br><br><a href=\"".$GLOBALS['basePath']."cancelTest.php?test=$id\">Cancel all pending tests</a>";
+                        echo "<br><br><a href=\"/cancelTest.php?test=$id\">Cancel all pending tests</a>";
                 }
                 ?>
             </div>
             <?php include('footer.inc'); ?>
             <script type="text/javascript">
+                var tests = "<?php echo implode(',', $testIds); ?>";
+                var pollingInterval = 5000;
+                var pollingIntervalTesting = 1000;
+                var waitingImage = '<?php echo "{$GLOBALS['cdnPath']}/images/status_waiting.png"; ?>';
+                var testingImage = '<?php echo "{$GLOBALS['cdnPath']}/images/status_testing.png"; ?>';
+                var lastStatusCode = 0;
+                var lastStatusText = '';
+                function UpdateStatus(){
+                    try {
+                      var xhr = new XMLHttpRequest();
+                      xhr.open('GET', '/testStatus.php?f=json&pos=1&tests=' + tests, true);
+                      xhr.onreadystatechange = function() {
+                        if (xhr.readyState != 4)
+                          return;
+                        var reload = false;
+                        var interval = pollingInterval;
+                        if (xhr.status == 200) {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response['statusCode'] != undefined &&
+                                response['statusCode'] != lastStatusCode) {
+                                lastStatusCode = response['statusCode'];
+                                if (lastStatusCode == 101)
+                                    $("#statusImage").attr("src",waitingImage);
+                                else if (lastStatusCode == 100)
+                                    $("#statusImage").attr("src",testingImage);
+                                else
+                                    reload = true;
+                            }
+                            if (lastStatusCode == 100) {
+                                interval = pollingIntervalTesting;
+                            }
+                            if (response['statusText'] != undefined &&
+                                response['statusText'] != lastStatusText) {
+                                lastStatusText = response['statusText'];
+                                $('#statusText').text(lastStatusText);
+                            }
+                        }
+                        if (reload)
+                            window.location.reload(true);
+                        else
+                            setTimeout('UpdateStatus()', interval);
+                      };
+                      xhr.onerror = function() {
+                        setTimeout('UpdateStatus()', pollingInterval);
+                      };
+                      xhr.send();
+                    } catch (err) {
+                        setTimeout('UpdateStatus()', pollingInterval);
+                    }
+                }
+                
+                function CheckVideo(id) {
+                    try {
+                      var xhr = new XMLHttpRequest();
+                      xhr.open('GET', '/video/videoStatus.php?id=' + id, true);
+                      xhr.onreadystatechange = function() {
+                        if (xhr.readyState != 4)
+                          return;
+                        var reload = false;
+                        var interval = pollingInterval;
+                        if (xhr.status == 200) {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response['statusCode'] == 200) {
+                                window.location.reload(true);
+                            }
+                        }
+                      };
+                      xhr.onerror = function() {};
+                      xhr.send();
+                    } catch (err) {
+                    }
+                }
+                
                 /*
                  * jQuery Pimg (Preview image) 
                  * Written by Dave Earley ( http://Bitsntuts.com )
@@ -298,6 +383,10 @@ else
                     });
                 };
                 //pimg();
+                <?php
+                if (!$complete && $view != 'bulk')
+                    echo "setTimeout('UpdateStatus()', pollingInterval);\n";
+                ?>
             </script>
         </div>
     </body>
@@ -324,12 +413,11 @@ if( $dirty )
 */
 function DisplayTests(&$tests)
 {
-    global $showSpeedIndex;
     global $fvonly;
     global $videoCaptured;
 
     if ($videoCaptured) {
-        echo "<form name=\"compare\" method=\"get\" action=\"".$GLOBALS['basePath']."video/compare.php\">";
+        echo "<form name=\"compare\" method=\"get\" action=\"/video/compare.php\">";
     }
     echo '<br><table class="batchResults" border="1" cellpadding="10" cellspacing="0">
         <tr>';
@@ -340,7 +428,7 @@ function DisplayTests(&$tests)
             <th>Median load time<br>(First view)</th>';
     if( !$fvonly )
         echo '<th>Median load time<br>(Repeat view)</th>';
-    echo '<th>Median Speed Index<br>(First View)</th>';
+    echo '<th>Median <a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a><br>(First View)</th>';
     echo    '<th>Raw page data</th>
             <th>Raw object data</th>
             <th>Http archive (.har)</th>
@@ -365,12 +453,11 @@ function DisplayTests(&$tests)
 */
 function DisplayTestsWithVariations(&$tests)
 {
-    global $showSpeedIndex;
     global $fvonly;
     global $videoCaptured;
 
     if ($videoCaptured) {
-        echo "<form name=\"compare\" method=\"get\" action=\"".$GLOBALS['basePath']."video/compare.php\">";
+        echo "<form name=\"compare\" method=\"get\" action=\"/video/compare.php\">";
     }
     echo '<br><table class="batchResults" border="1" cellpadding="10" cellspacing="0">
         <tr>';
@@ -381,9 +468,7 @@ function DisplayTestsWithVariations(&$tests)
             <th>Median load time<br>(First view)</th>';
     if( !$fvonly )
         echo '<th>Median load time<br>(Repeat view)</th>';
-    if( $showSpeedIndex ) {
-        echo '<th>Median Speed Index<br>(First View)</th>';
-    }
+    echo '<th>Median <a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a><br>(First View)</th>';
     echo   '<th>Raw page data</th>
             <th>Raw object data</th>
             <th>Http archive (.har)</th>
@@ -412,7 +497,6 @@ function DisplayTestsWithVariations(&$tests)
 */
 function DisplayTest($id, $url, $label, $complete)
 {
-    global $showSpeedIndex;
     global $stats;
     global $fvonly;
     global $videoCaptured;
@@ -428,15 +512,12 @@ function DisplayTest($id, $url, $label, $complete)
     $safeUrl = htmlspecialchars($url);
     $label = htmlspecialchars($label);
     if( FRIENDLY_URLS )
-        echo "<td><a href=\"".$GLOBALS['basePath']."result/$id/\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
+        echo "<td><a href=\"/result/$id/\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
     else
-        echo "<td><a href=\"".$GLOBALS['basePath']."results.php?test=$id\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
+        echo "<td><a href=\"/results.php?test=$id\" title=\"$safeUrl\" target=\"_blank\">$label</a></td>";
     if( $complete )
     {
-        $options = null;
-        if ($showSpeedIndex)
-            $options = array('SpeedIndex' => true);
-        $pageData = loadAllPageData($testPath, $options);
+        $pageData = loadAllPageData($testPath);
         $fvMedian = GetMedianRun($pageData, 0, $median_metric);
         $rvMedian = GetMedianRun($pageData, 1, $median_metric);
         $rvMedian_column = '';
@@ -451,23 +532,21 @@ function DisplayTest($id, $url, $label, $complete)
                 $stats['rv'][] = $pageData[$rvMedian][1]['loadTime'];
             echo "<td>$rvMedian_column</td>";
         }
-        if ($showSpeedIndex) {
-            echo '<td>';
-            if (array_key_exists('SpeedIndex', $pageData[$fvMedian][0]))
-                echo $pageData[$fvMedian][0]['SpeedIndex'];
-            echo '</td>';
-        }
+        echo '<td>';
+        if (array_key_exists('SpeedIndex', $pageData[$fvMedian][0]))
+            echo $pageData[$fvMedian][0]['SpeedIndex'];
+        echo '</td>';
         if( FRIENDLY_URLS )
         {
-            echo "<td><a href=\"".$GLOBALS['basePath']."result/$id/{$id}_{$fileUrl}_page_data.csv\">Download Page Data</a></td>";
-            echo "<td><a href=\"".$GLOBALS['basePath']."result/$id/{$id}_{$fileUrl}_requests.csv\">Download Object Data</a></td>";
+            echo "<td><a href=\"/result/$id/{$id}_{$fileUrl}_page_data.csv\">Download Page Data</a></td>";
+            echo "<td><a href=\"/result/$id/{$id}_{$fileUrl}_requests.csv\">Download Object Data</a></td>";
         }
         else
         {
-            echo "<td><a href=\"".$GLOBALS['basePath']."csv.php?test=$id\">Download Page Data</a></td>";
-            echo "<td><a href=\"".$GLOBALS['basePath']."csv.php?test=$id&requests=1\">Download Object Data</a></td>";
+            echo "<td><a href=\"/csv.php?test=$id\">Download Page Data</a></td>";
+            echo "<td><a href=\"/csv.php?test=$id&requests=1\">Download Object Data</a></td>";
         }
-        echo "<td><a href=\"".$GLOBALS['basePath']."export.php?test=$id\">Download HAR</a></td>";
+        echo "<td><a href=\"/export.php?test=$id\">Download HAR</a></td>";
     }
     else
     {
@@ -478,7 +557,7 @@ function DisplayTest($id, $url, $label, $complete)
         $status = GetTestStatus($id);
         echo $status['statusText'];
         if( $status['statusCode'] == 101 )
-            echo "( <a href=\"".$GLOBALS['basePath']."cancelTest.php?test=$id\">Cancel Test</a> )";
+            echo "( <a href=\"/cancelTest.php?test=$id\">Cancel Test</a> )";
         echo '</td>';
     }
     echo "</tr>\n";
@@ -503,6 +582,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
     global $videoDirty;
     global $admin;
     global $median_metric;
+    global $showExperimental;
     require_once('object_detail.inc');
     $includeRender = false;
     if( $_REQUEST['norender'] )
@@ -513,6 +593,8 @@ function DisplayPSS(&$tests, $video, &$dirty)
     $rvLoadTimes = array();
     $rvRenderTimes = array();
     $fvFLI = array();
+    if ($showExperimental)
+        $fvSpeedIndexDT = array();
     $rvFLI = array();
     $original = array();
     $optimized = array();
@@ -521,15 +603,29 @@ function DisplayPSS(&$tests, $video, &$dirty)
     global $fvonly;
     $url = '';
     $host  = $_SERVER['HTTP_HOST'];
+    $videoCustom = '';
     
     // first pass, check the status of all of the tests and calculate the relevant times
     foreach( $tests['urls'] as &$test )
     {
+        $test['end'] = 'visual';
+        if (!$count) {
+            if (array_key_exists('endOriginal', $_GET)) {
+                $test['end'] = urlencode(trim($_GET['endOriginal']));
+                $videoCustom .= md5('o' . $test['end']);
+            }
+        } else {
+            if (array_key_exists('endOptimized', $_GET)) {
+                $test['end'] = urlencode(trim($_GET['endOptimized']));
+                $videoCustom .= md5('x' . $test['end']);
+            }
+        }
         $fvLoadTime = null;
         $fvRenderTime = null;
         $rvLoadTime = null;
         $rvRenderTime = null;
         $fvFLIvalue = null;
+        $fvSpeedIndexDTValue = null;
         RestoreTest($test['id']);
         $test['path'] = GetTestPath($test['id']);
         $testPath = './' . $test['path'];
@@ -539,14 +635,23 @@ function DisplayPSS(&$tests, $video, &$dirty)
             $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
             if( !$started || (array_key_exists('started', $testInfo) && $testInfo['started'] < $started) )
                 $started = $testInfo['started'];
-            $pageData = loadAllPageData($testPath, array('SpeedIndex' => true));
+            $options = array('end' => $test['end']);
+            $pageData = loadAllPageData($testPath, $options);
             $fvMedian = GetMedianRun($pageData, 0, $median_metric);
             $test['fvMedian'] = $fvMedian;
             $fvLoadTime = $pageData[$fvMedian][0]['loadTime'];
             $fvRenderTime = $pageData[$fvMedian][0]['render'];
-            $visual = GetVisualProgress($testPath, $fvMedian, 0);
-            if (array_key_exists('FLI', $visual)) {
-                $fvFLIvalue = $visual['FLI'];
+            $visual = GetVisualProgress($testPath, $fvMedian, 0, null, $test['end']);
+            if (array_key_exists('SpeedIndex', $pageData[$fvMedian][0]))
+                $fvFLIvalue = $pageData[$fvMedian][0]['SpeedIndex'];
+            if (array_key_exists('SpeedIndexCustom', $pageData[$fvMedian][0]))
+                $fvFLIvalue = $pageData[$fvMedian][0]['SpeedIndexCustom'];
+            if (array_key_exists('SpeedIndexDT', $pageData[$fvMedian][0]))
+                $fvSpeedIndexDTValue = $pageData[$fvMedian][0]['SpeedIndexDT'];
+            if (array_key_exists('visualComplete', $visual) && 
+                array_key_exists($visual['visualComplete'], $visual['frames']) &&
+                is_file('.' . $visual['frames'][$visual['visualComplete']]['path'])) {
+                $test['thumbnail'] = "video_$fvMedian/{$visual['frames'][$visual['visualComplete']]['file']}";
             }
             if( $count )
             {
@@ -652,6 +757,8 @@ function DisplayPSS(&$tests, $video, &$dirty)
         $fvLoadTimes[$count] = $fvLoadTime;
         $fvRenderTimes[$count] = $fvRenderTime;
         $fvFLI[$count] = $fvFLIvalue;
+        if (isset($fvSpeedIndexDT) && isset($fvSpeedIndexDTValue))
+            $fvSpeedIndexDT[$count] = $fvSpeedIndexDTValue;
         if( !$fvonly )
         {
             $rvLoadTimes[$count] = $rvLoadTime;
@@ -799,7 +906,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
     {
         if ($baseDomainRedirect)
         {
-            $testUrl = $GLOBALS['basePath'].'/compare?url=' . urlencode($basePage['host'] . $basePage['url']);
+            $testUrl = '/compare?url=' . urlencode($basePage['host'] . $basePage['url']);
             echo '<div class="alert">';
             echo '<h1>Domain Redirect Detected</h1>';
             echo "It looks like <b>$testedHost</b> redirects to <b>$basePageHost</b> which prevented the optimization from being correctly measured.<br>Please <a href=\"$testUrl\">re-run the test</a> using <b>$basePageHost</b> instead.";
@@ -810,75 +917,93 @@ function DisplayPSS(&$tests, $video, &$dirty)
         {
             echo '<div class="alert">';
             echo '<h1>HTTPS Content Detected</h1>';
-            echo "It looks like one or more resources from <b>$basePageHost</b> are served over <b>HTTPS</b> which prevented the optimization from being correctly measured.<br>(Page Speed Service does not support serving HTTPS content from the base domain)";
+            echo "It looks like one or more resources from <b>$basePageHost</b> are served over <b>HTTPS</b> which prevented the optimization from being correctly measured.<br>(PageSpeed Service does not support serving HTTPS content from the base domain)";
             echo '</div>';
         }
         
-        echo '<br><table class="batchResults" border="1" cellpadding="15" cellspacing="0">
-                <tr>
-                <th class="empty"></th>';
-        // second pass, generate the header
-        $count = 0;
-        foreach( $tests['urls'] as &$test )
-        {
-            $label = htmlspecialchars($test['l']);
-            if( !strlen($label) )
-                $label = htmlspecialchars(ShortenUrl($test['u']));
-            echo "<th>$label</th>";
-            if( $count && $complete )
-                echo "<th>Difference</a></th>";
-            $count++;
-        }
-        echo '</tr>';
-        
-        // FV Page load time
-        if( $complete )
-        {
-            DisplayMetric('Page Load Time', $fvLoadTimes, $count);
-            if( $includeRender )
-                DisplayMetric('Start Render Time', $fvRenderTimes, $count);
-            if( $admin || strpos($_COOKIE['google_email'], '@google.com') !== false ) {
-                DisplayMetric('Speed Index (lower is better)', $fvFLI, $count, false, false);
-            }
-            if( !$fvonly )
-            {
-                DisplayMetric('Repeat View Page Load Time', $rvLoadTimes, $count);
-                if( $includeRender )
-                    DisplayMetric('Repeat View Start Render Time', $rvRenderTimes, $count);
-            }
-
-            // links to the test results
-            echo '<tr><td class="right">Full Test Result</td>';
+        if (array_key_exists('pss_advanced', $testInfo) && $testInfo['pss_advanced']) {
+            echo "<h2>Side-by-side Filmstrip (<a href=\"/video/compare.php?bare=1&tests={$tests['urls'][0]['id']},{$tests['urls'][1]['id']}&end=visual\" target=\"_blank\">open in new window</a>)</h2>";
+            $e1='';
+            if (is_numeric($tests['urls'][0]['end']))
+                $e1="-e:{$tests['urls'][0]['end']}";
+            $e2='';
+            if (is_numeric($tests['urls'][1]['end']))
+                $e2="-e:{$tests['urls'][1]['end']}";
+            echo "<iframe scrolling=\"no\" frameborder=\"0\" id=\"filmstrip\" src=\"/video/compare.php?embed=1&tests={$tests['urls'][0]['id']}$e1,{$tests['urls'][1]['id']}$e2&end=visual\"></iframe>";
+        } elseif (!array_key_exists('pss_advanced', $testInfo) || !$testInfo['pss_advanced']) {
+            echo '<br><table class="batchResults" border="1" cellpadding="15" cellspacing="0">
+                    <tr>
+                    <th class="empty"></th>';
+            // second pass, generate the header
             $count = 0;
             foreach( $tests['urls'] as &$test )
             {
-                $testurl = $GLOBALS['basePath']."/results.php?test={$test['id']}";
-                if( FRIENDLY_URLS )
-                    $testurl = $GLOBALS['basePath']."/result/{$test['id']}/";
-                $path = $test['path'];
-                $run = $test['fvMedian'];
-                echo "<td><a href=\"$testurl\" target=\"_blank\"><img class=\"progress pimg\" src=\"/thumbnail.php?test={$test['id']}&width=150&run=$run&file={$run}_screen.jpg\" img_src=\"/$path/{$run}_screen.jpg\"><br>view test</a></td>";
-                if( $count )
-                    echo "<td></td>";
+                $label = htmlspecialchars($test['l']);
+                if( !strlen($label) )
+                    $label = htmlspecialchars(ShortenUrl($test['u']));
+                echo "<th>$label</th>";
+                if( $count && $complete )
+                    echo "<th>Difference</a></th>";
                 $count++;
             }
-            echo "</tr>";
-        }
-        else
-        {
-            echo "<tr><td>Test Status</td>";
-            foreach( $tests['urls'] as &$test )
-            {
-                echo '<td>';
-                if( $test['c'] )
-                    echo 'Complete';
-                else
-                    echo $test['status'];
-                echo '</td>';
-            }
             echo '</tr>';
+            
+            // FV Page load time
+            if( $complete )
+            {
+                DisplayMetric('Page Load Time', $fvLoadTimes, $count);
+                if( $includeRender )
+                    DisplayMetric('Start Render Time', $fvRenderTimes, $count);
+                DisplayMetric('<a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a> (lower is better)', $fvFLI, $count, false, false);
+                if (isset($fvSpeedIndexDT) && count($fvSpeedIndexDT))
+                    DisplayMetric('<a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a> (Dev Tools)', $fvSpeedIndexDT, $count, false, false);
+                    
+                if( !$fvonly )
+                {
+                    DisplayMetric('Repeat View Page Load Time', $rvLoadTimes, $count);
+                    if( $includeRender )
+                        DisplayMetric('Repeat View Start Render Time', $rvRenderTimes, $count);
+                }
+
+                // links to the test results
+                echo '<tr><td class="right">Full Test Result</td>';
+                $count = 0;
+                foreach( $tests['urls'] as &$test )
+                {
+                    $testurl = "/results.php?test={$test['id']}";
+                    if (is_numeric($test['end']))
+                        $testurl .= "&end={$test['end']}";
+                    elseif( FRIENDLY_URLS )
+                        $testurl = "/result/{$test['id']}/";
+                    $path = $test['path'];
+                    $run = $test['fvMedian'];
+                    $thumbnail = "{$run}_screen.jpg";
+                    if (array_key_exists('thumbnail', $test)) {
+                        $thumbnail = urlencode($test['thumbnail']);
+                    }
+                    echo "<td><a href=\"$testurl\" target=\"_blank\"><img class=\"progress pimg\" src=\"/thumbnail.php?test={$test['id']}&width=150&run=$run&file=$thumbnail\" img_src=\"/$path/$thumbnail\"><br>view test</a></td>";
+                    if( $count )
+                        echo "<td></td>";
+                    $count++;
+                }
+                echo "</tr>";
+            }
+            else
+            {
+                echo "<tr><td>Test Status</td>";
+                foreach( $tests['urls'] as &$test )
+                {
+                    echo '<td>';
+                    if( $test['c'] )
+                        echo 'Complete';
+                    else
+                        echo $test['status'];
+                    echo '</td>';
+                }
+                echo '</tr>';
+            }
+            echo '</table><br>';
         }
-        echo '</table><br>';
     }
 
     // video
@@ -886,46 +1011,46 @@ function DisplayPSS(&$tests, $video, &$dirty)
     {
         $videoComplete = true;
         // regenerate a video if it was created a while ago and still isn't available
-        if( strlen($videoInfo['vID']) ) {
-            if (!CheckVideo($videoInfo['vID'], $regenerate_video) && $regenerate_video) {
-                if (array_key_exists('regenerated', $videoInfo) && $videoInfo['regenerated']) {
+        if( strlen($videoInfo['vID' . $videoCustom]) ) {
+            if (!CheckVideo($videoInfo['vID' . $videoCustom], $regenerate_video) && $regenerate_video) {
+                if (array_key_exists('regenerated' . $videoCustom, $videoInfo) && $videoInfo['regenerated'] . $videoCustom) {
                     $videoComplete = true;
-                    $videoInfo['vReady'] = true;
+                    $videoInfo['vReady' . $videoCustom] = true;
                 } else {
-                    $videoInfo['regenerated'] = true;
-                    $videoInfo['vID'] = null;
+                    $videoInfo['regenerated' . $videoCustom] = true;
+                    $videoInfo['vID' . $videoCustom] = null;
                 }
                 $videoDirty = true;
             }
         }
-        if( !strlen($videoInfo['vID']) )
+        if( !strlen($videoInfo['vID' . $videoCustom]) )
         {
-            $videoInfo['vID'] = CreateVideo($tests['urls']);
+            $videoInfo['vID' . $videoCustom] = CreateVideo($tests['urls']);
             $videoDirty = true;
             $videoComplete = false;
-            if( !strlen($videoInfo['vID']) )
+            if( !strlen($videoInfo['vID' . $videoCustom]) )
             {
                 // bail on the video if it couldn't be created
                 $videoComplete = true;
-                $videoInfo['vReady'] = true;
+                $videoInfo['vReady' . $videoCustom] = true;
             }
         }
-        elseif( !$videoInfo['vReady'] )
+        elseif( !$videoInfo['vReady' . $videoCustom] )
         {
-            $videoInfo['vReady'] = CheckVideo($videoInfo['vID'], $regenerate_video);
-            if( $videoInfo['vReady'] )
+            $videoInfo['vReady' . $videoCustom] = CheckVideo($videoInfo['vID' . $videoCustom], $regenerate_video);
+            if( $videoInfo['vReady' . $videoCustom] )
                 $videoDirty = true;
             else
                 $videoComplete = false;
         }
         
         if ($json) {
-            $json_response['data']['VideoID'] = $videoInfo['vID'];
+            $json_response['data']['VideoID'] = $videoInfo['vID' . $videoCustom];
             if ($videoComplete) {
                 $json_response['statusCode'] = 200;
                 $host  = $_SERVER['HTTP_HOST'];
                 $uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-                $json_response['data']['videoEmbed'] = "http://$host$uri/video/view.php?embed=1&id={$videoInfo['vID']}";
+                $json_response['data']['videoEmbed'] = "http://$host$uri/video/view.php?embed=1&id=" . $videoInfo['vID' . $videoCustom];
             } else {
                 $json_response['statusCode'] = 103;
                 $json_response['statusText'] = 'Creating Video';
@@ -933,13 +1058,18 @@ function DisplayPSS(&$tests, $video, &$dirty)
         } else {
             if( $videoComplete )
             {
-                echo "<h2>Visual Comparison* (<a href=\"".$GLOBALS['basePath']."video/compare.php?bare=1&tests={$tests['urls'][0]['id']},{$tests['urls'][1]['id']}\" target=\"_blank\">view filmstrip comparison</a>)</h2>";
-                VideoHtml($videoInfo['vID']);
+                if (!array_key_exists('pss_advanced', $testInfo) || !$testInfo['pss_advanced']) {
+                    echo "<h2>Visual Comparison* (<a href=\"/video/compare.php?bare=1&tests={$tests['urls'][0]['id']}-e:{$tests['urls'][0]['end']},{$tests['urls'][1]['id']}-e:{$tests['urls'][1]['end']}&end=visual\" target=\"_blank\">view filmstrip comparison</a>)</h2>";
+                } else {
+                    echo "<h2>Visual Comparison*</h2>";
+                }
+                VideoHtml($videoInfo['vID' . $videoCustom]);
             }
             else
             {
+                $videoId = $videoInfo['vID' . $videoCustom];
                 echo '<h2>Please wait while the video comparison is created<br><span class="small">(This page will automatically update when the video is ready)</span></h2>';
-                echo "<script language=\"JavaScript\">\nsetTimeout( \"window.location.reload(true)\", 10000 );\n</script>";
+                echo "<script language=\"JavaScript\">\nsetInterval( \"CheckVideo('$videoId')\", 1000 );\n</script>";
             }
         }
     }
@@ -1004,7 +1134,7 @@ function DisplayPSSPath(&$tests, $video, &$dirty)
             $test['path'] = GetTestPath($test['id']);
             $entry['path'] = $test['path'];
             $testPath = './' . $test['path'];
-            $entry['pageData'] = loadAllPageData($testPath, array('SpeedIndex' => true));
+            $entry['pageData'] = loadAllPageData($testPath);
             $entry['median_run'] = GetMedianRun($entry['pageData'], 0, $median_metric);
             $entry['median'] = $entry['pageData'][$entry['median_run']][0];
             $entry['requests'] = getRequests($test['id'], $testPath, $entry['median_run'], 0, $secure, $haveLocations, false);
@@ -1072,7 +1202,7 @@ function DisplayPSSPath(&$tests, $video, &$dirty)
         {
             echo '<div class="alert">';
             echo '<h1>HTTPS Content Detected</h1>';
-            echo "It looks like one or more resources from <b>$basePageHost</b> are served over <b>HTTPS</b> which prevented the optimization from being correctly measured.<br>(Page Speed Service does not support serving HTTPS content from the base domain)";
+            echo "It looks like one or more resources from <b>$basePageHost</b> are served over <b>HTTPS</b> which prevented the optimization from being correctly measured.<br>(PageSpeed Service does not support serving HTTPS content from the base domain)";
             echo '</div>';
         }
 /*        
@@ -1153,7 +1283,7 @@ function DisplayPSSPath(&$tests, $video, &$dirty)
                 }
             }
             if (!strlen($videoInfo['vID'])) {
-                $videoInfo['vID'] = CreateVideo($videoTests, 'all');
+                $videoInfo['vID'] = CreateVideo($videoTests);
                 $videoDirty = true;
                 $videoComplete = false;
                 if (!strlen($videoInfo['vID'])) {
@@ -1174,7 +1304,7 @@ function DisplayPSSPath(&$tests, $video, &$dirty)
                 }
             }
             if (!strlen($videoInfo['vPathID'])) {
-                $videoInfo['vPathID'] = CreateVideo($videoPathTests, 'all');
+                $videoInfo['vPathID'] = CreateVideo($videoPathTests);
                 $videoDirty = true;
                 $videoComplete = false;
                 if (!strlen($videoInfo['vPathID'])) {
@@ -1192,15 +1322,16 @@ function DisplayPSSPath(&$tests, $video, &$dirty)
             if( $videoComplete ) {
                 echo '<h2>First View Visual Comparison*</h2>';
                 VideoHtml($videoInfo['vID']);
-                echo "<br><a href=\"".$GLOBALS['basePath']."video/view.php?bare=1&id={$videoInfo['vID']}\" target=\"_blank\">view stand-alone video</a>";
-                echo "<br><a href=\"".$GLOBALS['basePath']."video/compare.php?bare=1&tests={$testData['Page']['Original']['id']},{$testData['Page']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
+                echo "<br><a href=\"/video/view.php?bare=1&id={$videoInfo['vID']}\" target=\"_blank\">view stand-alone video</a>";
+                echo "<br><a href=\"/video/compare.php?bare=1&tests={$testData['Page']['Original']['id']},{$testData['Page']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
                 echo '<br><br><h2>Site Navigation Visual Comparison*</h2>';
                 VideoHtml($videoInfo['vPathID']);
-                echo "<br><a href=\"".$GLOBALS['basePath']."video/view.php?bare=1&id={$videoInfo['vPathID']}\" target=\"_blank\">view stand-alone video</a>";
-                echo "<br><a href=\"".$GLOBALS['basePath']."video/compare.php?bare=1&tests={$testData['Path']['Original']['id']},{$testData['Path']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
+                echo "<br><a href=\"/video/view.php?bare=1&id={$videoInfo['vPathID']}\" target=\"_blank\">view stand-alone video</a>";
+                echo "<br><a href=\"/video/compare.php?bare=1&tests={$testData['Path']['Original']['id']},{$testData['Path']['Optimized']['id']}\" target=\"_blank\">view filmstrip comparison</a>";
             } else {
+                $videoId = $videoInfo['vID'];
                 echo '<h2>Please wait while the video comparison is created<br><span class="small">(This page will automatically update when the video is ready)</span></h2>';
-                echo "<script language=\"JavaScript\">\nsetTimeout( \"window.location.reload(true)\", 10000 );\n</script>";
+                echo "<script language=\"JavaScript\">\nsetInterval( \"CheckVideo('$videoId')\", 1000 );\n</script>";
             }
         }
     }
@@ -1274,8 +1405,11 @@ function DisplayBlink(&$tests, $video, &$dirty)
                 echo '<h2>Template Cached - Visual Comparison</h2>';
                 VideoHtml($tests['videoId']);
             }
-            else
+            else {
                 echo '<h2>Please wait while the video comparison is created<br><span class="small">(This page will automatically update when the video is ready)</span></h2>';
+                $videoId = $tests['videoId'];
+                echo "<script language=\"JavaScript\">\nsetInterval( \"CheckVideo('$videoId')\", 1000 );\n</script>";
+            }
         }
     }
 
@@ -1306,14 +1440,13 @@ function DisplayBlink(&$tests, $video, &$dirty)
             {
                 echo '<h2>Template Not Cached - Visual Comparison</h2>';
                 VideoHtml($tests['NCvideoId']);
-            }
-            else
+            } else {
                 echo '<h2>Please wait while the video comparison is created<br><span class="small">(This page will automatically update when the video is ready)</span></h2>';
+                $videoId = $tests['NCvideoId'];
+                echo "<script language=\"JavaScript\">\nsetInterval( \"CheckVideo('$videoId')\", 1000 );\n</script>";
+            }
         }
     }
-
-    if( !$videoComplete )
-        echo "<script language=\"JavaScript\">\nsetTimeout( \"window.location.reload(true)\", 10000 );\n</script>";
 }
 
 /**
@@ -1346,7 +1479,7 @@ function DisplayBlinkTable($tests, $tableLabel)
         $testPath = './' . $test['path'];
         if( $test['c'] )
         {
-            $pageData = loadAllPageData($testPath, array('SpeedIndex' => true));
+            $pageData = loadAllPageData($testPath);
             $fvMedian = GetMedianRun($pageData, 0, $median_metric);
             $test['fvMedian'] = $fvMedian;
             $metrics['Full Page Loaded'][$count] = $pageData[$fvMedian][0]['loadTime'];
@@ -1512,9 +1645,9 @@ function CreateVideo(&$tests, $end = null)
     $id = null;
 
     if (!strlen($end))
-        $end = 'docvisual';
+        $end = 'visual';
     $host  = $_SERVER['HTTP_HOST'];
-    $request = $GLOBALS['basePath']."video/create.php?f=json&force=1&end=$end&tests=";
+    $request = "http://$host/video/create.php?f=json&force=1&end=$end&tests=";
 
     $count = 0;
     foreach( $tests as &$test )
@@ -1526,11 +1659,13 @@ function CreateVideo(&$tests, $end = null)
         if( !strlen($label) )
             $label = htmlspecialchars(ShortenUrl($test['u']));
         $request .= urlencode($label);
+        if (array_key_exists('end', $test)) {
+            $request .= '-e:' . $test['end'];
+        }
         $count++;
     }
     
-    $ctx = stream_context_create(array('http' => array('timeout' => 10)));
-    $response = json_decode(file_get_contents($request, 0, $ctx), true);
+    $response = json_decode(http_fetch($request), true);
     if( $response['statusCode'] == 200 )
         $id = $response['data']['videoId'];
     
@@ -1549,10 +1684,9 @@ function CheckVideo($videoID, &$regenerate_video)
     $elapsed = 0;
 
     $dir = GetVideoPath($videoID, true);
-    if( is_dir("./$dir") && is_file("./$dir/video.ini") )
+    if( is_dir("./$dir") )
     {
-        $ini = parse_ini_file("./$dir/video.ini");
-        if (is_file("./$dir/video.mp4") || isset($ini['completed'])) {
+        if (is_file("./$dir/video.mp4")) {
             $done = true;
             GenerateVideoThumbnail("./$dir");
         } else {
@@ -1596,7 +1730,7 @@ function VideoHtml($id)
     echo "<script>\n
                     flowplayer(\"player$videoCount\", \n
                                     {\n
-                                        src: \"".$GLOBALS['basePath']."video/player/flowplayer-3.2.7.swf\",\n
+                                        src: \"/video/player/flowplayer-3.2.7.swf\",\n
                                         cachebusting: true,\n
                                         version: [9, 115]\n
                                     } , \n
@@ -1632,7 +1766,7 @@ function VideoHtml($id)
                                 ); \n
                 </script>\n
                 <br>* The video may extend past the measured load time if the page was still updating after it was technically loaded\n
-                <br><a class=\"link\" href=\"".$GLOBALS['basePath']."video/download.php?id=$id\">Click here to download the video file...</a>\n";
+                <br><a class=\"link\" href=\"/video/download.php?id=$id\">Click here to download the video file...</a>\n";
 }
 
 /**
@@ -1761,7 +1895,7 @@ function DisplayProgress(&$tests)
         $json_response['statusText'] = $statusText;
     } else {
         echo '<br><div id="statusImg">';
-        echo "<img src=\"{$GLOBALS['cdnPath']}/images/status_$img.png\">";
+        echo "<img id='statusImage' src=\"{$GLOBALS['cdnPath']}/images/status_$img.png\">";
         echo "<div id=\"statusText\">$statusText</div>\n";
         echo '</div><br>';
     }    

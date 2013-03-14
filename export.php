@@ -32,7 +32,7 @@ if( isset($testPath) )
 
     // build up the array
     $result = BuildResult($pageData);
-
+    
     // spit it out as json
     $filename = '';
     if (@strlen($url))
@@ -130,12 +130,18 @@ function BuildResult(&$pageData)
                 $pd['title'] .= "First View";
             $pd['title'] .= " for " . $data['URL'];
             $pd['id'] = "page_{$run}_{$cached}";
-            $pd['pageTimings'] = array( 'onLoad' => $data['docTime'], 'onContentLoad' => -1 );
+            $pd['pageTimings'] = array( 'onLoad' => $data['docTime'], 'onContentLoad' => -1, '_startRender' => $data['render'] );
             
             // add the pagespeed score
             $score = GetPageSpeedScore("$testPath/{$run}{$cached_text}_pagespeed.txt");
             if( strlen($score) )
                 $pd['_pageSpeed'] = array( 'score' => $score );
+            
+            // dump all of our metrics into the har data as custom fields
+            foreach($data as $name => $value) {
+                if (!is_array($value))
+                    $pd["_$name"] = $value;
+            }
             
             // add the page-level ldata to the result
             $result['log']['pages'][] = $pd;
@@ -314,6 +320,12 @@ function BuildResult(&$pageData)
                 
                 if (array_key_exists('custom_rules', $r)) {
                     $entry['_custom_rules'] = $r['custom_rules'];
+                }
+
+                // dump all of our metrics into the har data as custom fields
+                foreach($r as $name => $value) {
+                    if (!is_array($value))
+                        $entry["_$name"] = $value;
                 }
                 
                 // add it to the list of entries

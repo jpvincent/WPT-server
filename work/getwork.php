@@ -20,10 +20,17 @@ $tester = null;
 if (@strlen($ec2)) {
     $tester = $ec2;
 } elseif (@strlen($pc)) {
-    $tester = $pc;
+    $tester = $pc . '-' . trim($_SERVER['REMOTE_ADDR']);
 } else {
     $tester = trim($_SERVER['REMOTE_ADDR']);
 }
+$dnsServers = '';
+if (array_key_exists('dns', $_REQUEST))
+    $dnsServers = str_replace('-', ',', $_REQUEST['dns']);
+$supports_sharding = false;
+if (array_key_exists('shards', $_REQUEST) && $_REQUEST['shards'])
+    $supports_sharding = true;
+
 logMsg("getwork.php location:$location tester:$tester ex2:$ec2 recover:$recover");
 
 $is_done = false;
@@ -66,6 +73,7 @@ function GetJob() {
     global $tester;
     global $recover;
     global $is_json;
+    global $dnsServers;
 
     // load all of the locations
     $locations = parse_ini_file('./settings/locations.ini', true);
@@ -93,59 +101,16 @@ function GetJob() {
             if( !is_dir($workDir) )
                 mkdir($workDir, 0777, true);
             
-            // load the tester information
-            $testers = json_decode(file_get_contents("./tmp/$location.tm"), true);
-            if( !count($testers) )
-                $testers = array();
-            if( !isset($testers[$tester]) )
-                $testers[$tester] = array();
-            elseif( !is_array($testers[$tester]) )
-            {
-                unset($testers[$tester]);
-                $testers[$tester] = array();
-            }
+            $now = time();
+            $testers = GetTesters($location);
 
             // make sure the tester isn't marked as offline (usually when shutting down EC2 instances)                
             if(!@$testers[$tester]['offline']) {
-                // go through the backup directory and restore any that are over an hour old
-                // We prefix the files with an underscore to identify that they have been recovered 
-                // so we don't try to back them up
-                $fileName = null;
-                $recovered = false;
-                $backupDir = "$workDir/testing";
-                $backups = scandir($backupDir);
-                $now = time();
-                foreach( $backups as $file )
-                {
-                    if( is_file( "$backupDir/$file" ) )
-                    {
-                        $fileTime = filemtime("$backupDir/$file");
-                        if( $fileTime && $fileTime < $now )
-                        {
-                            // Check if the file should be recovered due to time or if a given tester requested it
-                            $elapsed = $now - $fileTime;
-                            if( $elapsed > 3600 )
-                            {
-                                $fileName = "$backupDir/$file";
-                                $recovered = true;
-                                break;
-                            }
-                            elseif (isset($recover) && $recover && strlen($tester) && strpos($file,$tester) === 0) 
-                            {
-                                $fileName = "$backupDir/$file";
-                                $recovered = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if( !isset($fileName) )
-                    $fileName = GetJobFile($workDir);
-                
+                $fileName = GetJobFile($workDir, $priority);
                 if( isset($fileName) && strlen($fileName) )
                 {
                     $is_done = true;
+                    $delete = true;
                     
                     if ($is_json)
                         header ("Content-type: application/json");
@@ -155,47 +120,64 @@ function GetJob() {
                     header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
                     // send the test info to the test agent
-                    $testInfo = file_get_contents($fileName);
-                    if( isset($recover) && $recover && !$recovered )
-                    {
-                        if( !is_dir($backupDir) )
-                            mkdir($backupDir, 0777, true);
-                        $fileBase = basename($fileName);
-                        $backupFile = $backupDir . '/' . $tester . "_" . $fileBase;
-                        if( rename($fileName, $backupFile) )
-                            touch($backupFile);
-                        else
-                            unlink($fileName);
+                    $testInfo = file_get_contents("$workDir/$fileName");
+
+                    // extract the test ID from the job file
+                    if( preg_match('/Test ID=([^\r\n]+)\r/i', $testInfo, $matches) )
+                        $testId = trim($matches[1]);
+
+                    if( isset($testId) ) {
+                        // figure out the path to the results
+                        $testPath = './' . GetTestPath($testId);
+
+                        // flag the test with the start time
+                        $ini = file_get_contents("$testPath/testinfo.ini");
+                        if (stripos($ini, 'startTime=') === false) {
+                            $time = time();
+                            $start = "[test]\r\nstartTime=" . gmdate("m/d/y G:i:s", $time);
+                            $out = str_replace('[test]', $start, $ini);
+                            file_put_contents("$testPath/testinfo.ini", $out);
+                        }
+                        
+                        if( gz_is_file("$testPath/testinfo.json") ) {
+                            $testInfoJson = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
+                            if (!array_key_exists('tester', $testInfoJson) || !strlen($testInfoJson['tester']))
+                                $testInfoJson['tester'] = $tester;
+                            if (isset($dnsServers) && strlen($dnsServers))
+                                $testInfoJson['testerDNS'] = $dnsServers;
+                            if (!array_key_exists('started', $testInfoJson) || !strlen($testInfoJson['started']))
+                                $testInfoJson['started'] = $time;
+                            $testInfoJson['id'] = $testId;
+                            ProcessTestShard($testInfoJson, $testInfo, $delete);
+                            gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfoJson));
+                        }
                     }
-                    else
-                        unlink($fileName);
+
+                    if ($delete) {
+                        unlink("$workDir/$fileName");
+                    } else {
+                        AddJobFileHead($workDir, $fileName, $priority, true);
+                    }
                     
                     if ($is_json) {
                         $testJson = array();
                         $script = '';
                         $isScript = false;
                         $lines = explode("\r\n", $testInfo);
-                        foreach($lines as $line)
-                        {
-                            if( strlen(trim($line)) )
-                            {
-                                if( $isScript )
-                                {
+                        foreach($lines as $line) {
+                            if( strlen(trim($line)) ) {
+                                if( $isScript ) {
                                     if( strlen($script) )
                                         $script .= "\r\n";
                                     $script .= $line;
-                                }
-                                elseif( !strcasecmp($line, '[Script]') )
+                                } elseif( !strcasecmp($line, '[Script]') )
                                     $isScript = true;
-                                else
-                                {
+                                else {
                                     $pos = strpos($line, '=');
-                                    if( $pos > -1 )
-                                    {
+                                    if( $pos > -1 ) {
                                         $key = trim(substr($line, 0, $pos));
                                         $value = trim(substr($line, $pos + 1));
-                                        if( strlen($key) && strlen($value) )
-                                        {
+                                        if( strlen($key) && strlen($value) ) {
                                             if( is_numeric($value) )
                                                 $testJson[$key] = (int)$value;
                                             else
@@ -212,78 +194,35 @@ function GetJob() {
                     else
                         echo $testInfo;
                     $ok = true;
-                    
-                    // extract the test ID from the job file
-                    if( preg_match('/Test ID=([^\r\n]+)\r/i', $testInfo, $matches) )
-                        $testId = trim($matches[1]);
-
-                    if( isset($testId) )
-                    {
-                        // figure out the path to the results
-                        $testPath = './' . GetTestPath($testId);
-
-                        // flag the test with the start time
-                        $ini = file_get_contents("$testPath/testinfo.ini");
-                        $time = time();
-                        $start = "[test]\r\nstartTime=" . gmdate("m/d/y G:i:s", $time);
-                        $out = str_replace('[test]', $start, $ini);
-                        file_put_contents("$testPath/testinfo.ini", $out);
-                        
-                        if( gz_is_file("$testPath/testinfo.json") )
-                        {
-                            $testInfoJson = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
-                            $testInfoJson['tester'] = $tester;
-                            $testInfoJson['started'] = $time;
-                            gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfoJson));
-                        }
-                    }
                 }
                     
-                // keep track of the last time this location reported in
-                $now = time();
-                $testers[$tester]['updated'] = $now;
-                $testers[$tester]['ip'] = $_SERVER['REMOTE_ADDR'];
-                $testers[$tester]['pc'] = $pc;
-                $testers[$tester]['ec2'] = $ec2;
-                $testers[$tester]['ver'] = $_GET['ver'];
-                $testers[$tester]['freedisk'] = @$_GET['freedisk'];
-                $testers[$tester]['test'] = @$testId;
-                if (isset($testId)) {
-                    $testers[$tester]['last'] = $now;
-                } else {
-                    // keep track of the FIRST idle request as the last work time so we can have an accurate "idle time"
-                    if( isset($testers[$tester]['test']) && strlen($testers[$tester]['test']) )
-                        $testers[$tester]['last'] = $now;
-                    unset($testers[$tester]['test']);
-                }
-                        
-                // delete any testers in this location that haven't checked in in over an hour
-                foreach( $testers as $name => &$data )
-                {
-                    if( $now > $data['updated'] )
-                    {
-                        $elapsed = $now - $data['updated'];
-                        if( $elapsed > 3600 )
-                            unset( $testers[$name] );
-                    }
-                }
-                        
                 // zero out the tracked page loads in case some got lost
-                if( !$is_done )
-                {
+                if( !$is_done ) {
                     $tests = json_decode(file_get_contents("./tmp/$location.tests"), true);
-                    if( $tests )
-                    {
+                    if( $tests ) {
                         $tests['tests'] = 0;
                         file_put_contents("./tmp/$location.tests", json_encode($tests));
                     }
                 }
             }
             
-            if ($testers)
-                file_put_contents("./tmp/$location.tm", json_encode($testers));
-
             UnlockLocation($lock);
+
+            // keep track of the last time this location reported in
+            $testerInfo = array();
+            $testerInfo['ip'] = $_SERVER['REMOTE_ADDR'];
+            $testerInfo['pc'] = $pc;
+            $testerInfo['ec2'] = $ec2;
+            $testerInfo['ver'] = $_GET['ver'];
+            $testerInfo['freedisk'] = @$_GET['freedisk'];
+            $testerInfo['ie'] = @$_GET['ie'];
+            $testerInfo['dns'] = $dnsServers;
+            $testerInfo['video'] = @$_GET['video'];
+            $testerInfo['test'] = '';
+            if (isset($testId)) {
+                $testerInfo['test'] = $testId;
+            }
+            UpdateTester($location, $tester, $testerInfo);
         }
     }
     
@@ -448,13 +387,13 @@ function CheckCron() {
                 $last_run = file_get_contents('./tmp/wpt_cron.dat');
             $now = time();
             $elapsed = $now - $last_run;
-            if (!$last_run || $elapsed > 600) {
+            if (!$last_run || $elapsed > 120) {
                 if ($elapsed > 1200) {
                     // if it has been over 20 minutes, run regardless of the wall-clock time
                     $should_run = true;
                 } else {
-                    $minute = gmdate('i', $now) % 15;
-                    if ($minute < 5)
+                    $minute = gmdate('i', $now) % 5;
+                    if ($minute < 2)
                         $should_run = true;
                 }
             }
@@ -485,10 +424,87 @@ function SendCronRequest($relative_url) {
     curl_setopt($c, CURLOPT_URL, $url);
     curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($c, CURLOPT_CONNECTTIMEOUT, 5);
-    curl_setopt($c, CURLOPT_TIMEOUT, 5);
+    curl_setopt($c, CURLOPT_CONNECTTIMEOUT, 1);
+    curl_setopt($c, CURLOPT_TIMEOUT, 1);
     curl_exec($c);
     curl_close($c);
 }
 
+/**
+* Process a sharded test
+* 
+* @param mixed $testInfo
+*/
+function ProcessTestShard(&$testInfo, &$test, &$delete) {
+    global $supports_sharding;
+    global $tester;
+    if (isset($testInfo) && array_key_exists('shard_test', $testInfo) && $testInfo['shard_test']) {
+        if ($supports_sharding) {
+            if( $testLock = fopen( "$testPath/test.lock", 'w',  false) )
+                flock($testLock, LOCK_EX);
+            $done = true;
+            $assigned_run = 0;
+            if (!array_key_exists('test_runs', $testInfo)) {
+                $testInfo['test_runs'] = array();
+                for ($run = 1; $run <= $testInfo['runs']; $run++) {
+                    $testInfo['test_runs'][$run] = array();
+                }
+            }
+            
+            // find a run to assign to a tester
+            for ($run = 1; $run <= $testInfo['runs']; $run++) {
+                if (!array_key_exists('tester', $testInfo['test_runs'][$run])) {
+                    $testInfo['test_runs'][$run]['tester'] = $tester;
+                    $testInfo['test_runs'][$run]['started'] = time();
+                    $testInfo['test_runs'][$run]['done'] = false;
+                    $assigned_run = $run;
+                    break;
+                }
+            }
+            
+            // go through again and see if all tests have been assigned
+            for ($run = 1; $run <= $testInfo['runs']; $run++) {
+                if (!array_key_exists('tester', $testInfo['test_runs'][$run])) {
+                    $done = false;
+                    break;
+                }
+            }
+            
+            if ($assigned_run) {
+                $append = "run=$assigned_run\r\n";
+
+                // Figure out if this test needs to be discarded
+                $index = $assigned_run;
+                if (array_key_exists('discard', $testInfo)) {
+                    if ($index <= $testInfo['discard']) {
+                        $append .= "discardTest=1\r\n";
+                        $index = 1;
+                        $done = true;
+                        $testInfo['test_runs'][$assigned_run]['discarded'] = true;
+                    } else {
+                        $index -= $testInfo['discard'];
+                    }
+                }
+                $append .= "index=$index\r\n";
+                
+                $insert = strpos($test, "\nurl");
+                if ($insert !== false) {
+                    $test = substr($test, 0, $insert + 1) . 
+                            $append . 
+                            substr($test, $insert + 1);
+                } else {
+                    $test = "run=$assigned_run\r\n" + $test;
+                }
+            }
+
+            if (!$done)
+                $delete = false;
+                
+            if ($testLock)
+                fclose($testLock);
+        } else {
+            $testInfo['shard_test'] = 0;
+        }
+    }
+}
 ?>

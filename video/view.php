@@ -1,5 +1,4 @@
 <?php
-
 chdir('..');
 include 'common.inc';
 $id = $_REQUEST['id'];
@@ -33,7 +32,8 @@ $ini = null;
 $title = "WebPagetest - Visual Comparison";
 
 $dir = GetVideoPath($id, true);
-if( is_dir("./$dir") ) {
+if( is_dir("./$dir") )
+{
     $valid = true;
     if (is_file("./$dir/video.mp4") || is_file("./$dir/video.ini")) {
         $ini = parse_ini_file("./$dir/video.ini");
@@ -79,8 +79,6 @@ if( is_dir("./$dir") ) {
             }
         }
     }
-} else {
-	trigger_error('Video directory does not exits : '.$dir, E_WARNING);
 }
 
 if( $xml || $json )
@@ -94,8 +92,8 @@ if( $xml || $json )
 
             $host  = $_SERVER['HTTP_HOST'];
             $uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-            $videoUrl = $GLOBALS['basePath'].'download.php?id='.$id;
-            $embedUrl = $GLOBALS['basePath'].'view.php?embed=1&id='.$id;
+            $videoUrl = "http://$host$uri/download.php?id=$id";
+            $embedUrl = "http://$host$uri/view.php?embed=1&id=$id";
         }
         else
             $ret = 100;
@@ -198,7 +196,8 @@ else
                 echo "body {background-color: $bgcolor; margin:0; padding: 0;}";
             ?>
         </style>
-        <script type="text/javascript" src="<?= $GLOBALS['basePath'] ?>video/player/flowplayer-3.2.6.min.js"></script>
+        <link rel="stylesheet" href="/video/video-js.3.2.0/video-js.min.css" type="text/css">
+        <script type="text/javascript" src="/video/video-js.3.2.0/video.min.js"></script>
     </head>
     <body>
         <div class="page">
@@ -226,62 +225,44 @@ else
                     $hasThumb = true;
                     list($width, $height) = getimagesize("./$dir/video.png");
                 }
-                
+
                 if( $_REQUEST['width'] )
                     $width = (int)$_REQUEST['width'];
                 if( $_REQUEST['height'] )
                     $height = (int)$_REQUEST['height'];
-                    
-                echo '<div';
-                echo " style=\"display:block; width:{$width}px; height:{$height}px\"";
-                echo " id=\"player\">\n";
-                echo "</div>\n";
 
-                // embed the actual player
-                ?>
-                <script>
-                    flowplayer("player", 
-                                    {
-                                        src: "<?= $GLOBALS['basePath'] ?>video/player/flowplayer-3.2.7.swf",
-                                        cachebusting: false,
-                                        version: [9, 115]
-                                    } , 
-                                    { 
-                                        clip:  { 
-                                            scaling: "fit"
-                                        } ,
-                                        playlist: [
-                                            <?php
-                                            if( $hasThumb )
-                                            {
-                                                echo "{ url: '".$GLOBALS['basePath'].$dir."/video.png'} ,\n";
-                                                echo "{ url: '".$GLOBALS['basePath'].$dir."/video.mp4', autoPlay: $autoplay, autoBuffering: false}\n";
-                                            }
-                                            else
-                                                echo "{ url: '".$GLOBALS['basePath'].$dir."/video.mp4', autoPlay: $autoplay, autoBuffering: true}\n";
-                                            ?>
-                                        ],
-                                        plugins: {
-                                            controls: {
-                                                volume:false,
-                                                mute:false,
-                                                stop:true,
-                                                tooltips: { 
-                                                    buttons: true, 
-                                                    fullscreen: 'Enter fullscreen mode' 
-                                                } 
-                                            }
-                                        } ,
-                                        canvas:  { 
-                                            backgroundColor: '#000000', 
-                                            backgroundGradient: 'none'
-                                        }
-                                    }
-                                ); 
-                </script>
-                <?php                
+                echo "<script>\n";
+                echo "_V_.options.techOrder = ['flash', 'html5'];\n";
+                echo "_V_.options.flash.swf = '/video/player/flowplayer-3.2.7.swf';\n";
+                echo "_V_.options.flash.flashVars = {config:\"{";
+                echo "'clip':{'scaling':'fit'},";
+                echo "'plugins':{'controls':{'volume':false,'mute':false,'stop':true,'tooltips':{'buttons':true,'fullscreen':'Enter fullscreen mode'}}},";
+                echo "'canvas':{'backgroundColor':'#000000','backgroundGradient':'none'},";
+                if ($hasThumb) {
+                    echo "'playlist':[{'url':'/$dir/video.png'},{'url':'/$dir/video.mp4','autoPlay':$autoplay,'autoBuffering':false}]";
+                } else {
+                    echo "'playlist':[{'url':'/$dir/video.mp4','autoPlay':$autoplay,'autoBuffering':true}]";
+                }
+                echo "}\"};\n";
+                echo "_V_.options.flash.params = {
+                       allowfullscreen: 'true',
+                       wmode: 'transparent',
+                       allowscriptaccess: 'always'
+                   };
+                   _V_.options.flash.attributes={};\n";
+                echo "</script>\n";
+                    
+                echo "<video id=\"player\" class=\"video-js vjs-default-skin\" controls
+                  preload=\"auto\" width=\"$width\" height=\"$height\"";
+                if ($hasThumb) {
+                    echo " poster=\"/$dir/video.png\"";
+                }
+                echo "data-setup=\"{}\">
+                    <source src=\"/$dir/video.mp4\" type='video/mp4'>
+                </video>";
+
                 if(!$embed)
-                    echo "<br><a class=\"link\" href=\"".$GLOBALS['basePath']."video/download.php?id=$id\">Click here to download the video file...</a>\n";
+                    echo "<br><a class=\"link\" href=\"/video/download.php?id=$id\">Click here to download the video file...</a>\n";
             }
             elseif( $valid && !$embed )
                 echo '<h1>Your video will be available shortly.  Please wait...</h1>';

@@ -24,7 +24,8 @@ $addOnly = true;
 $minute = (int)gmdate('i');
 if( $minute < 5 || $minute > 55 )
     $addOnly = false;
-
+$now = time();
+    
 echo "Fetching list of running instances...\n";
 $ec2 = new AmazonEC2($keyID, $secret);
 if( $ec2 )
@@ -35,30 +36,61 @@ if( $ec2 )
         {
             $location = $regionData['location'];
             echo "\n$region ($location):\n";
+            $ec2->set_region($region);
             
             // load the valid testers in this location
             $testers = array();
             $locations = explode(',', $location);
-            $first = true;
+            $locCount = count($locations);
             foreach($locations as $loc) {
                 $loc_testers = json_decode(file_get_contents("./tmp/$loc.tm"), true);
-                if ($first) {
-                    $first = false;
-                    $testers = array_merge($testers, $loc_testers);
-                } else {
-                    // make sure ALL of the locations know about all of the testers
-                    foreach ($testers as $id => &$tester) {
-                        if (!array_key_exists($id, $loc_testers)) {
-                            unset($testers[$id]);
+                foreach ($loc_testers as $id => $info) {
+                    $elapsed = 0;
+                    if (array_key_exists('updated', $info) && $info['updated'] < $now) {
+                        $elapsed = $now - $info['updated'];
+                    }
+                    if ($elapsed < 1800) {   // only count test machines that have contacted us in the last 30 minutes
+                        if (!array_key_exists($id, $testers)) {
+                            $testers[$id] = $info;
+                            $testers[$id]['locCount'] = 1;
+                        } else {
+                            $testerLocCount = $testers[$id]['locCount'];
+                            if (array_key_exists('test', $info) && strlen($info['test'])) {
+                                $testers[$id] = $info;
+                            }
+                            $testers[$id]['locCount'] = $testerLocCount + 1;
                         }
                     }
                 }
+            }
+            
+            // if any testers have been known for more than 10 minutes and
+            // they aren't showing up for all of the locations, reboot them
+            $reboot = array();
+            foreach ($testers as $id => $info) {
+                $lifetime = 0;
+                if (array_key_exists('first_contact', $info) && $info['first_contact'] < $now) {
+                    $lifetime = $now - $info['first_contact'];
+                }
+                $busy = false;
+                if (array_key_exists('test', $info) && strlen($info['test'])) {
+                    $busy = true;
+                }
+                if ($info['locCount'] < $locCount && 
+                    !$busy &&
+                    $lifetime > 600) {
+                    echo "$id needs to be rebooted\n";
+                    $reboot[] = $id;
+                }
+            }
+            
+            if (count($reboot)) {
+                $ec2->reboot_instances($reboot);
             }
 
             // get the list of current running ec2 instances        
             $terminate = array();
             $count = 0;
-            $ec2->set_region($region);
             $response = $ec2->describe_instances();
             $activeCount = 0;
             $idleCount = 0;
@@ -89,16 +121,15 @@ if( $ec2 )
             $counts["$region.$ami"] = $count - $termCount;
 
             // figure out what the target number of testers for this location is
-            // if we have any idle testers them plan to eliminate 50% of them
+            // if we have any idle testers them plan to eliminate them
             // otherwise, increase the number until we kit the expected backlog
             echo "Active: $activeCount\n";
             echo "Idle: $idleCount\n";
             echo "Offline: $offlineCount\n";
             $targetCount = $activeCount;
-            if( $idleCount )
-                $targetCount = (int)($activeCount + ($idleCount / 4));
-            elseif( $targetBacklog )
-            {
+            if( $idleCount ) {
+                // $targetCount = (int)($activeCount + ($idleCount / 4));
+            } elseif( $targetBacklog ) {
                 // get the current backlog
                 $backlog = GetPendingTests($location, $bk, $avgTime);
                 echo "Backlog: $backlog\n";
@@ -115,8 +146,7 @@ if( $ec2 )
             
             $needed = $targetCount - $counts["$region.$ami"];
             echo "Needed: $needed\n";
-            if( $needed > 0 )
-            {
+            if( $needed > 0 ) {
                 echo "Adding $needed spot instances in $region...";
                 $size = $instanceType;
                 if (array_key_exists('size', $regionData)) {
@@ -143,16 +173,12 @@ if( $ec2 )
                 $count = abs($needed);
                 $locations = explode(',', $location);
                 foreach($locations as $loc) {
-                    if( $lock = LockLocation($loc) )
-                    {
+                    if( $lock = LockLocation($loc) ) {
                         $testers = json_decode(file_get_contents("./tmp/$loc.tm"), true);
-                        if (count($testers))
-                        {
-                            foreach($testers as &$tester)
-                            {
+                        if (count($testers)) {
+                            foreach($testers as &$tester) {
                                 if (array_key_exists('ec2', $tester) && strlen($tester['ec2']) && !$tester['offline']) {
-                                    if( $count > 0 && !strlen($tester['test']) )
-                                    {
+                                    if( $count > 0 && !strlen($tester['test']) ) {
                                         $terminate[] = $tester['ec2'];
                                         $count--;
                                         $counts["$region.$ami"]--;
@@ -174,12 +200,10 @@ if( $ec2 )
             }
             
             // final step, terminate the instances we don't need
-            if( !$addOnly )
-            {
+            if (!$addOnly) {
                 $termCount = count($terminate);
                 echo "Terminating $termCount instances running in $region...";
-                if( $termCount )
-                {
+                if( $termCount ) {
                     $response = $ec2->terminate_instances($terminate);
                     if( $response->isOK() )
                         echo "ok\n";

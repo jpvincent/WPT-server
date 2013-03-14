@@ -51,6 +51,22 @@ if (array_key_exists('f', $_REQUEST)) {
                     Click on a data point in the chart to see the full test data (waterfall, etc) for the given data point.<br>
                     Highlight an area of the chart to zoom in on that area and double-click to zoom out.
                 </div>
+                <div style="float: right;">
+                    <form name="aggregation" method="get" action="view.php">
+                        <?php
+                        echo "<input type=\"hidden\" name=\"benchmark\" value=\"$benchmark\">";
+                        echo '<input type="hidden" name="url" value="' . htmlentities($url) . '">';
+                        ?>
+                        Time Period <select name="days" size="1" onchange="this.form.submit();">
+                            <option value="7" <?php if ($days == 7) echo "selected"; ?>>Week</option>
+                            <option value="31" <?php if ($days == 31) echo "selected"; ?>>Month</option>
+                            <option value="93" <?php if ($days == 93) echo "selected"; ?>>3 Months</option>
+                            <option value="183" <?php if ($days == 183) echo "selected"; ?>>6 Months</option>
+                            <option value="366" <?php if ($days == 366) echo "selected"; ?>>Year</option>
+                            <option value="all" <?php if ($days == 0) echo "selected"; ?>>All</option>
+                        </select>
+                    </form>
+                </div>
             </div>
             <div style="clear:both;">
             </div>
@@ -66,7 +82,7 @@ if (array_key_exists('f', $_REQUEST)) {
                 if (meta[time] != undefined) {
                     for(i = 0; i < meta[time].length; i++) {
                         ok = true;
-                        menu += '<a href="'.$GLOBALS['basePath'].'result/' + meta[time][i]['test'] + '/?medianMetric=' + medianMetric + '" target="_blank">' + meta[time][i]['label'] + '</a><br>';
+                        menu += '<a href="/result/' + meta[time][i]['test'] + '/?medianMetric=' + medianMetric + '" target="_blank">' + meta[time][i]['label'] + '</a><br>';
                     }
                 }
                 menu += '</div>';
@@ -79,10 +95,14 @@ if (array_key_exists('f', $_REQUEST)) {
 }
             $metrics = array('docTime' => 'Load Time (onload)', 
                             'SpeedIndex' => 'Speed Index',
+                            'SpeedIndexDT' => 'Speed Index (Dev Tools)',
                             'TTFB' => 'Time to First Byte', 
                             'titleTime' => 'Time to Title', 
                             'render' => 'Time to Start Render', 
+                            'visualComplete' => 'Time to Visually Complete', 
+                            'VisuallyCompleteDT' => 'Time to Visually Complete (Dev Tools)', 
                             'fullyLoaded' => 'Load Time (Fully Loaded)', 
+                            'server_rtt' => 'Estimated RTT to Server',
                             'domElements' => 'Number of DOM Elements', 
                             'connections' => 'Connections', 
                             'requests' => 'Requests (Fully Loaded)', 

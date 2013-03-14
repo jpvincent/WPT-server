@@ -1,6 +1,5 @@
 <?php
 $msStart = microtime(true);
-define('RESTORE_DATA_ONLY', true);
 
 //$debug=true;
 include 'common.inc';
@@ -8,6 +7,7 @@ require_once('page_data.inc');
 require_once('testStatus.inc');
 require_once('video/visualProgress.inc.php');
 require_once('domains.inc');
+require_once('breakdown.inc');
 
 // stub-out requests from M4_SpeedTestService
 //if( strpos($_SERVER['HTTP_USER_AGENT'], 'M4_SpeedTestService') !== false )
@@ -59,8 +59,12 @@ else
         {
             if( @strlen($test['testinfo']['url']) )
                 echo "<testUrl>" . xml_entities($test['testinfo']['url']) . "</testUrl>\n";
-            if( @strlen($test['testinfo']['location']) )
-                echo "<location>{$test['testinfo']['location']}</location>\n";
+            if( @strlen($test['testinfo']['location']) ) {
+                $locstring = $test['testinfo']['location'];
+                if( @strlen($test['testinfo']['browser']) )
+                    $locstring .= ':' . $test['testinfo']['browser'];
+                echo "<location>$locstring</location>\n";
+            }
             if( @strlen($test['testinfo']['connectivity']) )
             {
                 echo "<connectivity>{$test['testinfo']['connectivity']}</connectivity>\n";
@@ -73,9 +77,15 @@ else
                 echo "<label>" . xml_entities($test['testinfo']['label']) . "</label>\n";
             if( @strlen($test['testinfo']['completed']) )
                 echo "<completed>" . gmdate("r",$test['testinfo']['completed']) . "</completed>\n";
+            if( @strlen($test['testinfo']['testerDNS']) )
+                echo "<testerDNS>" . xml_entities($test['testinfo']['testerDNS']) . "</testerDNS>\n";
         }
         $runs = max(array_keys($pageData));
         echo "<runs>$runs</runs>\n";
+        echo "<successfulFVRuns>" . CountSuccessfulTests($pageData, 0) . "</successfulFVRuns>\n";
+        if( isset($rv) ) {
+            echo "<successfulRVRuns>" . CountSuccessfulTests($pageData, 1) . "</successfulRVRuns>\n";
+        }
         echo "<average>\n";
         echo "<firstView>\n";
         foreach( $fv as $key => $val )
@@ -105,16 +115,15 @@ else
                 if( strlen($score) )
                     echo "<PageSpeedScore>$score</PageSpeedScore>\n";
             }
-            $progress = GetVisualProgress($testPath, $fvMedian, 0);
-            if (isset($progress) && is_array($progress) && array_key_exists('FLI', $progress)) {
-                echo "<SpeedIndex>{$progress['FLI']}</SpeedIndex>\n";
-            }
             if( FRIENDLY_URLS )
                 echo "<PageSpeedData>http://$host$uri/result/$id/{$fvMedian}_pagespeed.txt</PageSpeedData>\n";
             else
-                echo "<PageSpeedData>".$GLOBALS['basePath']."getgzip.php?test=$id&amp;file={$fvMedian}_pagespeed.txt</PageSpeedData>\n";
+                echo "<PageSpeedData>http://$host$uri//getgzip.php?test=$id&amp;file={$fvMedian}_pagespeed.txt</PageSpeedData>\n";
             xmlDomains($id, $testPath, $fvMedian, 0);
+            xmlBreakdown($id, $testPath, $fvMedian, 0);
             xmlRequests($id, $testPath, $fvMedian, 0);
+            StatusMessages($id, $testPath, $fvMedian, 0);
+            ConsoleLog($id, $testPath, $fvMedian, 0);
             echo "</firstView>\n";
             
             if( isset($rv) )
@@ -132,16 +141,15 @@ else
                         if( strlen($score) )
                             echo "<PageSpeedScore>$score</PageSpeedScore>\n";
                     }
-                    $progress = GetVisualProgress($testPath, $rvMedian, 1);
-                    if (isset($progress) && is_array($progress) && array_key_exists('FLI', $progress)) {
-                        echo "<SpeedIndex>{$progress['FLI']}</SpeedIndex>\n";
-                    }
                     if( FRIENDLY_URLS )
                         echo "<PageSpeedData>http://$host$uri/result/$id/{$rvMedian}_Cached_pagespeed.txt</PageSpeedData>\n";
                     else
-                        echo "<PageSpeedData>".$GLOBALS['basePath']."getgzip.php?test=$id&amp;file={$rvMedian}_Cached_pagespeed.txt</PageSpeedData>\n";
+                        echo "<PageSpeedData>http://$host$uri//getgzip.php?test=$id&amp;file={$rvMedian}_Cached_pagespeed.txt</PageSpeedData>\n";
                     xmlDomains($id, $testPath, $fvMedian, 1);
+                    xmlBreakdown($id, $testPath, $fvMedian, 1);
                     xmlRequests($id, $testPath, $fvMedian, 1);
+                    StatusMessages($id, $testPath, $fvMedian, 1);
+                    ConsoleLog($id, $testPath, $fvMedian, 1);
                     echo "</repeatView>\n";
                 }
             }
@@ -169,10 +177,6 @@ else
                         if( strlen($score) )
                             echo "<PageSpeedScore>$score</PageSpeedScore>\n";
                     }
-                    $progress = GetVisualProgress($testPath, $i, 0);
-                    if (isset($progress) && is_array($progress) && array_key_exists('FLI', $progress)) {
-                        echo "<SpeedIndex>{$progress['FLI']}</SpeedIndex>\n";
-                    }
                     echo "</results>\n";
 
                     // links to the relevant pages
@@ -187,27 +191,19 @@ else
                     }
                     else
                     {
-                        echo "<details>".$GLOBALS['basePath']."details.php?test=$id&amp;run=$i</details>\n";
-                        echo "<checklist>".$GLOBALS['basePath']."performance_optimization.php?test=$id&amp;run=$i</checklist>\n";
-                        echo "<breakdown>".$GLOBALS['basePath']."breakdown.php?test=$id&amp;run=$i</breakdown>\n";
-                        echo "<domains>".$GLOBALS['basePath']."domains.php?test=$id&amp;run=$i</domains>\n";
-                        echo "<screenShot>".$GLOBALS['basePath']."screen_shot.php?test=$id&amp;run=$i</screenShot>\n";
+                        echo "<details>http://$host$uri/details.php?test=$id&amp;run=$i</details>\n";
+                        echo "<checklist>http://$host$uri/performance_optimization.php?test=$id&amp;run=$i</checklist>\n";
+                        echo "<breakdown>http://$host$uri/breakdown.php?test=$id&amp;run=$i</breakdown>\n";
+                        echo "<domains>http://$host$uri/domains.php?test=$id&amp;run=$i</domains>\n";
+                        echo "<screenShot>http://$host$uri/screen_shot.php?test=$id&amp;run=$i</screenShot>\n";
                     }
                     echo "</pages>\n";
                     
                     // urls for the relevant images
                     echo "<thumbnails>\n";
-					if(FRIENDLY_URLS) {
-						echo "<waterfall>http://$host$uri/result/$id/{$i}_waterfall_thumb.png</waterfall>\n";
-	                    echo "<checklist>http://$host$uri/result/$id/{$i}_optimization_thumb.png</checklist>\n";
-	                    echo "<screenShot>http://$host$uri/result/$id/{$i}_screen_thumb.jpg</screenShot>\n";
-						
-					} else  {
-				echo '<waterfall>'.$GLOBALS['basePath'].'thumbnail.php?test='.$id.'&amp;run='.$i.'&amp;file='.$i.'_waterfall_thumb.png</waterfall>'."\n";
-				echo '<checklist>'.$GLOBALS['basePath'].'thumbnail.php?test='.$id.'&amp;run='.$i.'&amp;file='.$i.'_optimization_thumb.png</checklist>'."\n";
-				echo '<screenShot>'.$GLOBALS['basePath'].'thumbnail.php?test='.$id.'&amp;run='.$i.'&amp;file='.$i.'_screen.jpg</screenShot>'."\n";
-					}
-                    
+                    echo "<waterfall>http://$host$uri/result/$id/{$i}_waterfall_thumb.png</waterfall>\n";
+                    echo "<checklist>http://$host$uri/result/$id/{$i}_optimization_thumb.png</checklist>\n";
+                    echo "<screenShot>http://$host$uri/result/$id/{$i}_screen_thumb.jpg</screenShot>\n";
                     echo "</thumbnails>\n";
 
                     echo "<images>\n";
@@ -215,45 +211,29 @@ else
                     echo "<connectionView>http://$host$uri$path/{$i}_connection.png</connectionView>\n";
                     echo "<checklist>http://$host$uri$path/{$i}_optimization.png</checklist>\n";
                     echo "<screenShot>http://$host$uri$path/{$i}_screen.jpg</screenShot>\n";
-                    if( is_file("$testPath/{$i}_screen.png") ) {
-	//			./thumbnail.php?test=$1&run=$2&file=$2_screen.jpg
+                    if( is_file("$testPath/{$i}_screen.png") )
                         echo "<screenShotPng>http://$host$uri$path/{$i}_screen.png</screenShotPng>\n";
-					}
                     echo "</images>\n";
 
                     // raw results
                     echo "<rawData>";
-					if( FRIENDLY_URLS ) {
-                    	echo "<headers>http://$host$uri$path/{$i}_report.txt</headers>\n";
-					} else {
-						echo '<headers>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_report.txt</headers>'."\n";
-					}
+                    echo "<headers>http://$host$uri$path/{$i}_report.txt</headers>\n";
                     if (array_key_exists('bodies', $test['testinfo']) && $test['testinfo']['bodies']) {
-						if( FRIENDLY_URLS ) {
-							echo "<bodies>http://$host$uri$path/{$i}_bodies.zip</bodies>\n";
-						} else {
-							echo '<bodies>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_bodies.zip</bodies>'."\n";
-						}
+                        echo "<bodies>http://$host$uri$path/{$i}_bodies.zip</bodies>\n";
                     }
-					if( FRIENDLY_URLS )
-                    {
-						echo "<pageData>http://$host$uri$path/{$i}_IEWPG.txt</pageData>\n";
-						echo "<requestsData>http://$host$uri$path/{$i}_IEWTR.txt</requestsData>\n";
-						echo "<utilization>http://$host$uri$path/{$i}_progress.csv</utilization>\n";
-						echo "<PageSpeedData>http://$host$uri/result/$id/{$i}_pagespeed.txt</PageSpeedData>\n";
-					} else {
-						echo '<pageData>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_IEWPG.txt</pageData>'."\n";
-						echo '<requestsData>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_IEWTR.txt</requestsData>'."\n";
-						echo '<utilization>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_progress.csv</utilization>'."\n";
-						echo '<PageSpeedData>'.$GLOBALS['basePath'].'getgzip.php?test='.$id.'&amp;file='.$i.'_pagespeed.txt</PageSpeedData>'."\n";
-					}
-					echo "</rawData>\n";
+                    echo "<pageData>http://$host$uri$path/{$i}_IEWPG.txt</pageData>\n";
+                    echo "<requestsData>http://$host$uri$path/{$i}_IEWTR.txt</requestsData>\n";
+                    echo "<utilization>http://$host$uri$path/{$i}_progress.csv</utilization>\n";
+                    echo "<PageSpeedData>http://$host$uri/result/$id/{$i}_pagespeed.txt</PageSpeedData>\n";
+                    echo "</rawData>\n";
+                    
                     // video frames
-                    if( $test['test']['video'])
+                    if( $test['test']['video'] || $test['testinfo']['video'] )
                     {
                         $frames = loadVideo("$testPath/video_{$i}");
                         if( $frames && count($frames) )
                         {
+                            $progress = GetVisualProgress($testPath, $i, 0);
                             echo "<videoFrames>\n";
                             foreach( $frames as $time => $frameFile )
                             {
@@ -272,7 +252,10 @@ else
                     }
                     
                     xmlDomains($id, $testPath, $i, 0);
+                    xmlBreakdown($id, $testPath, $i, 0);
                     xmlRequests($id, $testPath, $i, 0);
+                    StatusMessages($id, $testPath, $i, 0);
+                    ConsoleLog($id, $testPath, $i, 0);
                     echo "</firstView>\n";
                 }
 
@@ -288,10 +271,6 @@ else
                         $score = GetPageSpeedScore("$testPath/{$i}_Cached_pagespeed.txt");
                         if( strlen($score) )
                             echo "<PageSpeedScore>$score</PageSpeedScore>\n";
-                    }
-                    $progress = GetVisualProgress($testPath, $i, 1);
-                    if (isset($progress) && is_array($progress) && array_key_exists('FLI', $progress)) {
-                        echo "<SpeedIndex>{$progress['FLI']}</SpeedIndex>\n";
                     }
                     echo "</results>\n";
 
@@ -332,11 +311,12 @@ else
                     echo "</rawData>\n";
                     
                     // video frames
-                    if( $test['test']['video'] )
+                    if( $test['test']['video'] || $test['testinfo']['video']  )
                     {
                         $frames = loadVideo("$testPath/video_{$i}_cached");
                         if( $frames && count($frames) )
                         {
+                            $progress = GetVisualProgress($testPath, $i, 1);
                             echo "<videoFrames>\n";
                             foreach( $frames as $time => $frameFile )
                             {
@@ -355,7 +335,10 @@ else
                     }
                     
                     xmlDomains($id, $testPath, $i, 1);
+                    xmlBreakdown($id, $testPath, $i, 1);
                     xmlRequests($id, $testPath, $i, 1);
+                    StatusMessages($id, $testPath, $i, 1);
+                    ConsoleLog($id, $testPath, $i, 1);
                     echo "</repeatView>\n";
                 }
             }
@@ -428,6 +411,26 @@ function xmlDomains($id, $testPath, $run, $cached) {
 }
 
 /**
+* Dump a breakdown of the requests and bytes by mime type
+*/
+function xmlBreakdown($id, $testPath, $run, $cached) {
+    if (array_key_exists('breakdown', $_REQUEST) && $_REQUEST['breakdown']) {
+        echo "<breakdown>\n";
+        $requests;
+        $breakdown = getBreakdown($id, $testPath, $run, $cached, $requests);
+        foreach ($breakdown as $mime => &$values) {
+            $domain = strrev($domain);
+            echo "<$mime>\n";
+            echo "<requests>{$values['requests']}</requests>\n";
+            echo "<bytes>{$values['bytes']}</bytes>\n";
+            echo "</$mime>\n";
+        }
+        echo "</breakdown>\n";
+    }
+}
+
+
+/**
 * Dump information about all of the requests
 */
 function xmlRequests($id, $testPath, $run, $cached) {
@@ -445,6 +448,70 @@ function xmlRequests($id, $testPath, $run, $cached) {
             echo "</request>\n";
         }
         echo "</requests>\n";
+    }
+}
+
+/**
+* Dump any logged browser status messages
+* 
+* @param mixed $id
+* @param mixed $testPath
+* @param mixed $run
+* @param mixed $cached
+*/
+function StatusMessages($id, $testPath, $run, $cached) {
+    $cachedText = '';
+    if ($cached)
+        $cachedText = '_Cached';
+    $statusFile = "$testPath/$run{$cachedText}_status.txt";
+    if (gz_is_file($statusFile)) {
+        echo "<status>\n";
+        $messages = array();
+        $lines = gz_file($statusFile);
+        foreach($lines as $line) {
+            $line = trim($line);
+            if (strlen($line)) {
+                $parts = explode("\t", $line);
+                $time = xml_entities(trim($parts[0]));
+                $message = xml_entities(trim($parts[1]));
+                echo "<entry>\n";
+                echo "<time>$time</time>\n";
+                echo "<message>$message</message>\n";
+                echo "</entry>\n";
+            }
+        }
+        echo "</status>\n";
+    }
+}
+
+/**
+* Dump the console log if we have one
+* 
+* @param mixed $id
+* @param mixed $testPath
+* @param mixed $run
+* @param mixed $cached
+*/
+function ConsoleLog($id, $testPath, $run, $cached) {
+    $cachedText = '';
+    if ($cached)
+        $cachedText = '_Cached';
+    $consoleLogFile = "$testPath/$run{$cachedText}_console_log.json";
+    if (gz_is_file($consoleLogFile)) {
+        $consoleLog = json_decode(gz_file_get_contents($consoleLogFile), true);
+        if (isset($consoleLog) && is_array($consoleLog) && count($consoleLog)) {
+            echo "<consoleLog>\n";
+            foreach( $consoleLog as &$entry ) {
+                echo "<entry>\n";
+                echo "<source>" . xml_entities($entry['source']) . "</source>\n";
+                echo "<level>" . xml_entities($entry['level']) . "</level>\n";
+                echo "<message>" . xml_entities($entry['text']) . "</message>\n";
+                echo "<url>" . xml_entities($entry['url']) . "</url>\n";
+                echo "<line>" . xml_entities($entry['line']) . "</line>\n";
+                echo "</entry>\n";
+            }
+            echo "</consoleLog>\n";
+        }
     }
 }
 

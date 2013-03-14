@@ -28,6 +28,7 @@ else
         $parts = pathinfo($file);
         $type = $parts['extension'];
 
+        $fit = max(min(@$_REQUEST['fit'], 1000), 0);
         $newWidth = 250;
         $w = @$_REQUEST['width'];
         if( $w && $w > 20 && $w < 1000 )
@@ -43,13 +44,20 @@ else
         {
             tbnDrawChecklist($img);
         }
-        elseif( is_file("$testPath/$file") ) {
-            if( !strcasecmp( $type, 'jpg') )
-                $img = imagecreatefromjpeg("$testPath/$file");
-            elseif( !strcasecmp( $type, 'gif') )
-                $img = imagecreatefromgif("$testPath/$file");
-            else
-                $img = imagecreatefrompng("$testPath/$file");
+        else {
+            if( !is_file("$testPath/$file") ) {
+                $file = str_ireplace('.jpg', '.png', $file);
+                $parts = pathinfo($file);
+                $type = $parts['extension'];
+            }
+            if( is_file("$testPath/$file") ) {
+                if( !strcasecmp( $type, 'jpg') )
+                    $img = imagecreatefromjpeg("$testPath/$file");
+                elseif( !strcasecmp( $type, 'gif') )
+                    $img = imagecreatefromgif("$testPath/$file");
+                else
+                    $img = imagecreatefrompng("$testPath/$file");
+            }
         }
 
         if( $img )
@@ -79,6 +87,7 @@ function tbnDrawWaterfall(&$img)
     global $cached;
     global $url;
     global $newWidth;
+    global $test;
 
     include('waterfall.inc');
     $is_secure = false;
@@ -89,6 +98,12 @@ function tbnDrawWaterfall(&$img)
     $rows = GetRequestRows($requests, $use_dots);
     $page_data = loadPageRunData($testPath, $run, $cached);
     $page_events = GetPageEvents($page_data);
+    $bwIn=0;
+    if (isset($test) && array_key_exists('testinfo', $test) && array_key_exists('bwIn', $test['testinfo'])) {
+        $bwIn = $test['testinfo']['bwIn'];
+    } else if(isset($test) && array_key_exists('test', $test) && array_key_exists('bwIn', $test['test'])) {
+        $bwIn = $test['test']['bwIn'];
+    }
     $options = array(
         'id' => $id,
         'path' => $testPath,
@@ -96,6 +111,7 @@ function tbnDrawWaterfall(&$img)
         'is_cached' => $cached,
         'use_cpu' => true,
         'use_bw' => true,
+        'max_bw' => $bwIn,
         'is_thumbnail' => true,
         'width' => $newWidth
         );
@@ -137,14 +153,25 @@ function tbnDrawChecklist(&$img)
 function GenerateThumbnail(&$img, $type)
 {
     global $newWidth;
+    global $fit;
 
     // figure out what the height needs to be
     $width = imagesx($img);
     $height = imagesy($img);
     
-    if( $width > $newWidth )
-    {
+    if ($fit > 0) {
+        if ($width > $height) {
+            $scale = $fit / $width;
+        } else {
+            $scale = $fit / $height;
+        }
+    } else {
         $scale = $newWidth / $width;
+    }
+    
+    if( $scale < 1 )
+    {
+        $newWidth = (int)($width * $scale);
         $newHeight = (int)($height * $scale);
         
         # Create a new temporary image

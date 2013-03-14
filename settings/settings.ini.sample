@@ -28,11 +28,15 @@ enableVideo=1
 ;showslow=http://www.showslow.com
 ;beaconRate=100
 showslow_key=<your showslow API key>
+tcpdump_view="http://cloudshark.org/view?url="
 
 ; image quality (defaults to 30)
 iq=75
 ;save png full-resolution screen shots
 ;pngss=1
+
+; Run tests concurrently across test machines
+;shardTests=1
 
 ;Log tests that take longer than X seconds
 ;slow_test_time=240

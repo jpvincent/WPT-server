@@ -26,7 +26,7 @@ $page_description = "Test network path from multiple locations around the world 
             $tab = 'Home';
             include 'header.inc';
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
+            <form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return ValidateInput(this)">
             
             <input type="hidden" name="type" value="traceroute">
             <input type="hidden" name="vo" value="<?php echo $owner;?>">
@@ -49,11 +49,11 @@ $page_description = "Test network path from multiple locations around the world 
             
             <div id="test_box-container">
                 <ul class="ui-tabs-nav">
-                    <li class="analytical_review"><a href="<?= $GLOBALS['basePath'] ?>">Analytical Review</a></li>
-                    <li class="visual_comparison"><a href="<?= $GLOBALS['basePath'] ?>video/">Visual Comparison</a></li>
+                    <li class="analytical_review"><a href="/">Analytical Review</a></li>
+                    <li class="visual_comparison"><a href="/video/">Visual Comparison</a></li>
                     <?php
                     if( $settings['mobile'] )
-                        echo '<li class="mobile_test"><a href="'.$GLOBALS['basePath'].'mobile">Mobile</a></li>';
+                        echo '<li class="mobile_test"><a href="/mobile">Mobile</a></li>';
                     ?>
                     <li class="traceroute ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#">Traceroute</a></li>
                 </ul>

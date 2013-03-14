@@ -11,11 +11,25 @@ if (!$run) {
     $pageData = loadAllPageData($testPath);
     $run = GetMedianRun($pageData, $cached, $median_metric);
 }
+$cachedText = '';
 if ($run) {
     $videoPath = "$testPath/video_{$run}";
-    if( $cached )
+    if( $cached ) {
         $videoPath .= '_cached';
-    $frames = GetVisualProgress($testPath, $run, $cached);
+        $cachedText = '_cached';
+    }
+    $frames = GetVisualProgress($testPath, $run, $cached /*, array('nocache' => 1) */);
+}
+function GetSIProgress($time) {
+    global $frames;
+    $progress = 0;
+    foreach($frames['DevTools']['VisualProgress'] as $progressTime => $prog) {
+        if ($progressTime <= $time)
+            $progress = intval($prog * 100);
+        else
+            break;
+    }
+    return $progress;
 }
 ?>
 
@@ -49,6 +63,10 @@ if ($run) {
             {
                 padding: 5px 10px;
             }
+            #options {
+                width: 100%;
+                text-align: left;
+            }
         </style>
     </head>
     <body>
@@ -58,23 +76,20 @@ if ($run) {
             $videoId = $id;
             $nosubheader = true;
             include 'header.inc';
-            ?>
-            <?php
-            if (isset($frames) && array_key_exists('complete', $frames)) {
-                echo "<h1>Complete: {$frames['complete']}</h1>";
-            }
-            if (isset($frames) && array_key_exists('FLI', $frames)) {
-                echo "<h1>Feels Like: {$frames['FLI']}</h1>";
-            }
-            ?>
-            <table class="frames">
-            <tr><th>Time</th><th>Video Frame</th><th>Progress</th></tr>
-            <?php
+            echo '<table class="frames">';
+            echo '<tr><th>Time</th><th>Video Frame</th><th>Baseline<br>Speed Index: ' .  $pageData[$run][$cached]['SpeedIndex'] . 
+                    '<br>Visually Complete: ' . $pageData[$run][$cached]['visualComplete'] . 
+                    '</th><th>Dev Tools<br>Speed Index: ' . $pageData[$run][$cached]['SpeedIndexDT'] .
+                    '<br>Visually Complete: ' . $pageData[$run][$cached]['VisuallyCompleteDT'] . '</th></tr>';
             if (isset($frames) && array_key_exists('frames', $frames)) {
                 foreach ($frames['frames'] as $time => &$frame) {
                     echo '<tr><td>'. number_format($time / 1000.0, 3) . 's</td>';
-                    echo "<td><img src=\"{$frame['path']}\"></td>";
-                    echo "<td>{$frame['progress']}%</td></tr>";
+                    $img = $frame['path'];
+                    $thumb = "/thumbnail.php?test=$id&width=200&file=video_$run$cachedText/{$frame['file']}";
+                    echo "<td><a href=\"$img\"><img src=\"$thumb\"></a></td>";
+                    echo "<td>{$frame['progress']}%</td>";
+                    echo "<td>" . GetSIProgress($time) . "%</td>";
+                    echo "</tr>";
                 }
             }
             ?>

@@ -115,7 +115,7 @@ if( (int)$test[test][fvonly] == 0 )
             </table>
             <br>
             <img class="progress" usemap="#connection_map" id="connectionView" src="<?php 
-                echo $GLOBALS['basePath']."/waterfall.$extension?width=930&type=connection&test=$id&run=$run&mime=1&cached=0";?>">
+                echo "/waterfall.$extension?width=930&type=connection&test=$id&run=$run&mime=1&cached=0";?>">
             </div>
 
             <?php if( count($breakdownRv) ) { ?>
@@ -181,7 +181,7 @@ if( (int)$test[test][fvonly] == 0 )
             </table>
             <br>
             <img class="progress" usemap="#connection_map_rv" id="connectionViewRv" src="<?php 
-                echo $GLOBALS['basePath']."/waterfall.$extension?width=930&type=connection&test=$id&run=$run&mime=1&cached=1";?>">
+                echo "/waterfall.$extension?width=930&type=connection&test=$id&run=$run&mime=1&cached=1";?>">
             </div>
             <?php } ?>
         </div>
@@ -189,7 +189,7 @@ if( (int)$test[test][fvonly] == 0 )
         <?php include('footer.inc'); ?>
 
         <!--Load the AJAX API-->
-        <script type="text/javascript" src="//www.google.com/jsapi"></script>
+        <script type="text/javascript" src="<?php echo $GLOBALS['ptotocol']; ?>://www.google.com/jsapi"></script>
         <script type="text/javascript">
     
         // Load the Visualization API and the table package.

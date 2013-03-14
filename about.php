@@ -30,7 +30,7 @@ $page_description = "More information about WebPagetest website speed testing an
                 else
                 {
                 ?>
-                <a href="http://developers.google.com/speed"><img id="logo" src="<?= $GLOBALS['basePath'] ?>images/google.png"></a>
+                <a href="http://developers.google.com/speed"><img id="logo" src="images/google.png"></a>
                 <br><p>WebPagetest is an open source project that is being developed and supported by Google as part of our efforts 
                 to <a href="http://developers.google.com/speed">make the web faster</a>.</p>
                 <p>WebPagetest is a tool that was orginally developed by <a href="http://dev.aol.com/">AOL</a> for use internally and was open-sourced in 2008.

@@ -96,7 +96,7 @@ else
                 </form>
                 <h4>Clicking on an url will bring you to the results for that test</h4>
                 <?php
-                $action = $GLOBALS['basePath'].'/video/compare.php';
+                $action = '/video/compare.php';
                 echo "<form name=\"compare\" method=\"get\" action=\"$action\">";
                 ?>
 		        <table class="history" border="0" cellpadding="5px" cellspacing="0">
@@ -188,14 +188,18 @@ else
 							            $token = strtok("\t");
 						            }
 						            
-						            if( $date && $location && $url && $guid)
+                                    if (!$location) {
+                                        $location = '';
+                                    }
+						            if( isset($date) && isset($location) && isset($url) && isset($guid))
 						            {
                                         // see if it is supposed to be filtered out
                                         if ($private) {
                                             $ok = false;
                                             if ($includePrivate) {
                                                 $ok = true;
-                                            } elseif (isset($uid) && $uid == $testUID) {
+                                            } elseif ((isset($uid) && $uid == $testUID) || 
+                                                (isset($user) && strlen($user) && !strcasecmp($user, $testUser))) {
                                                 $ok = true;
                                             } elseif (isset($owner) && strlen($owner) && $owner == $o) {
                                                 $ok = true;
@@ -207,7 +211,8 @@ else
                                             
                                         if ($ok && !$all) {
                                             $ok = false;
-                                            if (isset($uid) && $uid == $testUID) {
+                                            if ((isset($uid) && $uid == $testUID) || 
+                                                (isset($user) && strlen($user) && !strcasecmp($user, $testUser))) {
                                                 $ok = true;
                                             } elseif (isset($owner) && strlen($owner) && $owner == $o) {
                                                 $ok = true;
@@ -262,9 +267,9 @@ else
                                                     else
                                                         echo '<td class="uid"></td>';
                                                 }
-                                                $link = $GLOBALS['basePath']."results.php?test=$guid";
+                                                $link = "/results.php?test=$guid";
                                                 if( FRIENDLY_URLS )
-                                                    $link = $GLOBALS['basePath']."result/$guid/";
+                                                    $link = "/result/$guid/";
                                                 if( !strncasecmp($guid, 'http:', 5) || !strncasecmp($guid, 'https:', 6) )
                                                     $link = $guid;
                                                     

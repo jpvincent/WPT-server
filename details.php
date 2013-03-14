@@ -3,18 +3,95 @@ include 'common.inc';
 include 'object_detail.inc'; 
 require_once('page_data.inc');
 require_once('waterfall.inc');
-$data = loadPageRunData($testPath, $run, $cached, array('SpeedIndex' => true));
+
+$options = null;
+if (array_key_exists('end', $_REQUEST))
+    $options = array('end' => $_REQUEST['end']);
+$data = loadPageRunData($testPath, $run, $cached, $options);
 
 $page_keywords = array('Performance Test','Details','Webpagetest','Website Speed Test','Page Speed');
 $page_description = "Website performance test details$testLabel";
 ?>
-<!DOCTYPE HTML>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
     <head>
         <title>WebPagetest Test Details<?php echo $testLabel; ?></title>
-        <?php $gaTemplate = 'Details'; 
-		$pageId = 'details';
-		include ('head.inc'); ?>
+        <?php $gaTemplate = 'Details'; include ('head.inc'); ?>
+        <style type="text/css">
+        div.bar {
+			height:12px; 
+			margin-top:auto; 
+			margin-bottom:auto;
+		}
+		
+		.left {text-align:left;}
+		.center {text-align:center;}
+
+		.indented1 {padding-left: 40pt;}
+		.indented2 {padding-left: 80pt;}
+		
+        td {
+			white-space:nowrap; 
+			text-align:left; 
+			vertical-align:middle; 
+		}
+		
+        td.center {
+			text-align:center;
+		}
+
+		table.details {
+		  margin-left:auto; margin-right:auto;
+		  background: whitesmoke;
+		  border-collapse: collapse;
+		}
+		table.details th, table.details td {
+		  border: 1px silver solid;
+		  padding: 0.2em;
+		  text-align: center;
+		  font-size: smaller;
+		}
+		table.details th {
+		  background: gainsboro;
+		}
+		table.details caption {
+		  margin-left: inherit;
+		  margin-right: inherit;
+		  background: whitesmoke;
+		}
+		table.details th.reqUrl, table.details td.reqUrl {
+		  text-align: left;
+		  width: 30em; 
+		  word-wrap: break-word;
+		}
+		table.details td.even {
+		  background: gainsboro;
+		}
+		table.details td.odd {
+		  background: whitesmoke;
+		}
+		table.details td.evenRender {
+		  background: #dfffdf;
+		}
+		table.details td.oddRender {
+		  background: #ecffec;
+		}
+		table.details td.evenDoc {
+		  background: #dfdfff;
+		}
+		table.details td.oddDoc {
+		  background: #ececff;
+		}
+		table.details td.warning {
+		  background: #ffff88;
+		}
+		table.details td.error {
+		  background: #ff8888;
+		}
+        <?php
+        include "waterfall.css";
+        ?>
+        </style>
     </head>
     <body>
         <div class="page">
@@ -32,16 +109,16 @@ $page_description = "Website performance test details$testLabel";
                         ?>
                     </div>
                     <?php
-	    		        echo '<a href="'.$GLOBALS['basePath'].'export.php?' . "test=$id&run=$run&cached=$cached" . '">Export HTTP Archive (.har)</a>';
+	    		        echo '<a href="/export.php?' . "test=$id&run=$run&cached=$cached" . '">Export HTTP Archive (.har)</a>';
 			            if ( is_dir('./google') && $settings['enable_google_csi'] )
-				            echo '<br><a href="'.$GLOBALS['basePath'].'google/google_csi.php?' . "test=$id&run=$run&cached=$cached" . '">CSI (.csv) data</a>';
+				            echo '<br><a href="/google/google_csi.php?' . "test=$id&run=$run&cached=$cached" . '">CSI (.csv) data</a>';
                         if( is_file("$testPath/{$run}{$cachedText}_dynaTrace.dtas") )
                         {
-                            echo "<br><a href=\"".$GLOBALS['basePath']."$testPath/{$run}{$cachedText}_dynaTrace.dtas\">Download dynaTrace Session</a>";
+                            echo "<br><a href=\"/$testPath/{$run}{$cachedText}_dynaTrace.dtas\">Download dynaTrace Session</a>";
                             echo ' (<a href="http://ajax.dynatrace.com/pages/" target="_blank">get dynaTrace</a>)';
                         }
                         if( is_file("$testPath/{$run}{$cachedText}_bodies.zip") )
-                            echo "<br><a href=\"".$GLOBALS['basePath']."$testPath/{$run}{$cachedText}_bodies.zip\">Download Response Bodies</a>";
+                            echo "<br><a href=\"/$testPath/{$run}{$cachedText}_bodies.zip\">Download Response Bodies</a>";
                         echo '<br>';
                     ?>
                 </div>
@@ -51,13 +128,15 @@ $page_description = "Website performance test details$testLabel";
                     <tr>
                         <?php
                         $cols = 4;
-                        if((float)$data['domTime'] > 0.0)
+                        if (array_key_exists('domTime', $data) && (float)$data['domTime'] > 0.0)
                             $cols++;
-                        if( $test['test']['aft'] )
+                        if (array_key_exists('aft', $test['test']) && $test['test']['aft'] )
                             $cols++;
-                        if($data['domElements'] > 0)
+                        if (array_key_exists('domElements', $data) && $data['domElements'] > 0)
                             $cols++;
-                        if((float)$data['visualComplete'] > 0.0)
+                        if (array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0)
+                            $cols++;
+                        if (array_key_exists('visualComplete', $data) && (float)$data['visualComplete'] > 0.0)
                             $cols++;
                         ?>
                         <th align="center" class="empty" valign="middle" colspan=<?php echo "\"$cols\"";?> ></th>
@@ -68,16 +147,19 @@ $page_description = "Website performance test details$testLabel";
                         <th align="center" valign="middle">Load Time</th>
                         <th align="center" valign="middle">First Byte</th>
                         <th align="center" valign="middle">Start Render</th>
-                        <?php if( $test['test']['aft'] ) { ?>
+                        <?php if( array_key_exists('aft', $test['test']) && $test['test']['aft'] ) { ?>
                         <th align="center" valign="middle">Above the Fold</th>
                         <?php } ?>
-                        <?php if( array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0 ) { ?>
+                        <?php if (array_key_exists('visualComplete', $data) && (float)$data['visualComplete'] > 0.0) { ?>
+                        <th align="center" valign="middle">Visually Complete</th>
+                        <?php } ?>
+                        <?php if (array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0) { ?>
                         <th align="center" valign="middle"><a href="https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/metrics/speed-index" target="_blank">Speed Index</a></th>
                         <?php } ?>
-                        <?php if( (float)$data['domTime'] > 0.0 ) { ?>
+                        <?php if (array_key_exists('domTime', $data) && (float)$data['domTime'] > 0.0 ) { ?>
                         <th align="center" valign="middle">DOM Element</th>
                         <?php } ?>
-                        <?php if( $data['domElements'] > 0 ) { ?>
+                        <?php if (array_key_exists('domElements', $data) && $data['domElements'] > 0 ) { ?>
                         <th align="center" valign="middle">DOM Elements</th>
                         <?php } ?>
                         <th align="center" valign="middle">Result (error code)</th>
@@ -96,17 +178,23 @@ $page_description = "Website performance test details$testLabel";
                         echo "<td id=\"TTFB\" valign=\"middle\">" . formatMsInterval($data['TTFB'], 3) . "</td>\n";
                         //echo "<td id=\"startRender\" valign=\"middle\">" . number_format($data['render'] / 1000.0, 3) . "s</td>\n";
                         echo "<td id=\"startRender\" valign=\"middle\">" . formatMsInterval($data['render'], 3) . "</td>\n";
-                        if( $test['test']['aft'] ) {
+                        if (array_key_exists('aft', $test['test']) && $test['test']['aft'] ) {
                             $aft = number_format($data['aft'] / 1000.0, 1) . 's';
                             if( !$data['aft'] )
                                 $aft = 'N/A';
                             echo "<td id=\"aft\" valign=\"middle\">$aft</th>";
                         }
-                        if( array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0 )
-                            echo "<td id=\"visualComplate\" valign=\"middle\">{$data['SpeedIndex']}</td>\n";
-                        if( (float)$data['domTime'] > 0.0 )
+                        if( array_key_exists('visualComplete', $data) && (float)$data['visualComplete'] > 0.0 )
+                            echo "<td id=\"visualComplate\" valign=\"middle\">" . formatMsInterval($data['visualComplete'], 3) . "</td>\n";
+                        if( array_key_exists('SpeedIndex', $data) && (int)$data['SpeedIndex'] > 0 ) {
+                            if (array_key_exists('SpeedIndexCustom', $data))
+                                echo "<td id=\"speedIndex\" valign=\"middle\">{$data['SpeedIndexCustom']}</td>\n";
+                            else
+                                echo "<td id=\"speedIndex\" valign=\"middle\">{$data['SpeedIndex']}</td>\n";
+                        }
+                        if (array_key_exists('domTime', $data) && (float)$data['domTime'] > 0.0 )
                             echo "<td id=\"domTime\" valign=\"middle\">" . formatMsInterval($data['domTime'], 3) . "</td>\n";
-                        if( $data['domElements'] > 0 )
+                        if (array_key_exists('domElements', $data) && $data['domElements'] > 0 )
                             echo "<td id=\"domElements\" valign=\"middle\">{$data['domElements']}</td>\n";
                         echo "<td id=\"result\" valign=\"middle\">{$data['result']}</td>\n";
 
@@ -149,7 +237,8 @@ $page_description = "Website performance test details$testLabel";
 		            </table><br>
                 <?php 
                 }
-                if ($data['loadEventStart'] > 0 || $data['domContentLoadedEventStart'] > 0)
+                if ((array_key_exists('loadEventStart', $data) && $data['loadEventStart'] > 0) ||
+                    (array_key_exists('domContentLoadedEventStart', $data) && $data['domContentLoadedEventStart'] > 0))
                 {
                     echo '<h2><a href="http://dvcs.w3.org/hg/webperf/raw-file/tip/specs/NavigationTiming/Overview.html#process" target="_blank">W3C Navigation Timing</a></h2>';
                     echo '<table id="tableNavTiming" class="pretty" align="center" border="1" cellpadding="10" cellspacing="0">';
@@ -181,16 +270,16 @@ $page_description = "Website performance test details$testLabel";
                         <td><table><tr><td><div class="bar" style="width:15px; background-color:#00FF00"></div></td><td>Time to First Byte</td></tr></table></td>
                         <td><table><tr><td><div class="bar" style="width:15px; background-color:#007BFF"></div></td><td>Content Download</td></tr></table></td>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#28BC00"></div></td><td>Start Render</td></tr></table></td>
-                        <?php if( $data['aft'] ) { ?>
+                        <?php if (array_key_exists('aft', $data) && $data['aft'] ) { ?>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#FF0000"></div></td><td>Above the Fold</td></tr></table></td>
                         <?php } ?>
-                        <?php if( (float)$data['domTime'] > 0.0 ) { ?>
+                        <?php if (array_key_exists('domTime', $data) && (float)$data['domTime'] > 0.0 ) { ?>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#F28300"></div></td><td>DOM Element</td></tr></table></td>
                         <?php } ?>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#0000FF"></div></td><td>Document Complete</td></tr></table></td>
                         <td style="vertical-align:middle;"><div style="background-color:#FFFF00">3xx result</div></td>
                         <td style="vertical-align:middle;"><div style="background-color:#FF0000">4xx+ result</div></td>
-                        <?php if( $settings['enable_google_csi'] ) { ?>
+                        <?php if(array_key_exists('enable_google_csi', $settings) && $settings['enable_google_csi'] ) { ?>
                         <td><table><tr><td><div class="arrow-down"></div></td><td>CSI</td></tr></table></td>
                         <?php } ?>
                     </tr>
@@ -198,8 +287,8 @@ $page_description = "Website performance test details$testLabel";
                 <br>
                 <?php
                     InsertWaterfall($url, $requests, $id, $run, $cached);
-                    echo "<br><a href=\"".$GLOBALS['basePath']."customWaterfall.php?width=930&test=$id&run=$run&cached=$cached\">customize waterfall</a> &#8226; ";
-                    echo "<a href=\"".$GLOBALS['basePath']."pageimages.php?test=$id&run=$run&cached=$cached\">View all Images</a>";
+                    echo "<br><a href=\"/customWaterfall.php?width=930&test=$id&run=$run&cached=$cached\">customize waterfall</a> &#8226; ";
+                    echo "<a href=\"/pageimages.php?test=$id&run=$run&cached=$cached\">View all Images</a>";
                 ?>
                 <br>
                 <br>
@@ -219,7 +308,7 @@ $page_description = "Website performance test details$testLabel";
                     foreach($map as $entry) {
                         if (array_key_exists('request', $entry)) {
                             $index = $entry['request'] + 1;
-                            $title = "$index: {$entry['url']}";
+                            $title = "$index: " . htmlspecialchars($entry['url']);
                             echo "<area href=\"#request$index\" alt=\"$title\" title=\"$title\" shape=RECT coords=\"{$entry['left']},{$entry['top']},{$entry['right']},{$entry['bottom']}\">\n";
                         } elseif(array_key_exists('url', $entry)) {
                             echo "<area href=\"#request\" alt=\"{$entry['url']}\" title=\"{$entry['url']}\" shape=RECT coords=\"{$entry['left']},{$entry['top']},{$entry['right']},{$entry['bottom']}\">\n";
@@ -235,7 +324,7 @@ $page_description = "Website performance test details$testLabel";
                         <td><table><tr><td><div class="bar" style="width:15px; background-color:#CF25DF"></div></td><td>SSL Negotiation</td></tr></table></td>
                         <?php } ?>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#28BC00"></div></td><td>Start Render</td></tr></table></td>
-                        <?php if( (float)$data['domTime'] > 0.0 ) { ?>
+                        <?php if(array_key_exists('domTime', $data) && (float)$data['domTime'] > 0.0 ) { ?>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#F28300"></div></td><td>DOM Element</td></tr></table></td>
                         <?php } ?>
                         <td><table><tr><td><div class="bar" style="width:2px; background-color:#0000FF"></div></td><td>Document Complete</td></tr></table></td>
@@ -246,7 +335,7 @@ $page_description = "Website performance test details$testLabel";
                     $extenstion = 'php';
                     if( FRIENDLY_URLS )
                         $extenstion = 'png';
-                    echo $GLOBALS['basePath']."waterfall.$extenstion?type=connection&width=930&test=$id&run=$run&cached=$cached&mime=1";?>">
+                    echo "/waterfall.$extenstion?type=connection&width=930&test=$id&run=$run&cached=$cached&mime=1";?>">
                 </div>
 		        <br><br> 
                 <?php include('./ads/details_middle.inc'); ?>

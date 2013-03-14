@@ -20,6 +20,7 @@ BuildVideoScript($testPath, $videoPath);
 
 $page_keywords = array('Screen Shot','Webpagetest','Website Speed Test');
 $page_description = "Website performance test screen shots$testLabel.";
+$userImages = true;
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -98,9 +99,9 @@ $page_description = "Website performance test screen shots$testLabel.";
             <?php
                 if( is_dir("./$videoPath") )
                 {
-                    $createPath = $GLOBALS['basePath']."video/create.php?tests=$id-r:$run-c:$cached&id={$id}.{$run}.{$cached}";
+                    $createPath = "/video/create.php?tests=$id-r:$run-c:$cached&id={$id}.{$run}.{$cached}";
                     echo "<a href=\"$createPath\">Create Video</a> &#8226; ";
-                    echo "<a href=\"".$GLOBALS['basePath']."/video/downloadFrames.php?test=$id&run=$run&cached=$cached\">Download Video Frames</a>";
+                    echo "<a href=\"/video/downloadFrames.php?test=$id&run=$run&cached=$cached\">Download Video Frames</a>";
                 }
                     
                 if($cached == 1)
@@ -109,14 +110,14 @@ $page_description = "Website performance test screen shots$testLabel.";
                 {
                     echo '<h1>Fully Loaded</h1>';
                     echo '<a href="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen.png">';
-                    echo '<img class="center" alt="Screen Shot" style="max-width:930px; -ms-interpolation-mode: bicubic;" src="'.$GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_screen.png">';
+                    echo '<img class="center" alt="Screen Shot" style="max-width:930px; -ms-interpolation-mode: bicubic;" src="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen.png">';
                     echo '</a>';
                 }
                 elseif( is_file($testPath . '/' . $run . $cachedText . '_screen.jpg') )
                 {
                     echo '<h1>Fully Loaded</h1>';
 		            echo '<a href="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen.jpg">';
-                    echo '<img class="center" alt="Screen Shot" style="max-width:930px; -ms-interpolation-mode: bicubic;" src="' .$GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_screen.jpg">';
+                    echo '<img class="center" alt="Screen Shot" style="max-width:930px; -ms-interpolation-mode: bicubic;" src="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen.jpg">';
                     echo '</a>';
                 }
                 // display the last status message if we have one
@@ -133,7 +134,7 @@ $page_description = "Website performance test screen shots$testLabel.";
                     if( isset($pageRunData) && isset($pageRunData['render']) )
                         echo ' (' . number_format($pageRunData['render'] / 1000.0, 3) . '  sec)';
                     echo '</h1></a>';
-                    echo '<img class="center" alt="Start Render Screen Shot" src="' .$GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_screen_render.jpg">';
+                    echo '<img class="center" alt="Start Render Screen Shot" src="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen_render.jpg">';
                 }
                 if( is_file($testPath . '/' . $run . $cachedText . '_screen_dom.jpg') )
                 {
@@ -141,7 +142,7 @@ $page_description = "Website performance test screen shots$testLabel.";
                     if( isset($pageRunData) && isset($pageRunData['domTime']) )
                         echo ' (' . number_format($pageRunData['domTime'] / 1000.0, 3) . '  sec)';
                     echo '</h1></a>';
-                    echo '<img class="center" alt="DOM Element Screen Shot" src="' . $GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_screen_dom.jpg">';
+                    echo '<img class="center" alt="DOM Element Screen Shot" src="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen_dom.jpg">';
                 }
                 if( is_file($testPath . '/' . $run . $cachedText . '_screen_doc.jpg') )
                 {
@@ -149,7 +150,7 @@ $page_description = "Website performance test screen shots$testLabel.";
                     if( isset($pageRunData) && isset($pageRunData['docTime']) )
                         echo ' (' . number_format($pageRunData['docTime'] / 1000.0, 3) . '  sec)';
                     echo '</h1></a>';
-                    echo '<img class="center" alt="Document Complete Screen Shot" src="' . $GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_screen_doc.jpg">';
+                    echo '<img class="center" alt="Document Complete Screen Shot" src="' . substr($testPath, 1) . '/' . $run . $cachedText . '_screen_doc.jpg">';
                 }
                 if( is_file($testPath . '/' . $run . $cachedText . '_aft.png') )
                 {
@@ -158,7 +159,7 @@ $page_description = "Website performance test screen shots$testLabel.";
                         echo ' (' . number_format($pageRunData['aft'] / 1000.0, 3) . '  sec)';
                     echo '</h1></a>';
                     echo 'White = Stabilized Early, Blue = Dynamic, Red = Late Static (failed AFT), Green = AFT<br>';
-                    echo '<img class="center" alt="AFT Diagnostic image" src="' . $GLOBALS['basePath']. substr($testPath, 1) . '/' . $run . $cachedText . '_aft.png">';
+                    echo '<img class="center" alt="AFT Diagnostic image" src="' . substr($testPath, 1) . '/' . $run . $cachedText . '_aft.png">';
                 }
                 
                 // display all of the status messages

@@ -20,7 +20,7 @@ $page_description = "Visually compare the performance of multiple websites with 
             $tab = 'Home';
             include 'header.inc';
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>video/docompare.php" method="POST" onsubmit="return ValidateInput(this)">
+            <form name="urlEntry" action="/video/docompare.php" method="POST" onsubmit="return ValidateInput(this)">
 
             <h2 class="cufon-dincond_black">Test a website's performance</h2>
 

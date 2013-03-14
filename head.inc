@@ -6,22 +6,19 @@ if( strlen($page_description) )
     echo "<meta name=\"description\" content=\"$page_description\">\n";
 ?>
 <meta name="author" content="Patrick Meenan">
-<meta http-equiv="X-UA-Compatible" content="IE=8"> 
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"> 
 
-<base href="<?= $GLOBALS['basePath'] ?>" />
-
-<link rel="shortcut icon" href="<?= $GLOBALS['basePath'] ?>/images/favicon.ico" type="image/vnd.microsoft.icon">
-<link rel="icon" href="<?= $GLOBALS['basePath'] ?>/images/favicon.png" type="image/png">
-<link rel="stylesheet" href="<?= $GLOBALS['basePath'] ?>makeCSS.php?page=<?= $gaTemplate ?>" type="text/css">
+<link rel="shortcut icon" href="/images/favicon.ico" type="image/vnd.microsoft.icon">
+<link rel="icon" href="/images/favicon.png" type="image/png">
 
 <?php 
-
     if(extension_loaded('newrelic'))
         echo @newrelic_get_browser_timing_header();
     if (is_file('./settings/customhead.inc.php')) {
         include('./settings/customhead.inc.php');
     }
         
+    echo "<link rel=\"stylesheet\" href=\"{$GLOBALS['cdnPath']}/pagestyle.css?v=" . VER_CSS . "\" type=\"text/css\">\n";
     echo "<style type=\"text/css\">\n";
     
     // switch to the private install logo if we're not running on webpagetest
@@ -43,13 +40,13 @@ if( strlen($page_description) )
     if( $privateInstall )
     {
         if( $blkLogo )
-            echo ".logo a {background-image: url(".$GLOBALS['basePath']."/images/logo_private_blk.png);}";
+            echo ".logo a {background-image: url(/images/logo_private_blk.png);}";
         else
-            echo ".logo a {background-image: url(".$GLOBALS['basePath']."/images/logo_private.png);}";
+            echo ".logo a {background-image: url(/images/logo_private.png);}";
     }
     elseif( $blkLogo )
     {
-        echo ".logo a {background-image: url(".$GLOBALS['basePath']."/images/logo_blk.png);}";
+        echo ".logo a {background-image: url(/images/logo_blk.png);}";
     }
 
     // include a custom style if one exists
@@ -81,3 +78,4 @@ function html2rgb($color)
 
     return array($r, $g, $b);
 }
+?>

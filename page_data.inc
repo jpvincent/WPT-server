@@ -1,4 +1,5 @@
 <?php
+require_once('devtools.inc.php');
 
 /**
 * Load the page results directly from the results files
@@ -52,7 +53,65 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
         $ret = loadPageData("$testPath/{$run}_Cached_IEWPG.txt", $options);
     else
         $ret = loadPageData("$testPath/{$run}_IEWPG.txt", $options);
-
+    if (!isset($ret) || !is_array($ret) || !count($ret))
+        GetDevToolsRequests($testPath, $run, $cached, $requests, $ret);
+    
+    // see if we have video files to calculate a visually complete time from
+    if (isset($ret)) {
+        $video_dir = "$testPath/video_$run";
+        if ($cached)
+            $video_dir .= '_cached';
+        if( is_dir($video_dir) && (!array_key_exists('lastVisualChange', $ret) || !$ret['lastVisualChange'])) {
+            $frames = loadVideo($video_dir);
+            if( $frames && count($frames) ) {
+                $last = end(array_keys($frames));
+                if( $last )
+                    $ret['lastVisualChange'] = $last * 100;
+            }
+        }
+        require_once('./video/visualProgress.inc.php');
+        $progress = GetVisualProgress($testPath, $run, $cached);
+        if (isset($progress) && is_array($progress)) {
+            if (array_key_exists('FLI', $progress)) {
+                $ret['SpeedIndex'] = $progress['FLI'];
+            }
+            if (array_key_exists('visualComplete', $progress)) {
+                $ret['visualComplete'] = $progress['visualComplete'];
+            }
+            if (array_key_exists('DevTools', $progress) && is_array($progress['DevTools'])) {
+                if (array_key_exists('SpeedIndex', $progress['DevTools'])) {
+                    $ret['SpeedIndexDT'] = intval($progress['DevTools']['SpeedIndex']);
+                    if (!array_key_exists('SpeedIndex', $ret))
+                        $ret['SpeedIndex'] = $ret['SpeedIndexDT'];
+                }
+                if (array_key_exists('VisuallyComplete', $progress['DevTools'])) {
+                    $ret['VisuallyCompleteDT'] = $progress['DevTools']['VisuallyComplete'];
+                    if (!array_key_exists('visualComplete', $ret))
+                        $ret['visualComplete'] = $ret['VisuallyCompleteDT'];
+                }
+                if (array_key_exists('StartRender', $progress['DevTools']) &&
+                    (!array_key_exists('render', $ret) || !$ret['render']))
+                    $ret['render'] = $progress['DevTools']['StartRender'];
+            }
+            if ((!array_key_exists('lastVisualChange', $ret) ||
+                 !$ret['lastVisualChange']) &&
+                array_key_exists('visualComplete', $ret))
+                $ret['lastVisualChange'] = $ret['visualComplete'];
+        }
+        // see if we need a custom Speed Index as well
+        $end = null;
+        if (isset($options) && array_key_exists('end', $options)) {
+            $end = $options['end'];
+            $progress = GetVisualProgress($testPath, $run, $cached, null, $end);
+            if (isset($progress) && is_array($progress)) {
+                if (array_key_exists('FLI', $progress)) {
+                    $ret['SpeedIndexCustom'] = $progress['FLI'];
+                }
+                $ret['visualCompleteCustom'] = $progress['visualComplete'];
+            }
+        }
+    }
+    
     return $ret;
 }
 
@@ -120,9 +179,13 @@ function loadPageData($file, $options = null)
                                 'loadEventEnd' => @(int)$fields[78],
                                 'domContentLoadedEventStart' => @(int)$fields[79],
                                 'domContentLoadedEventEnd' => @(int)$fields[80],
-                                'visualComplete' => @(int)$fields[81],
+                                'lastVisualChange' => @(int)$fields[81],
                                 'browser_name' => @trim($fields[82]),
-                                'browser_version' => @trim($fields[83])
+                                'browser_version' => @trim($fields[83]),
+                                'server_count' => @(int)trim($fields[84]),
+                                'server_rtt' => @(int)trim($fields[85]),
+                                'base_page_cdn' => @trim($fields[86]),
+                                'adult_site' => @(int)trim($fields[87])
                             );
                 
                 $ret['date'] = strtotime(trim($fields[0]) . ' ' . trim($fields[1]));
@@ -130,32 +193,6 @@ function loadPageData($file, $options = null)
                     $ret['pageSpeedVersion'] = '1.9';
 
                 break;
-            }
-        }
-    }
-    
-    // see if we have video files to calculate a visually complete time from
-    if( isset($ret) )
-    {
-        $video_dir = dirname($file) . '/video_';
-        $filename = basename($file);
-        $video_dir .= (int)$filename;
-        $cached = 0;
-        if (stripos($filename, 'Cached') !== false)
-            $cached = 1;
-        if( is_dir($video_dir) && (!array_key_exists('visualComplete', $ret) || !$ret['visualComplete'])) {
-            $frames = loadVideo($video_dir);
-            if( $frames && count($frames) ) {
-                $last = end(array_keys($frames));
-                if( $last )
-                    $ret['visualComplete'] = $last * 100;
-            }
-        }
-        if (isset($options) && array_key_exists('SpeedIndex', $options) && $options['SpeedIndex']) {
-            require_once('./video/visualProgress.inc.php');
-            $progress = GetVisualProgress(dirname($file), (int)$filename, $cached);
-            if (isset($progress) && is_array($progress) && array_key_exists('FLI', $progress)) {
-                $ret['SpeedIndex'] = $progress['FLI'];
             }
         }
     }
