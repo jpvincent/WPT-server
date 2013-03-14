@@ -236,7 +236,7 @@ $loc = ParseLocations($locations);
                                         $runs = (int)$_COOKIE["runs"];
                                         if( isset($req_runs) )
                                             $runs = (int)$req_runs;
-                                        $runs = max(1, min($runs, $settings['maxruns']));
+                                        $runs = max(3, min($runs, $settings['maxruns']));
                                         ?>
                                         <input id="number_of_tests" type="text" class="text short" name="runs" value=<?php echo "\"$runs\""; ?>>
                                     </li>
@@ -460,7 +460,7 @@ $loc = ParseLocations($locations);
                                     $video = (int)$_REQUEST['video'];
                                 }
                                 ?>
-                                <input type="checkbox" name="video" id="videoCheck" class="checkbox before_label" <?php if( $video ) echo 'checked=checked'; ?>>
+                                <input type="checkbox" name="video" id="videoCheck" class="checkbox before_label" checked>
                                 <label for="videoCheck" class="auto_width">Capture Video</label>
                                 <br>
                                 <br>
