@@ -1244,8 +1244,9 @@ function checkQueueGrowthCountAndEmailAlert(){
         $message .= "Timestamp: ".timestamp()."\n";
         $message .= "\n--------------------------------------------\n";
         $message .= "Queue count continues to grow. Please provision more testers or decrease the runrate for this location.";
-        // Update alert time stamp
-        $queueStatus[$key]['LastQueueGrowthAlertTime'] = current_seconds();
+        if(!empty($key))
+          // Update alert time stamp
+          $queueStatus[$key]['LastQueueGrowthAlertTime'] = current_seconds();
         writeIniFile($queueStatus, $queueStatusFilename ,true);
       } else {
 //        logOutput('[INFO] [checkQueueGrowthCountAndEmailAlert] QueueGrowthCheck for: '.$key.' alert interval has not passed. Last Alert: '.$status["LastQueueGrowthAlertTime"]);
@@ -1306,7 +1307,8 @@ function updateQueueProcessRate(){
             }
           }
           $location['QueueGrowthCheckTimeStamp'] = $currentTime;
-          $locationInformation[$key] = $location;
+          if(!empty($key))
+            $locationInformation[$key] = $location;
 //        } else {
 //          logOutput('[INFO] [updateQueueProcessRate] Skipping QueueGrowthCheck: interval not passed for : '.$key);
 //           Keep previous info it update time hasn't passed

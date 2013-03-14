@@ -77,44 +77,6 @@
             </tr>
           </table>
           <br>
-          <br>
-          <h2 class="cufon-dincond_black">Tester Status</h2>
-          <table class="pretty" style="border-collapse:collapse" width="100%">
-            <thead>
-              <th></th>
-              <th align="right">Tester</th>
-              <th align="center">PC</th>
-              <th align="right">EC2 Instance</th>
-              <th align="center">Launch Time</th>
-              <th align="center"><a title="EC2 State as of last query">EC2 State (<a href="?cache=false">refresh</a>)</a><br>({$lastEc2StatusCheck|date_format:"Y/m/d - H:i:s"})</a></th>
-              <th align="center">IP</th>
-              <th align="right">Busy</th>
-              <th align="right">Last Check</th>
-              <th align="right">Last Work</th>
-            </thead>
-            {foreach from=$testers item=tester}
-              <tr><a name="{$tester.id}"></a> <td colspan="10" nowrap="true" bgcolor="#f5f5dc"><h4 style="font-size: medium;">{$tester.id}</h4></td></tr>
-                {assign var="eo" value="odd"}
-                {foreach from=$tester.Agents item=agent}
-                  {if $eo == "even"} {assign var="eo" value="odd"} {else} {assign var="eo" value= "even"}{/if}
-                  {assign value="#98fb98" var="bgcolor"}
-
-                  <tr class="{$eo}">
-                    <td></td>
-                    <td align="right">{$agent.index}</td>
-                    <td align="center">{$agent.pc}</td>
-                    <td align="center">{$agent.ec2}</td>
-                    <td align="center">{if isset($agent.ec2Status.launchTime)}{$agent.ec2Status.launchTime}{/if}</td>
-                    <td align="center">{if isset($agent.ec2Status.state)}{$agent.ec2Status.state}{/if}</td>
-                    <td align="center">{$agent.ip}</td>
-                    <td align="right">{$agent.busy}</td>
-                    <td align="right">{$agent.elapsed}</td>
-                    <td align="right">{$agent.last}</td>
-                  </tr>
-                {/foreach}
-            {/foreach}
-          </table>
-          <br>
 
           <h4>* Run rates are per hour.</h4>
         </div>

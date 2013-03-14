@@ -1,7 +1,7 @@
 <?php
   require("login/login.php");
   include_once 'monitor.inc';
-  include_once 'ec2_functions.inc';
+  // include_once 'ec2_functions.inc';
   include_once 'utils.inc';
   $testers = getTestersInformation();
   $locations = getLocationInformation();
@@ -14,7 +14,7 @@
       $cache = false;
     }
   }
-  $ec2TesterStatus = getEC2TesterStatus($cache);
+  /*$ec2TesterStatus = getEC2TesterStatus($cache);
 
   foreach($testers as &$tester){
     foreach($tester['Agents'] as $key=>&$agent){
@@ -25,7 +25,7 @@
     }
   }
   $lastEc2StatusCheck = getEC2TesterStatusLastCheckTime();
-
+  */
 // IE9 and IE9_wptdriver handle IE9, Chrome, and Firefox. Ignore duplicate entries
 // As IE9 and IE9_wptdriver are reported separately.
 $locs = array();
@@ -46,7 +46,7 @@ foreach( $locations as $key=>$loc){
   }
 }
 
-  $smarty->assign('lastEc2StatusCheck',$lastEc2StatusCheck);
+  //$smarty->assign('lastEc2StatusCheck',$lastEc2StatusCheck);
   $smarty->assign('locations',$locs);
   $smarty->assign('testers',$testers);
   $smarty->assign('runRateInfo',$runRateInfo);

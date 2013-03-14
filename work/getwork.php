@@ -27,7 +27,7 @@ if (@strlen($ec2)) {
 $dnsServers = '';
 if (array_key_exists('dns', $_REQUEST))
     $dnsServers = str_replace('-', ',', $_REQUEST['dns']);
-$supports_sharding = false;
+$supports_sharding = true;
 if (array_key_exists('shards', $_REQUEST) && $_REQUEST['shards'])
     $supports_sharding = true;
 
