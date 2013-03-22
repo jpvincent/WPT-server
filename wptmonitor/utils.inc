@@ -738,7 +738,8 @@ function writeIniFile($assoc_arr, $path, $has_sections=FALSE) {
       $content = "";
       if ($has_sections) {
           foreach ($assoc_arr as $key=>$elem) {
-              $content .= "[".$key."]".PHP_EOL;
+
+              $content .= '["'.str_replace("'", '', $key).'"]'.PHP_EOL;
               foreach ($elem as $key2=>$elem2) {
                   if(is_array($elem2))
                   {
@@ -758,13 +759,15 @@ function writeIniFile($assoc_arr, $path, $has_sections=FALSE) {
               {
                   for($i=0;$i<count($elem);$i++)
                   {
-                      $content .= $key2."[] = \"".$elem[$i]."\"".PHP_EOL;
+                      $content .= $key."[] = \"".$elem[$i]."\"".PHP_EOL;
                   }
               }
-              else if($elem=="") $content .= $key2." = ".PHP_EOL;
-              else $content .= $key2." = \"".$elem."\"".PHP_EOL;
+              else if($elem=="") $content .= $key." = ".PHP_EOL;
+              else $content .= $key." = \"".$elem."\"".PHP_EOL;
           }
       }
+
+      $content .= PHP_EOL.PHP_EOL;
 
       if (!$handle = fopen($path, 'w')) {
           return false;
