@@ -3,6 +3,8 @@ require("login/login.php");
 include 'monitor.inc';
 include_once 'graph_functions.inc';
 
+set_time_limit('90');
+
 $userId = getCurrentUserId();
 date_default_timezone_set($_SESSION['ls_timezone']);
 
@@ -426,4 +428,3 @@ function cleanupDir($dir, $timeStamp){
   }
 
 }
-?>
