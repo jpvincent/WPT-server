@@ -179,13 +179,13 @@
                   <label title="Instruct the target WPT host to include only the first view">First View Only</label>
                 </td>
                 <td>
-                  <input type="checkbox" name="firstviewonly" value="on" {if $job.FirstViewOnly}checked="true" {/if}/></td>
+                  <input type="checkbox" name="firstviewonly" value="1" {if $job.FirstViewOnly}checked="true" {/if}/></td>
               </tr>
               <tr>
                 <td align="right">
                   <label title="Instruct the target WPT host to capture video and filmstrip">Capture Video</label>
                 </td>
-                <td><input type="checkbox" name="video" value="on" {if $job.Video}checked="true" {/if}/></td>
+                <td><input type="checkbox" name="video" value="1" {if $job.Video}checked="true" {/if}/></td>
               </tr>
               {*<tr>*}
                 {*<td align="right" nowrap="true">*}
