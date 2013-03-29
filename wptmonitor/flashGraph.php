@@ -84,7 +84,9 @@ $smarty->assign('startTime', $startDateTime);
 $smarty->assign('endTime', $endDateTime);
 // End start/end times
 
-$q = Doctrine_Query::create()->from('WPTResult r, r.WPTJob j')->select('r.MultiStep, r.SequenceNumber, r.WPTResultId, r.WPTJobId, j.Label, j.WPTJobFolderId, j.UserId, j.Active');
+$q = Doctrine_Query::create()
+    ->from('WPTResult r, r.WPTJob j')
+    ->select('r.MultiStep, r.SequenceNumber, r.WPTResultId, r.WPTJobId, j.Label, j.WPTJobFolderId, j.UserId, j.Active');
 
 // Create jobs list
 //$q = Doctrine_Query::create()->select('j.Id, j.Label')
@@ -100,13 +102,18 @@ $q = Doctrine_Query::create()->from('WPTResult r, r.WPTJob j')->select('r.MultiS
       $q->andWhere('j.Active = ?',true);
     }
 
+$q->groupBy('r.wptjobid, r.SequenceNumber');
+
 //if ($folderId > -1) {
 //  $q->andWhere('j.WPTJobFolderId = ?', $folderId);
 //}
 $shares = getFolderShares($userId,'WPTJob');
 $smarty->assign('shares',$shares);
-
+//echo memory_get_usage() . "\n";/*print 'coucou';
+/*print $q->getSQLQuery();
+*/
 $jobs = $q->fetchArray();
+//echo memory_get_usage() . "\n";
 $q->free(true);
 //print_r($jobs);exit;
 $jobArray = array();
@@ -124,6 +131,7 @@ foreach ($jobs as $j) {
   }
   $jobArray[$i] = $l;
 }
+// print_r($jobArray);
 $smarty->assign('jobs', $jobArray);
 // End create jobs list
 
