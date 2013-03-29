@@ -980,8 +980,10 @@ logOutput('[LOG] will process pageDataArray ');
 //            }
 //          }
 //        }
+/*
 logOutput('[LOG] coucou');
 logOutput('[LOG] '.print_r($result, true));
+*/
         $result->save();
         }
         updateJobstatus($id, $status);

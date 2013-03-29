@@ -487,6 +487,15 @@ function logOutput($msg, $file="jobProcessor_log.html") {
   } else {
     fwrite($fp, $a . "" . $m);
   }
+
+  // truncate only once per 
+  static $already_truncated = false;
+
+  if($already_truncated === false) {
+    ftruncate($fp, 100000); // 100Kb max
+    $already_truncated = true;
+  }
+    
   fclose($fp);
 }
 
