@@ -19,4 +19,3 @@ if( isset($_GET['file']) &&
 }
 else
     header("HTTP/1.0 404 Not Found");  
-?>

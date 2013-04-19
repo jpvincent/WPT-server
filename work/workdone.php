@@ -890,6 +890,8 @@ function ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad) {
     // Keep meta data about a page from iterating the entries
     $pageData;
 
+logoutput(print_r($parsedHar['log']['pages'], true));
+
     // Iterate over the page records.
     foreach ($parsedHar['log']['pages'] as $pagecount => $page)
     {

@@ -209,14 +209,15 @@ function delimitedToArray($data, $delimiter, $header = false) {
   $rawDataHeaders[]='Visually Complete (ms)';
   // Header array for agents that don't provide them
   $results = array();
-  $lines = explode("\n", $data);
+  $lines = explode(PHP_EOL, $data);
   $headers = array();
 
   $heads = explode($delimiter, $lines[0]);
   foreach ($heads as $key => $h) {
     $headers[] = trim($h);
   }
-
+/*print_r($heads);
+print_r($lines);*/
   foreach ($lines as $key => $line) {
     if (!$header && $key == 0) {
       continue;

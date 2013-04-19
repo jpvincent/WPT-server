@@ -1897,4 +1897,25 @@ function ShardKey($test_num) {
     
     return $key;
 }
-?>
+
+function logOutput($msg, $file="wpt_log.html") {
+  //$timeStamp = date(DATE_W3C);
+    $timeStamp = date("m/d/Y h:i:s");
+  $a = "";
+  $m = "[ " . $timeStamp . " ] " . $msg . "\n";
+  if (!($fp = fopen($file, 'a'))) {
+    echo "[ERROR] [logOutput] Cannot open log file";
+  } else {
+    fwrite($fp, $a . "" . $m);
+  }
+
+  // truncate only once per 
+  static $already_truncated = false;
+
+  if($already_truncated === false) {
+    ftruncate($fp, 100000); // 100Kb max
+    $already_truncated = true;
+  }
+    
+  fclose($fp);
+}

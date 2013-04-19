@@ -136,7 +136,9 @@ function submitWPTRequest($wptHost,
   $baseURL = getBaseURL();
   // Defaults to -1 indicating failure
   $wptResultId = "-1";
-  $req = new HttpRequest($wptHost, HTTP_METH_POST);
+  // $req = new HttpRequest($wptHost, HTTP_METH_POST);
+  $req = curl_init();
+
   $params = array();
   $params['agent'] = 'wptmonitor';
   $params['callback'] = $baseURL.'/wptCallBack.php';
@@ -166,10 +168,22 @@ function submitWPTRequest($wptHost,
   if ($navscript) {
     $params['script'] = $navscript;
   }
-  $req->addQueryData($params);
-
-  try {
-    $response = $req->send();
+  // $req->addQueryData($params);
+  $fields = array();
+  foreach ($params as $key => $value) {
+    $fields[] = $key.'='.$value;
+  }
+  curl_setopt($req,CURLOPT_URL, $wptHost );
+  curl_setopt($req,CURLOPT_POST, count($fields));
+  curl_setopt($req,CURLOPT_POSTFIELDS, implode('&', $fields) )
+  ;
+  curl_setopt($req, CURLOPT_RETURNTRANSFER, 1);
+  // try {
+    // $response = $req->send();
+    $responseXml = curl_exec($req);
+    $responseCode = curl_getinfo($req, CURLINFO_HTTP_CODE);
+    //close connection
+    curl_close($req);
     /**
      *
 <?xml version="1.0" encoding="UTF-8"?>
@@ -197,9 +211,10 @@ function submitWPTRequest($wptHost,
   </data>
 </response>
      */
-    $responseCode = $req->getResponseCode();
+    /*$responseCode = $req->getResponseCode();
     $responseXml = $req->getResponseBody();
-
+  */
+// logOutput('RESPONSE '.$responseXml);
     if ($responseCode != 200 ){
       $resultStatus['statusText'] = "Job Submission failed with http response code: ".$responseCode;
       logOutput("[ERROR] [submitWPTRequest] Job Submission failed with http response code: ".$responseCode);
@@ -212,10 +227,10 @@ function submitWPTRequest($wptHost,
         logOutput("[ERROR] [submitWPTRequest] Job Submission failed with message: ".$xml->statusText);
       }
     }
-  } catch (HttpException $ex) {
+  /*} catch (HttpException $ex) {
     $resultStatus['statusText'] = "Exception: ".$ex->getMessage();
     logOutput("[ERROR] [submitWPTRequest] Exception: ".$ex->getMessage()." ".$responseXml);
-  }
+  }*/
   $resultStatus['wptResultId']=$wptResultId;
   return $resultStatus;
 }
@@ -622,6 +637,8 @@ function processResultsForAll( $resultId = null ) {
       $results = $q->execute();
     }
     $q->free(true);
+
+// logOutput( print_r($results, true));
 
     foreach ($results as $result)
     {
