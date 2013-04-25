@@ -150,38 +150,6 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
             $archive = new PclZip($_FILES['file']['tmp_name']);
             $list = $archive->extract(PCLZIP_OPT_PATH, "$testPath/", PCLZIP_OPT_REMOVE_ALL_PATH);
         }
-
-        // compress the text data files
-        if( isset($_FILES['file']) )
-        {
-            $f = scandir($testPath);
-            foreach( $f as $textFile )
-            {
-                logMsg("Checking $textFile\n");
-                if( is_file("$testPath/$textFile") )
-                {
-                    $parts = pathinfo($textFile);
-                    $ext = $parts['extension'];
-                    if( !strcasecmp( $ext, 'txt') || !strcasecmp( $ext, 'json') || !strcasecmp( $ext, 'csv') )
-                    {
-                        // delete the optimization file (generated dynamically now)
-                        // or any files with sensitive data if we were asked to
-                        if( $ini['sensitive'] && strpos($textFile, '_report') ) {
-                            RemoveSensitiveHeaders("$testPath/$textFile");
-                        }
-                        if( strpos($textFile, '_optimization') ) {
-                            unlink("$testPath/$textFile");
-                        } else {
-                            logMsg( "Compressing $testPath/$textFile\n" );
-
-                            if( gz_compress("$testPath/$textFile") )
-                                unlink("$testPath/$textFile");
-                        }
-                    }
-                }
-            }
-        }
-        CheckForSpam();
         
         // make sure the test result is valid, otherwise re-run it
         if ($done && !$har && !$pcap && isset($testInfo) &&
@@ -889,8 +857,6 @@ function ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad) {
 
     // Keep meta data about a page from iterating the entries
     $pageData;
-
-logoutput(print_r($parsedHar['log']['pages'], true));
 
     // Iterate over the page records.
     foreach ($parsedHar['log']['pages'] as $pagecount => $page)
@@ -1886,4 +1852,44 @@ function CheckForSpam() {
         $testInfo_dirty = true;
     }
 }
+
+        //Patch for Headers in local
+        $iewpg = $testPath."/".$runNumber."_IEWPG.txt";
+        $content = file_get_contents($iewpg);
+        $headerLocal = "Date Time Event Name URL Load Time (ms) Time to First Byte (ms) unused Bytes Out Bytes In DNS Lookups Connections Requests OK Responses Redirects Not Modified Not Found Other Responses Error Code Time to Start Render (ms) Segments Transmitted Segments Retransmitted Packet Loss (out) Activity Time(ms) Descriptor Lab ID Dialer ID Connection Type Cached Event URL Pagetest Build Measurement Type Experimental Doc Complete Time (ms) Event GUID Time to DOM Element (ms) Includes Object Data Cache Score Static CDN Score One CDN Score GZIP Score Cookie Score Keep-Alive Score DOCTYPE Score Minify Score Combine Score Bytes Out (Doc) Bytes In (Doc) DNS Lookups (Doc) Connections (Doc) Requests (Doc) OK Responses (Doc) Redirects (Doc) Not Modified (Doc) Not Found (Doc) Other Responses (Doc) Compression Score Host IP Address ETag Score Flagged Requests Flagged Connections Max Simultaneous Flagged Connections Time to Base Page Complete (ms) Base Page Result Gzip Total Bytes Gzip Savings Minify Total Bytes Minify Savings Image Total Bytes Image Savings Base Page Redirects Optimization Checked \r\n";
+        $fp = fopen($iewpg, 'w+');
+        fwrite($fp, $headerLocal.$content);
+        fclose($fp);
+
+        // compress the text data files
+        if( isset($_FILES['file']) )
+        {
+            $f = scandir($testPath);
+            foreach( $f as $textFile )
+            {
+                logMsg("Checking $textFile\n");
+                if( is_file("$testPath/$textFile") )
+                {
+                    $parts = pathinfo($textFile);
+                    $ext = $parts['extension'];
+                    if( !strcasecmp( $ext, 'txt') || !strcasecmp( $ext, 'json') || !strcasecmp( $ext, 'csv') )
+                    {
+                        // delete the optimization file (generated dynamically now)
+                        // or any files with sensitive data if we were asked to
+                        if( $ini['sensitive'] && strpos($textFile, '_report') ) {
+                            RemoveSensitiveHeaders("$testPath/$textFile");
+                        }
+                        if( strpos($textFile, '_optimization') ) {
+                            unlink("$testPath/$textFile");
+                        } else {
+                            logMsg( "Compressing $testPath/$textFile\n" );
+
+                            if( gz_compress("$testPath/$textFile") )
+                                unlink("$testPath/$textFile");
+                        }
+                    }
+                }
+            }
+        }
+        CheckForSpam();
 ?>
