@@ -1893,5 +1893,3 @@ $headerLocal = "Date Time Event Name URL Load Time (ms) Time to First Byte (ms) 
 $content = $headerLocal.gz_file_get_contents($iewpg);
 $iewpg = $testPath."/".$runNumber."_IEWPG.txt";
 gz_file_put_contents($iewpg, $content);
-
-?>

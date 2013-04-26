@@ -830,7 +830,9 @@ function DisplayGraphs() {
                 echo "dataTimes.setValue($row, 0, '$label');\n";
                 $column = 1;
                 foreach($tests as &$test) {
-                    echo "dataTimes.setValue($row, $column, {$test['pageData'][$test['run']][$test['cached']][$metric]});\n";
+                    $val = $test['pageData'][$test['run']][$test['cached']][$metric];
+                    if(!empty($val))
+                        echo 'dataTimes.setValue('.$row.', '.$column.', '. $val .');'.PHP_EOL;
                     $column++;
                 }
                 $row++;
@@ -839,8 +841,12 @@ function DisplayGraphs() {
             echo "dataBytes.setValue(0, 0, 'Total');\n";
             $column = 1;
             foreach($tests as &$test) {
-                echo "dataRequests.setValue(0, $column, {$test['pageData'][$test['run']][$test['cached']]['requests']});\n";
-                echo "dataBytes.setValue(0, $column, {$test['pageData'][$test['run']][$test['cached']]['bytesIn']});\n";
+                $val = $test['pageData'][$test['run']][$test['cached']]['requests'];
+                if(!empty($val))
+                    echo "dataRequests.setValue(0, $column, ".$val.');'.PHP_EOL;
+                $val = $test['pageData'][$test['run']][$test['cached']]['bytesIn'];
+                if(!empty($val))
+                    echo "dataBytes.setValue(0, $column, ".$val.');'.PHP_EOL;
                 $column++;
             }
             $row = 1;
@@ -849,8 +855,12 @@ function DisplayGraphs() {
                 echo "dataBytes.setValue($row, 0, '$mimeType');\n";
                 $column = 1;
                 foreach($tests as &$test) {
-                    echo "dataRequests.setValue($row, $column, {$test['breakdown'][$mimeType]['requests']});\n";
-                    echo "dataBytes.setValue($row, $column, {$test['breakdown'][$mimeType]['bytes']});\n";
+                    $val = $test['breakdown'][$mimeType]['requests'];
+                    if(!empty($val))
+                        echo "dataRequests.setValue($row, $column, ".$val.');'.PHP_EOL;
+                    $val = $test['breakdown'][$mimeType]['bytes'];
+                    if(!empty($val))
+                        echo "dataBytes.setValue($row, $column, ".$val.');'.PHP_EOL;
                     $column++;
                 }
                 $row++;
