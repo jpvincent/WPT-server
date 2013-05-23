@@ -21,7 +21,7 @@
             {/if}
                 <p>If you are having any problems of just have questions about the site, please feel free to <a href="mailto:{$contactEmail}">contact us</a>.</p>
           </div>
-            <div style="float:right;vertical-align:bottom;clear:both;font-size: larger;"><br><p>Powered by <a target="_blank" href="http://www.wptmonitor.org/">WPTMonitor</a></p></div>
+            <div style="float:right;vertical-align:bottom;clear:both;font-size: larger;"><br><p>Powered by <a href="https://github.com/jpvincent/WPT-server/">a fork of WPTMonitor</a>. <a target="_blank" href="http://www.wptmonitor.org/">Also see Original project</a></p></div>
 
         </div>
       </div>
