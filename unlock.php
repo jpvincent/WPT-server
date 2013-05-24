@@ -1,21 +1,18 @@
 <?php 
-//Vide les dossiers temporaires de WPT et Wptmonitor
-function clearFolder($folder)
-{
-        $dossier=opendir($folder);
-        while ($File = readdir($dossier))
-        {
-                if ($File != "." && $File != "..")
-                {
-                        $Vidage= $folder.$File;
-                        unlink($Vidage);
-                        echo $folder." est maintenant vide !";
-                }
-        }
-        closedir($dossier);
+// Will clear the temporary folders of both WPT and WPTMonitor. Consequence is that the queue is cleared
+function clearFolder($folder) {
+	$dossier=opendir($folder);
+	while ($File = readdir($dossier)) {
+		if ($File != '.' && $File != '..') {
+			$Vidage= $folder.$File;
+			unlink($Vidage);
+			echo '<p>'.$folder.' is now empty</p>';
+		}
+	}
+	closedir($dossier);
 }
-//Dossiers à vider :
-clearFolder("tmp/");
-clearFolder("work/jobs/");
-clearFolder("wptmonitor/template_c/");
-clearFolder("wptmonitor/graph/cache/");
+// Known folders to clear
+clearFolder('tmp/');
+clearFolder('work/jobs/');
+clearFolder('wptmonitor/template_c/');
+clearFolder('wptmonitor/graph/cache/');
