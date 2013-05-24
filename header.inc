@@ -299,6 +299,9 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
         $tabs['Content Breakdown'] = "/breakdown.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Domains'] = "/domains.php?test=$id&run=$gradeRun&cached=$cached$end";
         
+        //if(file_exists($testPath.'/'.$run.'_progress.csv'))
+        $tabs['User Experience'] = $GLOBALS['basePath']."/front-experience.php?test=$id&run=$run&cached=$cached";
+
         if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
             $tabs['Screen Shot'] = "/screen_shot.php?test=$id&run=$gradeRun&cached=$cached$end";
         //$tabs['More Checks'] = "/moreChecks.php?test=$id";
