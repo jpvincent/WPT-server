@@ -1,4 +1,6 @@
 <?php
+error_reporting(-1);
+
 /**
  * The job processor scans the jobs db to find any job that is active and due to be run.
  * It also scans the results directory to see if any results are pending and will poll the wpt server
@@ -31,9 +33,12 @@
     processResultsForAll();
 
     $jobs = Doctrine_Core::getTable('WPTJob')->findAll();
+	$nbAlerts = 0;
     foreach($jobs as $job){
-      processAlertsForJob($job['Id']);
+      $nbAlerts += processAlertsForJob($job['Id']);
     }
+
+	exportResultToExternal($nbAlerts, 'global.alerts');
 
   } catch (Exception $e) {
     error_log("[WPTMonitor] Failed while Listing Users: " . $wptResultId . " message: " . $e->getMessage());

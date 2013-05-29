@@ -52,6 +52,10 @@ elseif ($view == 'blink')
     $view = 'blink';
 else
     $view = 'bulk';
+$mod_pagespeed = false;
+if (array_key_exists('script', $test['testinfo']) &&
+    stripos($test['testinfo']['script'], "addHeader\tModPagespeed:off\t%HOST_REGEX%") !== false)
+  $mod_pagespeed = true;
 
 $stats = array();
 $stats['fv'] = array();
@@ -114,8 +118,7 @@ elseif($json && $view == 'pss')
 else
 {
 ?>
-
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
     <head>
         <title>WebPagetest Comparison Test Result<?php echo $testLabel; ?></title>
@@ -149,7 +152,7 @@ else
             }
         </style>
         </style>
-        <script type="text/javascript" src="/video/player/flowplayer-3.2.6.min.js"></script>
+        <script type="text/javascript" src="/video/player/flowplayer-3.2.12.min.js"></script>
     </head>
     <body>
         <div class="page">
@@ -661,7 +664,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                 if ($json) {
                     $optimized[0]['page_speed_data'] = LoadPageSpeedData("$testPath/{$fvMedian}_pagespeed.txt");
                     $optimized[0]['video_frames'] = array();
-                    $frames = loadVideo("$testPath/video_{$fvMedian}");
+                    loadVideo("$testPath/video_{$fvMedian}", $frames);
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
@@ -684,7 +687,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                 if ($json) {
                     $original[0]['page_speed_data'] = LoadPageSpeedData("$testPath/{$fvMedian}_pagespeed.txt");
                     $original[0]['video_frames'] = array();
-                    $frames = loadVideo("$testPath/video_{$fvMedian}");
+                    loadVideo("$testPath/video_{$fvMedian}", $frames);
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
@@ -713,7 +716,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                 if ($json) {
                     $optimized[1]['page_speed_data'] = LoadPageSpeedData("$testPath/{$rvMedian}_Cached_pagespeed.txt");
                     $optimized[1]['video_frames'] = array();
-                    $frames = loadVideo("$testPath/video_{$rvMedian}_cached");
+                    loadVideo("$testPath/video_{$rvMedian}_cached", $frames);
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
@@ -735,7 +738,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                 if ($json) {
                     $original[1]['page_speed_data'] = LoadPageSpeedData("$testPath/{$rvMedian}_Cached_pagespeed.txt");
                     $original[1]['video_frames'] = array();
-                    $frames = loadVideo("$testPath/video_{$rvMedian}_cached");
+                    loadVideo("$testPath/video_{$rvMedian}_cached", $frames);
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
@@ -770,27 +773,30 @@ function DisplayPSS(&$tests, $video, &$dirty)
 
     $baseDomainRedirect = false;
     $baseDomainSSL = false;
-    $requests = getRequests($tests['urls'][1]['id'], $tests['urls'][1]['path'], $tests['urls'][1]['fvMedian'], 0, $secure, $haveLocations, false);
-    if( count($requests) )
-    {
-        if($basePage = GetBasePage($requests))
-        {
-            // see if there was a domain redirect for the base page
-            $testedHost = $requests[0]['host'];
-            $basePageHost = $basePage['host'];
-            if( $testedHost != $basePageHost )
-                $baseDomainRedirect = true;
-            
-            // see if any of the requests served from the base page were over ssl
-            foreach( $requests as &$request )
-            {
-                if( $request['host'] == $basePageHost && $request['is_secure'] )
-                {
-                    $baseDomainSSL = true;
-                    break;
-                }
-            }
-        }
+    global $mod_pagespeed;
+    if (!$mod_pagespeed) {
+      $requests = getRequests($tests['urls'][1]['id'], $tests['urls'][1]['path'], $tests['urls'][1]['fvMedian'], 0, $secure, $haveLocations, false);
+      if( count($requests) )
+      {
+          if($basePage = GetBasePage($requests))
+          {
+              // see if there was a domain redirect for the base page
+              $testedHost = $requests[0]['host'];
+              $basePageHost = $basePage['host'];
+              if( $testedHost != $basePageHost )
+                  $baseDomainRedirect = true;
+              
+              // see if any of the requests served from the base page were over ssl
+              foreach( $requests as &$request )
+              {
+                  if( $request['host'] == $basePageHost && $request['is_secure'] )
+                  {
+                      $baseDomainSSL = true;
+                      break;
+                  }
+              }
+          }
+      }
     }
 
     if( $json || $csv )
@@ -1730,7 +1736,7 @@ function VideoHtml($id)
     echo "<script>\n
                     flowplayer(\"player$videoCount\", \n
                                     {\n
-                                        src: \"/video/player/flowplayer-3.2.7.swf\",\n
+                                        src: \"/video/player/flowplayer-3.2.16.swf\",\n
                                         cachebusting: true,\n
                                         version: [9, 115]\n
                                     } , \n
@@ -1765,7 +1771,7 @@ function VideoHtml($id)
                                     }\n
                                 ); \n
                 </script>\n
-                <br>* The video may extend past the measured load time if the page was still updating after it was technically loaded\n
+                <br>* The video for each page stops when the page is visually complete and may not match the technical load time measurement.\n
                 <br><a class=\"link\" href=\"/video/download.php?id=$id\">Click here to download the video file...</a>\n";
 }
 

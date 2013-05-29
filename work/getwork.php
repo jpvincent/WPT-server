@@ -27,11 +27,11 @@ if (@strlen($ec2)) {
 $dnsServers = '';
 if (array_key_exists('dns', $_REQUEST))
     $dnsServers = str_replace('-', ',', $_REQUEST['dns']);
-$supports_sharding = true;
+$supports_sharding = false;
 if (array_key_exists('shards', $_REQUEST) && $_REQUEST['shards'])
     $supports_sharding = true;
 
-logMsg("getwork.php location:$location tester:$tester ex2:$ec2 recover:$recover");
+logMsg("getwork.php location:$location tester:$tester ex2:$ec2 recover:$recover sharding:".$supports_sharding);
 
 $is_done = false;
 if (!array_key_exists('freedisk', $_GET) || (float)$_GET['freedisk'] > 0.1) {

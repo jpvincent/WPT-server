@@ -1,6 +1,6 @@
 <?php
 include('common.inc');
-$file = "$testPath/{$_GET['file']}";
+$file = "$testPath/{$_GET['file']}".'.gz';
 
 if( isset($_GET['file']) && 
     strlen($_GET['file']) && 
@@ -19,3 +19,4 @@ if( isset($_GET['file']) &&
 }
 else
     header("HTTP/1.0 404 Not Found");  
+?>

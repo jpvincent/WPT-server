@@ -114,10 +114,10 @@ if (!defined('EMBED')) {
                 $opens = '';
                 if( !strcasecmp($tabName, $tab) )
                     $current = ' class="current"';
-                if (substr($tabUrl, 0, 4) == 'http') {
+                /*if (substr($tabUrl, 0, 4) == 'http') {
                     $target = ' target="_blank"';
                     $opens = ' (opens in a new tab)';
-                }
+                }*/
                 echo "<li$current><a title=\"$tabName$opens\" href=\"$tabUrl\"$target>$tabName</a></li>";
             }
         }
@@ -164,7 +164,7 @@ if (!defined('EMBED')) {
 </div>
 
 <?php
-if (isset($settings['alert']) && strlen($settings['alert'])) {
+if (!defined('BARE_UI') && isset($settings['alert']) && strlen($settings['alert'])) {
     echo '<div class="alert bold">';
     echo $settings['alert'];
     echo '</div>';
@@ -298,10 +298,9 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
             $tabs['PageSpeed'] = "/pagespeed.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Content Breakdown'] = "/breakdown.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Domains'] = "/domains.php?test=$id&run=$gradeRun&cached=$cached$end";
+		//if(file_exists($testPath.'/'.$run.'_progress.csv'))
+		$tabs['User Experience'] = $GLOBALS['basePath']."/front-experience.php?test=$id&run=$run&cached=$cached";
         
-        //if(file_exists($testPath.'/'.$run.'_progress.csv'))
-        $tabs['User Experience'] = $GLOBALS['basePath']."/front-experience.php?test=$id&run=$run&cached=$cached";
-
         if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
             $tabs['Screen Shot'] = "/screen_shot.php?test=$id&run=$gradeRun&cached=$cached$end";
         //$tabs['More Checks'] = "/moreChecks.php?test=$id";
@@ -366,4 +365,3 @@ function GetGrades(&$pageData, &$test, $id, $run)
     
     return $grades;
 }
-?>

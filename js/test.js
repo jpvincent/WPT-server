@@ -1,3 +1,5 @@
+var wptStorage = window.localStorage || {};
+
 function ValidateInput(form)
 {
     if( (form.url.value == "" || form.url.value == "Enter a Website URL") &&
@@ -36,6 +38,8 @@ function ValidateInput(form)
     document.cookie = 'd=' + $('#bwDown').val() + expires +  '; path=/';
     document.cookie = 'l=' + $('#latency').val() + expires +  '; path=/';
     document.cookie = 'p=' + $('#plr').val() + expires +  '; path=/';
+    
+    SaveSettings();
 
     return true;
 }
@@ -44,58 +48,43 @@ function ValidateInput(form)
     Do any populating of the input form based on the loaded location information
 */
 (function($) {
-    $(document).ready(function() {
-
-        // enable tooltips
-        $("#DOMElement").tooltip({ position: "top center", offset: [-5, 0]  });  
+    // enable tooltips
+    $("#DOMElement").tooltip({ position: "top center", offset: [-5, 0]  });  
+    
+    // enable tab-input in the script field
+    $("#enter_script").tabby();
         
-        // enable tab-input in the script field
-        $("#enter_script").tabby();
-            
-       // handle when the selection changes for the location
-        $("#location").change(function(){
-            LocationChanged();
-        });
-        $("#location2").change(function(){
-            $("#location").val($("#location2").val());
-            LocationChanged();
-        });
-
-        $("#browser").change(function(){
-            BrowserChanged();
-        });
-
-        $("#connection").change(function(){
-            ConnectionChanged();
-        });
-        
-        if( $('#aftCheck').attr('checked') )
-            $('#aftSettings').removeClass('hidden');
-            
-        $("#aftCheck").change(function(){
-            if( $('#aftCheck').attr('checked') )
-            {
-                $('#videoCheck').attr('checked', true);
-                $('#aftSettings').removeClass('hidden');
-            }
-            else
-                $('#aftSettings').addClass('hidden');
-        });
-
-        $("#videoCheck").change(function(){
-            if( !$('#videoCheck').attr('checked') )
-            {
-                $('#aftCheck').attr('checked', false);
-                $('#aftSettings').addClass('hidden');
-            }
-        });
-
-        // make sure to select an intelligent default (in case the back button was hit)
+   // handle when the selection changes for the location
+    $("#location").change(function(){
         LocationChanged();
-        
-        //$('#url').focus();
     });
+    $("#location2").change(function(){
+        $("#location").val($("#location2").val());
+        LocationChanged();
+    });
+
+    $("#browser").change(function(){
+        BrowserChanged();
+    });
+
+    $("#connection").change(function(){
+        ConnectionChanged();
+    });
+    
+    RestoreSettings();
 })(jQuery);
+
+function RestoreSettings() {
+    if (wptStorage['testVideo'] != undefined && wptStorage['testVideo'])
+        $('#videoCheck').prop('checked', true);
+    if (wptStorage['testLoc'] != undefined)
+        $('#location').val(wptStorage['testLoc']); 
+    LocationChanged();
+}
+
+function SaveSettings() {
+    wptStorage['testVideo'] = $('#videoCheck').is(':checked');
+}
 
 /*
     Populate the different browser options for a given location
@@ -105,6 +94,7 @@ function LocationChanged()
     $("#current-location").text($('#location option:selected').text());
     var loc = $('#location').val(); 
     $('#location2').val(loc); 
+    wptStorage['testLoc'] = loc;
 
     var marker = locations[loc]['marker'];
     try{
@@ -153,6 +143,9 @@ function LocationChanged()
     }
     $('#browser').html(browserHtml);
     
+    if (wptStorage['testBrowser'] != undefined)
+        $('#browser').val(wptStorage['testBrowser']); 
+
     BrowserChanged();
     
     UpdateSponsor();
@@ -167,6 +160,7 @@ function BrowserChanged()
     var selectedBrowser = $('#browser').val();
     var defaultConfig = locations[loc]['default'];
     var selectedConfig;
+    wptStorage['testBrowser'] = selectedBrowser;
     
     var connections = [];
 
@@ -224,6 +218,15 @@ function BrowserChanged()
     }
     $('#connection').html(connectionHtml);
     
+    if (wptStorage['testConnection'] != undefined) {
+        var connection = wptStorage['testConnection'];
+        $('#connection option:contains(' +  connection + ')').each(function(){
+            if ($(this).text() == connection) {
+                $(this).attr('selected', 'selected');
+            }
+        });
+    }
+
     ConnectionChanged();
 }
 
@@ -233,6 +236,7 @@ function BrowserChanged()
 function ConnectionChanged()
 {
     var conn = $('#connection').val();
+    wptStorage['testConnection'] = $('#connection option:selected').text();
     if( conn != undefined && conn.length )
     {
         var parts = conn.split('.');
@@ -243,32 +247,22 @@ function ConnectionChanged()
         var backlog = locations[config]['backlog'];
         var wait = locations[config]['wait'];
         var waitText = '';
-        if( wait < 0 )
-        {
+        if( wait < 0 ) {
             waitText = 'Location is offline, please select a different browser or location';
             $('#wait').removeClass('backlogWarn').addClass('backlogHigh');
-            //$('#start_test-button').hide();
-        }
-        else if( wait > 120 )
-        {
+        } else if( wait > 120 ) {
             waitText = 'Location is exceptionally busy, please select a different location or try again later';
             $('#wait').removeClass('backlogWarn').addClass('backlogHigh');
-            //$('#start_test-button').hide();
-        }
-        else
-        {
+        } else {
             $('#wait').removeClass('backlogWarn , backlogHigh');
-            //$('#start_test-button').show();
             if( wait == 1 )
                 waitText = '1 minute';
-            else if (wait > 0)
-            {
+            else if (wait > 0) {
                 if (wait > 120)
                     waitText = Math.rount(wait / 60) + ' hours';
                 else
                     waitText = wait + ' minutes';
-            }
-            else
+            } else
                 waitText = 'None';
         }
 
@@ -276,32 +270,23 @@ function ConnectionChanged()
         var down = locations[config]['down'] / 1000;
         var latency = locations[config]['latency'];
         var plr = 0;
-        var aftCutoff = $('#aftec').val();
-        if( connection != undefined && connection.length )
-        {
-            if( connectivity[connection] != undefined )
-            {
+        if( connection != undefined && connection.length ) {
+            if( connectivity[connection] != undefined ) {
                 up = connectivity[connection]['bwOut'] / 1000;
                 down = connectivity[connection]['bwIn'] / 1000;
                 latency = connectivity[connection]['latency'];
                 if( connectivity[connection]['plr'] != undefined )
                     plr = connectivity[connection]['plr'];
-                if( connectivity[connection]['aftCutoff'] != undefined )
-                    aftCutoff = connectivity[connection]['aftCutoff'];
-            }
-            else
-            {
+            } else {
                 setSpeed = false;
             }
         }
 
-        if( setSpeed )
-        {
+        if( setSpeed ) {
             $('#bwDown').val(down);
             $('#bwUp').val(up);
             $('#latency').val(latency);
             $('#plr').val(plr);
-            $('#aftec').val(aftCutoff);
         }
         
         // enable/disable the fields as necessary

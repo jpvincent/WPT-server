@@ -1,5 +1,6 @@
 <?php
 require_once('testStatus.inc');
+require_once('logging.inc');
 
 /**
 * Archive the given test if it hasn't already been archived
@@ -119,22 +120,30 @@ function RestoreArchive($id) {
     $ret = false;
     if (strpos($id, '.') === false) {
         global $settings;
+        global $debug;
+    //    $debug = true;
         $testPath = './' . GetTestPath($id);
         $url = '';
         // see if we have a http path where the file is archived
         $check_dir = $testPath;
         for ($i = 0; $i <= 4; $i++) {
             $check_dir = dirname($check_dir);
+            logMsg("Checking: $check_dir/archive.dat");
             if (is_file("$check_dir/archive.dat")) {
                 $url = trim(file_get_contents("$check_dir/archive.dat"));
                 if (strlen($url))
                     break;
             }
         }
+        logMsg("Archive URL: $url");
         if (strlen($url) || 
             array_key_exists('archive_dir', $settings) || 
             array_key_exists('archive_s3_url', $settings) ||
             array_key_exists('archive_s3_server', $settings)) {
+            if (!is_dir($testPath)) {
+                mkdir( $testPath, 0777, true );
+            }
+            $testPath = realpath($testPath);
             $zipfile = "./tmp/$id.zip";
             if (strlen($url)) {
                 $url .= "/$id.zip";
@@ -142,7 +151,7 @@ function RestoreArchive($id) {
                 if (isset($settings['archive_dir'])) {
                     $source = GetArchiveFile($id);
                     //see if we have a 2nd-level archive
-                    if (!is_file($source) && array_key_exists('archive2_dir', $settings))
+                    if ((!is_file($source) || !filesize($source)) && array_key_exists('archive2_dir', $settings))
                         RestoreArchive2($id, $source);
                     if (is_file($source)) {
                         touch($source);
@@ -152,7 +161,7 @@ function RestoreArchive($id) {
                     $separator = strrpos($id, '_');
                     if ($separator !== false) {
                         $bucket = $settings['archive_s3_bucket'];
-                        $file = "$id.zip";
+                        $file = "$id";
                         if (trim($settings['archive_s3_server']) == 's3.us.archive.org') {
                             // special-case Internet Archive storage
                             $bucket = $settings['archive_s3_bucket'] . '_' . substr($id, 0, $separator);
@@ -225,14 +234,8 @@ function RestoreArchive2($id, $dest) {
             $destDir = dirname($dest);
             if (!is_dir($destDir))
                 mkdir($destDir, 0777, true);
-            $zip = new ZipArchive;
-            if ($zip->open($longTermZip) === TRUE) {
-                // extractTo wasn't working so fall back to loading the file
-                $data = $zip->getFromName("$file.zip");
-                if ($data !== FALSE)
-                    file_put_contents($dest, $data);
-                $zip->close();
-            }
+            $command = "unzip -p \"$longTermZip\" \"$file.zip\" > \"$dest\"";
+            exec($command, $output, $result);
         }
     }
 }

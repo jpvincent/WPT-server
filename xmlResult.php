@@ -1,20 +1,19 @@
 <?php
 $msStart = microtime(true);
+define('RESTORE_DATA_ONLY', true);
 
 //$debug=true;
-include 'common.inc';
+require_once('common.inc');
 require_once('page_data.inc');
 require_once('testStatus.inc');
 require_once('video/visualProgress.inc.php');
 require_once('domains.inc');
 require_once('breakdown.inc');
 
-// stub-out requests from M4_SpeedTestService
-//if( strpos($_SERVER['HTTP_USER_AGENT'], 'M4_SpeedTestService') !== false )
-//    exit();
-
 // see if we are sending abbreviated results
-$pagespeed = (int)$_REQUEST['pagespeed'];
+$pagespeed = 0;
+if (array_key_exists('pagespeed', $_REQUEST))
+  $pagespeed = (int)$_REQUEST['pagespeed'];
 
 if( isset($test['test']) && $test['test']['batch'] )
     BatchResult($id, $testPath);
@@ -41,7 +40,7 @@ else
         echo "<response>\n";
         echo "<statusCode>200</statusCode>\n";
         echo "<statusText>Ok</statusText>\n";
-        if( strlen($_REQUEST['r']) )
+        if( array_key_exists('r', $_REQUEST) && strlen($_REQUEST['r']) )
             echo "<requestId>{$_REQUEST['r']}</requestId>\n";
         echo "<data>\n";
         
@@ -65,6 +64,8 @@ else
                     $locstring .= ':' . $test['testinfo']['browser'];
                 echo "<location>$locstring</location>\n";
             }
+            if ( @strlen($test['test']['location']) )
+                echo "<from>" . xml_entities($test['test']['location']) . "</from>\n";
             if( @strlen($test['testinfo']['connectivity']) )
             {
                 echo "<connectivity>{$test['testinfo']['connectivity']}</connectivity>\n";
@@ -99,6 +100,19 @@ else
             echo "</repeatView>\n";
         }
         echo "</average>\n";
+        echo "<standardDeviation>\n";
+        echo "<firstView>\n";
+        foreach( $fv as $key => $val )
+            echo "<$key>" . PageDataStandardDeviation($pageData, $key, 0) . "</$key>\n";
+        echo "</firstView>\n";
+        if( isset($rv) )
+        {
+            echo "<repeatView>\n";
+            foreach( $rv as $key => $val )
+                echo "<$key>" . PageDataStandardDeviation($pageData, $key, 1) . "</$key>\n";
+            echo "</repeatView>\n";
+        }
+        echo "</standardDeviation>\n";
 
         // output the median run data
         $fvMedian = GetMedianRun($pageData, 0, $median_metric);
@@ -228,9 +242,10 @@ else
                     echo "</rawData>\n";
                     
                     // video frames
-                    if( $test['test']['video'] || $test['testinfo']['video'] )
+                    if( (array_key_exists('video', $test['test']) && $test['test']['video']) ||
+                        (array_key_exists('video', $test['testinfo']) && $test['testinfo']['video']) )
                     {
-                        $frames = loadVideo("$testPath/video_{$i}");
+                        loadVideo("$testPath/video_{$i}", $frames);
                         if( $frames && count($frames) )
                         {
                             $progress = GetVisualProgress($testPath, $i, 0);
@@ -296,6 +311,8 @@ else
                     echo "<connectionView>http://$host$uri$path/{$i}_Cached_connection.png</connectionView>\n";
                     echo "<checklist>http://$host$uri$path/{$i}_Cached_optimization.png</checklist>\n";
                     echo "<screenShot>http://$host$uri$path/{$i}_Cached_screen.jpg</screenShot>\n";
+                    if( is_file("$testPath/{$i}_Cached_screen.png") )
+                        echo "<screenShotPng>http://$host$uri$path/{$i}_Cached_screen.png</screenShotPng>\n";
                     echo "</images>\n";
 
                     // raw results
@@ -311,9 +328,10 @@ else
                     echo "</rawData>\n";
                     
                     // video frames
-                    if( $test['test']['video'] || $test['testinfo']['video']  )
+                    if( (array_key_exists('video', $test['test']) && $test['test']['video']) ||
+                        (array_key_exists('video', $test['testinfo']) && $test['testinfo']['video']) )
                     {
-                        $frames = loadVideo("$testPath/video_{$i}_cached");
+                        loadVideo("$testPath/video_{$i}_cached", $frames);
                         if( $frames && count($frames) )
                         {
                             $progress = GetVisualProgress($testPath, $i, 1);
@@ -438,12 +456,28 @@ function xmlRequests($id, $testPath, $run, $cached) {
         echo "<requests>\n";
         $secure = false;
         $haveLocations = false;
-        $requests = getRequests($id, $testPath, $run, $cached, $secure, $haveLocations, false);
+        $requests = getRequests($id, $testPath, $run, $cached, $secure, $haveLocations, false, true);
         foreach ($requests as &$request) {
-            $domain = strrev($domain);
             echo "<request number=\"{$request['number']}\">\n";
             foreach ($request as $field => $value) {
-                echo "<$field>" . xml_entities($value) . "</$field>\n";
+                if (!is_array($value))
+                  echo "<$field>" . xml_entities($value) . "</$field>\n";
+            }
+            if (array_key_exists('headers', $request) && is_array($request['headers'])) {
+              echo "<headers>\n";
+              if (array_key_exists('request', $request['headers']) && is_array($request['headers']['request'])) {
+                echo "<request>\n";
+                foreach ($request['headers']['request'] as $value)
+                  echo "<header>" . xml_entities($value) . "</header>\n";
+                echo "</request>\n";
+              }
+              if (array_key_exists('response', $request['headers']) && is_array($request['headers']['response'])) {
+                echo "<response>\n";
+                foreach ($request['headers']['response'] as $value)
+                  echo "<header>" . xml_entities($value) . "</header>\n";
+                echo "</response>\n";
+              }
+              echo "</headers>\n";
             }
             echo "</request>\n";
         }

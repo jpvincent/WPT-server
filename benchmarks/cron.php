@@ -7,7 +7,9 @@ chdir('..');
 require 'common.inc';
 require 'testStatus.inc';
 require 'breakdown.inc';
+require_once('archive.inc');
 set_time_limit(36000);
+error_reporting(E_ERROR | E_PARSE);
 $debug=true;
 if (!is_dir('./log')) {
     mkdir('./log', 0777, true);
@@ -244,18 +246,21 @@ function CheckBenchmarkStatus($benchmark, &$state) {
         $done = true;
         foreach ($state['tests'] as &$test) {
             if (!$test['completed']) {
-                $status = GetTestStatus($test['id'], false);
+                $status = GetTestStatus($test['id'], true);
                 $now = time();
                 if ($status['statusCode'] >= 400) {
                     logMsg("Test {$test['id']} : Failed", "./log/$logFile", true);
                     if (ResubmitBenchmarkTest($benchmark, $test['id'], $state)) {
+                        logMsg("Test {$test['id']} : Resubmit succeeded, marking benchmark as not done", "./log/$logFile", true);
                         $done = false;
                     } else {
+                        logMsg("Test {$test['id']} : Resubmit failed, marking as completed", "./log/$logFile", true);
                         $test['completed'] = $now;
                     }
                 } elseif( $status['statusCode'] == 200 ) {
                     logMsg("Test {$test['id']} : Completed", "./log/$logFile", true);
-                    if (!IsTestValid($test['id']) && ResubmitBenchmarkTest($benchmark, $test['id'], $state)) {
+                    if (!IsTestValid($test['id']) && 
+                        ResubmitBenchmarkTest($benchmark, $test['id'], $state)) {
                         $done = false;
                     } else {
                         if (array_key_exists('completeTime', $status) && $status['completeTime']) {
@@ -443,18 +448,22 @@ function ResubmitBenchmarkTest($benchmark, $id, &$state) {
             foreach ($state['tests'] as $index => &$testData) {
                 if ($testData['id'] == $id) {
                     if (!array_key_exists('retry', $testData) || $testData['retry'] < $MAX_RETRIES) {
+                        if (!array_key_exists('retry', $testData))
+                            $testData['retry'] = 1;
+                        else
+                            $testData['retry']++;
                         $new_id = SubmitBenchmarkTest($testData['url'], $testData['location'], $configurations[$testData['config']]['settings'], $benchmark);
                         if ($new_id !== false ) {
                             $testData['id'] = $new_id;
                             $testData['submitted'] = time();
                             $testData['completed'] = 0;
-                            if (!array_key_exists('retry', $testData)) {
-                                $testData['retry'] = 0;
-                            }
-                            $testData['retry']++;
                             $resubmitted = true;
                             logMsg("Test $id from $benchmark resubmitted, new ID = $new_id", "./log/$logFile", true);
+                        } else {
+                            logMsg("Test $id from $benchmark resubmit failed", "./log/$logFile", true);
                         }
+                    } else {
+                        logMsg("Test $id exceeded retry limit, already retried {$testData['retry']} times", "./log/$logFile", true);
                     }
                     break;
                 }

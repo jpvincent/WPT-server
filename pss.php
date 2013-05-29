@@ -14,7 +14,7 @@ $locations = LoadLocations();
 $loc = ParseLocations($locations);
 
 $preview = false;
-if( strlen($_GET['preview']) && $_GET['preview'] )
+if( array_key_exists('preview', $_GET) && strlen($_GET['preview']) && $_GET['preview'] )
     $preview = true;
 $mps = false;
 if (array_key_exists('mps', $_REQUEST))
@@ -24,7 +24,7 @@ $page_keywords = array('Comparison','Webpagetest','Website Speed Test','Page Spe
 $page_description = "Comparison Test$testLabel.";
 ?>
 
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
     <head>
         <title>WebPagetest - Comparison Test</title>
@@ -34,7 +34,7 @@ $page_description = "Comparison Test$testLabel.";
         <div class="page">
             <?php
             $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? '/compare' : '/pss.php' );
-            if( strlen($_GET['pssid']) )
+            if( array_key_exists('pssid', $_GET) && strlen($_GET['pssid']) )
                 $navTabs['Test Result'] = FRIENDLY_URLS ? "/result/{$_GET['pssid']}/" : "/results.php?test={$_GET['pssid']}";
             $navTabs += array(  'PageSpeed Service Home' => 'http://code.google.com/speed/pss', 
                                 'Sample Tests' => 'http://code.google.com/speed/pss/gallery.html',
@@ -63,20 +63,25 @@ $page_description = "Comparison Test$testLabel.";
             <input type="hidden" name="sensitive" value="1">
             <?php
             if ($mps) {
-                echo "<input type=\"hidden\" name=\"script\" value=\"addHeader&#09;ModPagespeed:off&#09;%HOST_REGEX%&#10;navigate&#09;%URL%\">\n";
+                $script = 'addHeader\tModPagespeed:off\t%HOST_REGEX%\nnavigate\t%URL%';
+                echo "<input type=\"hidden\" id=\"script\" name=\"script\" value=\"addHeader&#09;ModPagespeed:off&#09;%HOST_REGEX%&#10;navigate&#09;%URL%\">\n";
                 echo "<input type=\"hidden\" name=\"runs\" value=\"7\">\n";
             } elseif ($preview) {
-                echo "<input type=\"hidden\" name=\"script\" value=\"if&#09;run&#09;1&#10;if&#09;cached&#09;0&#10;addHeader&#09;X-PSA-Blocking-Rewrite: pss_blocking_rewrite&#09;%HOST_REGEX%&#10;endif&#10;endif&#10;setCookie&#09;http://%HOSTR%&#09;_GPSSPRVW=1&#10;navigate&#09;%URL%\">\n";
+                $script = 'if\trun\t1\nif\tcached\t0\naddHeader\tX-PSA-Blocking-Rewrite: pss_blocking_rewrite\t%HOST_REGEX%\nendif\nendif\nsetCookie\thttp://%HOSTR%\t_GPSSPRVW=1\nnavigate\t%URL%';
+                echo "<input type=\"hidden\" id=\"script\" name=\"script\" value=\"if&#09;run&#09;1&#10;if&#09;cached&#09;0&#10;addHeader&#09;X-PSA-Blocking-Rewrite: pss_blocking_rewrite&#09;%HOST_REGEX%&#10;endif&#10;endif&#10;setCookie&#09;http://%HOSTR%&#09;_GPSSPRVW=1&#10;navigate&#09;%URL%\">\n";
                 echo "<input type=\"hidden\" name=\"runs\" value=\"8\">\n";
                 echo "<input type=\"hidden\" name=\"discard\" value=\"1\">\n";
-            } elseif( strlen($_GET['origin']) ) {
-                echo "<input type=\"hidden\" name=\"script\" value=\"setDnsName&#09;%HOSTR%&#09;{$_GET['origin']}&#10;navigate&#09;%URL%\">\n";
+            } elseif( array_key_exists('origin', $_GET) && strlen($_GET['origin']) ) {
+                $script = 'setDnsName\t%HOSTR%\t' . htmlspecialchars($_GET['origin']) . '\nnavigate\t%URL%';
+                echo "<input type=\"hidden\" id=\"script\" name=\"script\" value=\"setDnsName&#09;%HOSTR%&#09;{$_GET['origin']}&#10;navigate&#09;%URL%\">\n";
                 echo "<input type=\"hidden\" name=\"runs\" value=\"5\">\n";
             } else {
-                echo "<input type=\"hidden\" name=\"script\" value=\"if&#09;run&#09;1&#10;if&#09;cached&#09;0&#10;addHeader&#09;X-PSA-Blocking-Rewrite: pss_blocking_rewrite&#09;%HOST_REGEX%&#10;endif&#10;endif&#10;setDnsName&#09;%HOSTR%&#09;ghs.google.com&#10;overrideHost&#09;%HOSTR%&#09;psa.pssdemos.com&#10;navigate&#09;%URL%\">\n";
+                $script = 'if\trun\t1\nif\tcached\t0\naddHeader\tX-PSA-Blocking-Rewrite: pss_blocking_rewrite\t%HOST_REGEX%\nendif\nendif\nsetDnsName\t%HOSTR%\tghs.google.com\noverrideHost\t%HOSTR%\tpsa.pssdemos.com\nnavigate\t%URL%';
+                echo "<input type=\"hidden\" id=\"script\" name=\"script\" value=\"if&#09;run&#09;1&#10;if&#09;cached&#09;0&#10;addHeader&#09;X-PSA-Blocking-Rewrite: pss_blocking_rewrite&#09;%HOST_REGEX%&#10;endif&#10;endif&#10;setDnsName&#09;%HOSTR%&#09;ghs.google.com&#10;overrideHost&#09;%HOSTR%&#09;psa.pssdemos.com&#10;navigate&#09;%URL%\">\n";
                 echo "<input type=\"hidden\" name=\"runs\" value=\"8\">\n";
                 echo "<input type=\"hidden\" name=\"discard\" value=\"1\">\n";
             }
+            echo "<script>\nvar originalScript = \"$script\";\n</script>";
             ?>
             <input type="hidden" name="bulkurls" value="">
             <input type="hidden" name="vo" value="<?php echo $owner;?>">
@@ -97,7 +102,7 @@ $page_description = "Comparison Test$testLabel.";
                 echo '<h2 class="cufon-dincond_black"><small>Compare your currently optimized site to it\'s unoptimized version</a></small></h2>';
               } elseif ($preview) {
                 echo '<h2 class="cufon-dincond_black"><small>Preview optimization changes for your site hosted on <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
-              } elseif( strlen($_GET['origin']) )
+              } elseif( array_key_exists('origin', $_GET) && strlen($_GET['origin']) )
                 echo '<h2 class="cufon-dincond_black"><small>Measure performance of original site vs optimized by <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
               else
                 echo '<h2 class="cufon-dincond_black"><small>Measure your site performance when optimized by <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
@@ -115,7 +120,7 @@ $page_description = "Comparison Test$testLabel.";
                         echo "<li><input type=\"text\" name=\"testurl\" id=\"testurl\" value=\"$default\" class=\"text large\" onfocus=\"if (this.value == this.defaultValue) {this.value = '';}\" onblur=\"if (this.value == '') {this.value = this.defaultValue;}\"></li>\n";
                         ?>
                         <li>
-                            <label for="location">Test From<br><small id="locinfo">(Using Chrome on DSL)</small></label>
+                            <label for="location">Test From<br><small id="locinfo">(Using Chrome on Cable)</small></label>
                             <select name="pssloc" id="pssloc">
                                 <option value="US_East" selected>US East (Virginia)</option>
                                 <option value="US_West">US West (California)</option>
@@ -132,14 +137,27 @@ $page_description = "Comparison Test$testLabel.";
                             <label for="location">Location</label>
                             <select name="where" id="location">
                                 <?php
+                                $lastGroup = null;
                                 foreach($loc['locations'] as &$location)
                                 {
                                     $selected = '';
                                     if( $location['checked'] )
                                         $selected = 'selected';
                                         
+                                    if (array_key_exists('group', $location) && $location['group'] != $lastGroup) {
+                                        if (isset($lastGroup))
+                                            echo "</optgroup>";
+                                        if (strlen($location['group'])) {
+                                            $lastGroup = $location['group'];
+                                            echo "<optgroup label=\"" . htmlspecialchars($lastGroup) . "\">";
+                                        } else
+                                            $lastGroup = null;
+                                    }
+
                                     echo "<option value=\"{$location['name']}\" $selected>{$location['label']}</option>";
                                 }
+                                if (isset($lastGroup))
+                                    echo "</optgroup>";
                                 ?>
                             </select>
                             <?php if( $settings['map'] ) { ?>
@@ -236,21 +254,31 @@ $page_description = "Comparison Test$testLabel.";
                         <li>
                             <?php
                             if (!$mps && !$preview && (!array_key_exists('origin', $_GET) || !strlen($_GET['origin']))) {
-                            ?>
-                            <label for="backend">Optimization Settings</label>
-                            <select name="backend" id="backend">
-                                <option value="prod" selected>Default (Safe)</option>
-                                <option value="aggressive">Aggressive</option>
-                                <?php
-                                if( !$supportsAuth || ($admin || strpos($_COOKIE['google_email'], '@google.com') !== false) ) {
+                                $prodSelected = '';
+                                $aggressiveSelected = ' selected';
+                                if (array_key_exists('aggressive', $_REQUEST) && !$_REQUEST['aggressive']) {
+                                    $prodSelected = ' selected';
+                                    $aggressiveSelected = '';
+                                }
+                                echo '<label for="backend">Optimization Settings</label>';
+                                echo '<select name="backend" id="backend">';
+                                echo "<option value=\"prod\"$prodSelected>Default (Safe)</option>";
+                                echo "<option value=\"aggressive\"$aggressiveSelected>Aggressive</option>";
+                                if( !$supportsAuth || ($admin || strpos($_COOKIE['google_email'], '@google.com') !== false) )
                                     echo '<option value="staging">Staging</option>';
-                                }                                    
-                                ?>
-                            </select>
-                            <?php
+                                echo '</select>';
                             } else {
-                            echo "<input type=\"hidden\" name=\"backend\" id=\"backend\" value=\"prod\">\n";
+                                echo "<input type=\"hidden\" name=\"backend\" id=\"backend\" value=\"prod\">\n";
                             }
+                            ?>
+                        </li>
+                        <li>
+                            <label for="mobile">Test Mobile Page<br><small>Chrome Only</small></label>
+                            <?php
+                            $checked = '';
+                            if (array_key_exists('mobile', $_REQUEST) && $_REQUEST['mobile'])
+                                $checked = ' checked="checked"';
+                            echo "<input type=\"checkbox\" name=\"mobile\" id=\"mobile\" class=\"mobile\"$checked>";
                             ?>
                         </li>
                         <li>
@@ -288,14 +316,26 @@ $page_description = "Comparison Test$testLabel.";
                 <p>
                     <select id="location2">
                         <?php
+                        $lastGroup = null;
                         foreach($loc['locations'] as &$location)
                         {
                             $selected = '';
                             if( $location['checked'] )
                                 $selected = 'SELECTED';
+                            if (array_key_exists('group', $location) && $location['group'] != $lastGroup) {
+                                if (isset($lastGroup))
+                                    echo "</optgroup>";
+                                if (strlen($location['group'])) {
+                                    $lastGroup = $location['group'];
+                                    echo "<optgroup label=\"" . htmlspecialchars($lastGroup) . "\">";
+                                } else
+                                    $lastGroup = null;
+                            }
                                 
                             echo "<option value=\"{$location['name']}\" $selected>{$location['label']}</option>";
                         }
+                        if (isset($lastGroup))
+                            echo "</optgroup>";
                         ?>
                     </select>
                     <input id="location-ok" type=button class="simplemodal-close" value="OK">
@@ -332,6 +372,7 @@ $page_description = "Comparison Test$testLabel.";
         </script>
         <script type="text/javascript" src="<?php echo $GLOBALS['cdnPath']; ?>/js/test.js?v=<?php echo VER_JS_TEST;?>"></script> 
         <script type="text/javascript">
+            wptStorage['testBrowser'] = 'Chrome';
             function PreparePSSTest(form)
             {
                 var url = form.testurl.value;
@@ -349,9 +390,19 @@ $page_description = "Comparison Test$testLabel.";
                 
                 form.label.value = 'PageSpeed Service Comparison for ' + url;
                 
+                if (form['mobile'] && !$("#morelocs").is(":visible")) {
+                    if (form.mobile.checked) {
+                        var loc = $('#connection').val();
+                        if (loc.indexOf('.Cable') > 0) {
+                            loc = loc.replace('.Cable', '.3G');
+                            $('#connection').val(loc); 
+                        }
+                    }
+                }
+                
                 <?php
                 // build the psuedo batch-url list
-                if( $mps || strlen($_GET['origin']) )
+                if( $mps || (array_key_exists('origin', $_GET) && strlen($_GET['origin'])) )
                     echo 'var batch = "Original=" + url + "\nOptimized=" + url + " noscript";' . "\n";
                 else
                     echo 'var batch = "Original=" + url + " noscript\nOptimized=" + url;' . "\n";
@@ -381,7 +432,7 @@ $page_description = "Comparison Test$testLabel.";
                 var backend = form.backend.value;
                 if (backend == 'aggressive') {
                     script = form.script.value;
-                    script = "addHeader\tModPagespeedFilters:combine_css,rewrite_css,inline_import_to_link,extend_cache,combine_javascript,rewrite_javascript,resize_images,move_css_to_head,rewrite_style_attributes_with_url,convert_png_to_jpeg,convert_jpeg_to_webp,recompress_images,convert_jpeg_to_progressive,convert_meta_tags,inline_css,inline_images,inline_javascript,lazyload_images,flatten_css_imports,inline_preview_images,defer_javascript,defer_iframe,add_instrumentation,flush_subresources,fallback_rewrite_css_urls,insert_dns_prefetch\t%HOST_REGEX%\n" + script;
+                    script = "addHeader\tModPagespeedFilters:combine_css,rewrite_css,inline_import_to_link,extend_cache,combine_javascript,rewrite_javascript,resize_images,move_css_to_head,rewrite_style_attributes_with_url,convert_png_to_jpeg,convert_jpeg_to_webp,recompress_images,convert_jpeg_to_progressive,convert_meta_tags,inline_css,inline_images,inline_javascript,lazyload_images,flatten_css_imports,inline_preview_images,defer_javascript,defer_iframe,add_instrumentation,flush_subresources,fallback_rewrite_css_urls,insert_dns_prefetch,split_html,prioritize_critical_css,convert_to_webp_lossless,convert_gif_to_png\t%HOST_REGEX%\n" + script;
                     form.script.value = script;
                     form.web10.value = 0;
                 } else if (backend == 'staging') {
@@ -390,7 +441,7 @@ $page_description = "Comparison Test$testLabel.";
                     script = script.replace(/pss_blocking_rewrite/g, 'pss_staging');
                     form.script.value = script;
                     form.web10.value = 0;
-                    form.runs.value = 10;
+                    form.runs.value = 8;
                     form.discard.value = 1;
                 }
                 <?php
@@ -420,6 +471,8 @@ $page_description = "Comparison Test$testLabel.";
             $("#pssloc").change(function(){
                 PSSLocChanged();
             });
+            
+            $('#script').val(originalScript);
         </script>
     </body>
 </html>

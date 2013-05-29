@@ -58,7 +58,7 @@ $locations = LoadLocations();
 $loc = ParseLocations($locations);
 
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
     <head>
         <title>WebPagetest - Website Performance and Optimization Test</title>
@@ -114,14 +114,26 @@ $loc = ParseLocations($locations);
                             <label for="location">Test Location</label>
                             <select name="where" id="location">
                                 <?php
+                                $lastGroup = null;
                                 foreach($loc['locations'] as &$location)
                                 {
                                     $selected = '';
                                     if( $location['checked'] )
                                         $selected = 'selected';
+                                    if (array_key_exists('group', $location) && $location['group'] != $lastGroup) {
+                                        if (isset($lastGroup))
+                                            echo "</optgroup>";
+                                        if (strlen($location['group'])) {
+                                            $lastGroup = $location['group'];
+                                            echo "<optgroup label=\"" . htmlspecialchars($lastGroup) . "\">";
+                                        } else
+                                            $lastGroup = null;
+                                    }
                                         
                                     echo "<option value=\"{$location['name']}\" $selected>{$location['label']}</option>";
                                 }
+                                if (isset($lastGroup))
+                                    echo "</optgroup>";
                                 ?>
                             </select>
                             <?php if (isset($settings['map'])) { ?>
@@ -183,6 +195,7 @@ $loc = ParseLocations($locations);
                             <ul class="ui-tabs-nav">
                                 <li><a href="#test-settings">Test Settings</a></li>
                                 <li><a href="#advanced-settings">Advanced</a></li>
+                                <li><a href="#advanced-chrome">Chrome</a></li>
                                 <li><a href="#auth">Auth</a></li>
                                 <li><a href="#script">Script</a></li>
                                 <li><a href="#block">Block</a></li>
@@ -279,6 +292,12 @@ $loc = ParseLocations($locations);
                                         </label>
                                     </li>
                                     <li>
+                                        <input type="checkbox" name="clearcerts" id="clearcerts" class="checkbox" style="float: left;width: auto;">
+                                        <label for="clearcerts" class="auto_width">
+                                            Clear SSL Certificate Caches
+                                        </label>
+                                    </li>
+                                    <li>
                                         <input type="checkbox" name="ignoreSSL" id="ignore_ssl_cerificate_errors" class="checkbox" style="float: left;width: auto;">
                                         <label for="ignore_ssl_cerificate_errors" class="auto_width">
                                             Ignore SSL Certificate Errors<br>
@@ -296,24 +315,6 @@ $loc = ParseLocations($locations);
                                         <input type="checkbox" name="tcpdump" id="tcpdump" class="checkbox" style="float: left;width: auto;">
                                         <label for="tcpdump" class="auto_width">
                                             Capture network packet trace (tcpdump)
-                                        </label>
-                                    </li>
-                                    <li>
-                                        <input type="checkbox" name="timeline" id="timeline" class="checkbox" style="float: left;width: auto;">
-                                        <label for="timeline" class="auto_width">
-                                            Capture Dev Tools Timeline (Chrome Only)
-                                        </label>
-                                    </li>
-                                    <li>
-                                        <input type="checkbox" name="netlog" id="netlog" class="checkbox" style="float: left;width: auto;">
-                                        <label for="netlog" class="auto_width">
-                                            Capture Network Log (Chrome Only)
-                                        </label>
-                                    </li>
-                                    <li>
-                                        <input type="checkbox" name="spdy3" id="spdy3" class="checkbox" style="float: left;width: auto;">
-                                        <label for="spdy3" class="auto_width">
-                                            Force Spdy version 3 (Chrome Only)
                                         </label>
                                     </li>
                                     <li>
@@ -353,6 +354,49 @@ $loc = ParseLocations($locations);
                                         </label>
                                         <input id="time" type="text" class="text short" name="time" value=""> seconds
                                     </li>
+                                    <?php
+                                    /*
+                                    <li>
+                                        <label for="orientationDefault">
+                                            Mobile Orientation<br>
+                                            <small>Experimental</small>
+                                        </label>
+                                        <input id="orientationDefault" type="radio" name="orientation" checked=checked value="default">Device Default
+                                        <input id="orientationPortrait" type="radio" name="orientation" value="portrait">Portrait
+                                        <input id="orientationPortrait" type="radio" name="orientation" value="landscape">Landscape
+                                    </li>
+                                    */
+                                    ?>
+                                </ul>
+                            </div>
+                            <div id="advanced-chrome" class="test_subbox ui-tabs-hide">
+                                <p>Chrome-specific advanced settings:</p>
+                                <ul class="input_fields">
+                                    <li>
+                                        <input type="checkbox" name="mobile" id="mobile" class="checkbox" style="float: left;width: auto;">
+                                        <label for="mobile" class="auto_width">
+                                            Emulate Mobile Browser (Experimental)<br>
+                                            <small>Chrome mobile user agent, 640x960 screen, 2x scaling and fixed viewport</small>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="timeline" id="timeline" class="checkbox" style="float: left;width: auto;">
+                                        <label for="timeline" class="auto_width">
+                                            Capture Dev Tools Timeline
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="netlog" id="netlog" class="checkbox" style="float: left;width: auto;">
+                                        <label for="netlog" class="auto_width">
+                                            Capture Network Log
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" name="spdy3" id="spdy3" class="checkbox" style="float: left;width: auto;">
+                                        <label for="spdy3" class="auto_width">
+                                            Force Spdy version 3
+                                        </label>
+                                    </li>
                                 </ul>
                             </div>
                             <div id="auth" class="test_subbox ui-tabs-hide">
@@ -365,14 +409,7 @@ $loc = ParseLocations($locations);
                                 
                                 <ul class="input_fields">
                                     <li>
-                                        <?php if($settings['enableSNS']) { ?>
-                                        <input type="radio" name="authType" id="auth_type-aol_sns" value="1" class="radio" checked=checked>
-                                        <label for="auth_type-aol_sns" class="inline">AOL SNS</label>
-                                        <input type="radio" name="authType" id="auth_type-http_basic_auth" value="0" class="radio">
-                                        <label for="auth_type-http_basic_auth" class="inline">HTTP Basic Auth</label>
-                                        <?php } else { ?>
                                         HTTP Basic Authentication
-                                        <?php } ?>
                                     </li>
                                     <li>
                                         <label for="username" style="width: auto;">Username</label>
@@ -464,32 +501,6 @@ $loc = ParseLocations($locations);
                                 <label for="videoCheck" class="auto_width">Capture Video</label>
                                 <br>
                                 <br>
-                                <p>
-                                    <input type="checkbox" name="aft" id="aftCheck" class="checkbox before_label">
-                                    <label for="aftCheck" class="auto_width">Measure Above-the-fold rendering time (AFT)<br><small>(experimental - be patient, each run takes at least 4 minutes)</small></label>
-                                </p>
-                                <br>
-                                <br>
-                                <div id="aftSettings" class="hidden">
-                                    <p>
-                                        <label for="aftec" class="auto_width">AFT Cutoff</label>
-                                        <?php
-                                        $aftCutoff = (int)$settings['aftEarlyCutoff'];
-                                        if(!$aftCutoff)
-                                            $aftCutoff = 25;
-                                        ?>
-                                        <input id="aftec" type="text" name="aftec" class="text" style="width: 3em;" value="<?php echo (int)$aftCutoff; ?>"> Seconds
-                                    </p>
-                                    <p>
-                                        <label for="aftmc" class="auto_width">Ignore changes smaller than</label>
-                                        <?php
-                                        $aftMinChanges = (int)$settings['aftMinChanges'];
-                                        if(!$aftMinChanges)
-                                            $aftMinChanges = 25;
-                                        ?>
-                                        <input id="aftmc" type="text" name="aftmc" class="text" style="width: 3em;" value="<?php echo (int)$aftMinChanges; ?>"> Pixels
-                                    </p>
-                                </div>
                             </div>
                             <?php } ?>
 
@@ -524,14 +535,27 @@ $loc = ParseLocations($locations);
                 <p>
                     <select id="location2">
                         <?php
+                        $lastGroup = null;
                         foreach($loc['locations'] as &$location)
                         {
                             $selected = '';
                             if( $location['checked'] )
                                 $selected = 'selected';
                                 
+                            if (array_key_exists('group', $location) && $location['group'] != $lastGroup) {
+                                if (isset($lastGroup))
+                                    echo "</optgroup>";
+                                if (strlen($location['group'])) {
+                                    $lastGroup = $location['group'];
+                                    echo "<optgroup label=\"" . htmlspecialchars($lastGroup) . "\">";
+                                } else
+                                    $lastGroup = null;
+                            }
+
                             echo "<option value=\"{$location['name']}\" $selected>{$location['label']}</option>";
                         }
+                        if (isset($lastGroup))
+                            echo "</optgroup>";
                         ?>
                     </select>
                     <input id="location-ok" type=button class="simplemodal-close" value="OK">

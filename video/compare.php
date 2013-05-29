@@ -1,4 +1,7 @@
 <?php
+// maximum number of tests that are allowed to be compared in video
+$maxCompare = 9;
+
 if( !isset($_REQUEST['tests']) && isset($_REQUEST['t']) )
 {
     $tests = '';
@@ -60,7 +63,7 @@ else
     if( strlen($labels) )
         $title .= ' - ' . $labels;
     ?>
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+    <!DOCTYPE html>
     <html>
         <head>
             <title>WebPagetest - Visual Comparison</title>
@@ -278,6 +281,28 @@ else
             </div>
 
             <script type="text/javascript">
+                <?php echo "var maxCompare = $maxCompare;"; ?>
+                function ValidateInput(form)
+                {
+                    var ret = false;
+                    
+                    var count = $('input:checked[name="t[]"]').size();
+                    if( count > 0 )
+                    {
+                        if( count <= maxCompare )
+                            ret = true;
+                        else
+                        {
+                            alert("Select no more than " + maxCompare + " tests to compare");
+                            return false;
+                        }
+                    }
+                    else
+                        alert("Please select at least one test to create a video from");
+                    
+                    return ret;
+                }
+
                 function ShowAdvanced()
                 {
                     $("#advanced").modal({opacity:80});
@@ -830,9 +855,9 @@ function DisplayGraphs() {
                 echo "dataTimes.setValue($row, 0, '$label');\n";
                 $column = 1;
                 foreach($tests as &$test) {
-                    $val = $test['pageData'][$test['run']][$test['cached']][$metric];
-                    if(!empty($val))
-                        echo 'dataTimes.setValue('.$row.', '.$column.', '. $val .');'.PHP_EOL;
+					$val = $test['pageData'][$test['run']][$test['cached']][$metric];
+					if(!empty($val))
+						echo 'dataTimes.setValue('.$row.', '.$column.', '. $val .');'.PHP_EOL;
                     $column++;
                 }
                 $row++;
@@ -841,12 +866,12 @@ function DisplayGraphs() {
             echo "dataBytes.setValue(0, 0, 'Total');\n";
             $column = 1;
             foreach($tests as &$test) {
-                $val = $test['pageData'][$test['run']][$test['cached']]['requests'];
-                if(!empty($val))
-                    echo "dataRequests.setValue(0, $column, ".$val.');'.PHP_EOL;
-                $val = $test['pageData'][$test['run']][$test['cached']]['bytesIn'];
-                if(!empty($val))
-                    echo "dataBytes.setValue(0, $column, ".$val.');'.PHP_EOL;
+				$val = $test['pageData'][$test['run']][$test['cached']]['requests'];
+				if(!empty($val))
+					echo "dataRequests.setValue(0, $column, ".$val.');'.PHP_EOL;
+				$val = $test['pageData'][$test['run']][$test['cached']]['bytesIn'];
+				if(!empty($val))
+					echo "dataBytes.setValue(0, $column, ".$val.');'.PHP_EOL;
                 $column++;
             }
             $row = 1;
@@ -855,12 +880,12 @@ function DisplayGraphs() {
                 echo "dataBytes.setValue($row, 0, '$mimeType');\n";
                 $column = 1;
                 foreach($tests as &$test) {
-                    $val = $test['breakdown'][$mimeType]['requests'];
-                    if(!empty($val))
-                        echo "dataRequests.setValue($row, $column, ".$val.');'.PHP_EOL;
-                    $val = $test['breakdown'][$mimeType]['bytes'];
-                    if(!empty($val))
-                        echo "dataBytes.setValue($row, $column, ".$val.');'.PHP_EOL;
+					$val = $test['breakdown'][$mimeType]['requests'];
+					if(!empty($val))
+						echo "dataRequests.setValue($row, $column, ".$val.');'.PHP_EOL;
+					$val = $test['breakdown'][$mimeType]['bytes'];
+					if(!empty($val))
+						echo "dataBytes.setValue($row, $column, ".$val.');'.PHP_EOL;
                     $column++;
                 }
                 $row++;
@@ -872,7 +897,7 @@ function DisplayGraphs() {
                     echo "var progressChartDT = new google.visualization.LineChart(document.getElementById('compare_visual_progress_dt'));\n";
                     echo "progressChartDT.draw(dataProgressDT, {title: 'Visual Progress - Dev Tools (%)', hAxis: {title: 'Time (seconds)'}});\n";
                 }
-            }            
+            }
             ?>
             var timesChart = new google.visualization.ColumnChart(document.getElementById('compare_times'));
             timesChart.draw(dataTimes, {title: 'Timings (ms)'});
@@ -886,4 +911,3 @@ function DisplayGraphs() {
     </script>
     <?php
 }
-?>

@@ -1,0 +1,223 @@
+<settings>
+  <margins>0</margins>
+  <text_size>10</text_size>
+
+  <plot_area>
+    <border_color>E2E2E2</border_color>
+  </plot_area>
+
+  <scroller>
+    <enabled>true</enabled>
+    <!--<height>50</height>-->
+    <graph_data_source>close</graph_data_source>
+    <bg_color>ffffff,E2E2E2</bg_color>
+    <resize_button_color>FF0000</resize_button_color>
+  </scroller>
+
+  <export_as_image>
+    <file>lib/amcharts/amline/export.php</file>
+  </export_as_image>
+  <connect>true</connect>
+  <link_target>_blank</link_target>
+  <redraw>true</redraw>
+  <legend>
+    <max_columns>5</max_columns>
+    <text_size>10</text_size>
+    <align>center</align>
+    <spacing>5</spacing>
+  </legend>
+  <colors>#0000CD, #A52A2A, #458B00, #8B4513, #2A0CD0, #00008B, #68228B, #8470FF, #8B0000, #8FBC8F,
+    #8B7500,#333333,#990000
+  </colors>
+  <preloader_on_reload>true</preloader_on_reload>
+  <decimals_separator>.</decimals_separator>
+    <thousands_separator>,</thousands_separator>
+    <digits_after_decimal>3</digits_after_decimal>
+    <precision>3</precision>
+<data><chart>
+<series>
+<value xid="1366624800">04/22 10:00</value>
+<value xid="1366628400">04/22 11:00</value>
+<value xid="1366632000">04/22 12:00</value>
+<value xid="1366635600">04/22 13:00</value>
+<value xid="1366639200">04/22 14:00</value>
+<value xid="1366642800">04/22 15:00</value>
+<value xid="1366646400">04/22 16:00</value>
+<value xid="1366650000">04/22 17:00</value>
+<value xid="1366653600">04/22 18:00</value>
+<value xid="1366657200">04/22 19:00</value>
+<value xid="1366660800">04/22 20:00</value>
+<value xid="1366664400">04/22 21:00</value>
+<value xid="1366668000">04/22 22:00</value>
+<value xid="1366671600">04/22 23:00</value>
+<value xid="1366675200">04/23 00:00</value>
+<value xid="1366678800">04/23 01:00</value>
+<value xid="1366682400">04/23 02:00</value>
+<value xid="1366686000">04/23 03:00</value>
+<value xid="1366689600">04/23 04:00</value>
+<value xid="1366693200">04/23 05:00</value>
+<value xid="1366696800">04/23 06:00</value>
+<value xid="1366700400">04/23 07:00</value>
+<value xid="1366704000">04/23 08:00</value>
+<value xid="1366707600">04/23 09:00</value>
+<value xid="1366711200">04/23 10:00</value>
+<value xid="1366714800">04/23 11:00</value>
+<value xid="1366718400">04/23 12:00</value>
+<value xid="1366722000">04/23 13:00</value>
+<value xid="1366725600">04/23 14:00</value>
+<value xid="1366729200">04/23 15:00</value>
+<value xid="1366732800">04/23 16:00</value>
+<value xid="1366736400">04/23 17:00</value>
+<value xid="1366740000">04/23 18:00</value>
+<value xid="1366743600">04/23 19:00</value>
+<value xid="1366747200">04/23 20:00</value>
+<value xid="1366750800">04/23 21:00</value>
+<value xid="1366754400">04/23 22:00</value>
+<value xid="1366758000">04/23 23:00</value>
+<value xid="1366761600">04/24 00:00</value>
+<value xid="1366765200">04/24 01:00</value>
+<value xid="1366768800">04/24 02:00</value>
+<value xid="1366772400">04/24 03:00</value>
+<value xid="1366776000">04/24 04:00</value>
+<value xid="1366779600">04/24 05:00</value>
+<value xid="1366783200">04/24 06:00</value>
+<value xid="1366786800">04/24 07:00</value>
+<value xid="1366790400">04/24 08:00</value>
+<value xid="1366794000">04/24 09:00</value>
+<value xid="1366797600">04/24 10:00</value>
+<value xid="1366801200">04/24 11:00</value>
+<value xid="1366804800">04/24 12:00</value>
+<value xid="1366808400">04/24 13:00</value>
+<value xid="1366812000">04/24 14:00</value>
+<value xid="1366815600">04/24 15:00</value>
+<value xid="1366819200">04/24 16:00</value>
+<value xid="1366822800">04/24 17:00</value>
+<value xid="1366826400">04/24 18:00</value>
+<value xid="1366830000">04/24 19:00</value>
+<value xid="1366833600">04/24 20:00</value>
+<value xid="1366837200">04/24 21:00</value>
+<value xid="1366840800">04/24 22:00</value>
+<value xid="1366844400">04/24 23:00</value>
+<value xid="1366848000">04/25 00:00</value>
+<value xid="1366851600">04/25 01:00</value>
+<value xid="1366855200">04/25 02:00</value>
+<value xid="1366858800">04/25 03:00</value>
+<value xid="1366862400">04/25 04:00</value>
+<value xid="1366866000">04/25 05:00</value>
+<value xid="1366869600">04/25 06:00</value>
+<value xid="1366873200">04/25 07:00</value>
+<value xid="1366876800">04/25 08:00</value>
+<value xid="1366880400">04/25 09:00</value>
+<value xid="1366884000">04/25 10:00</value>
+<value xid="1366887600">04/25 11:00</value>
+<value xid="1366891200">04/25 12:00</value>
+<value xid="1366894800">04/25 13:00</value>
+<value xid="1366898400">04/25 14:00</value>
+<value xid="1366902000">04/25 15:00</value>
+<value xid="1366905600">04/25 16:00</value>
+<value xid="1366909200">04/25 17:00</value>
+<value xid="1366912800">04/25 18:00</value>
+<value xid="1366916400">04/25 19:00</value>
+<value xid="1366920000">04/25 20:00</value>
+<value xid="1366923600">04/25 21:00</value>
+<value xid="1366927200">04/25 22:00</value>
+<value xid="1366930800">04/25 23:00</value>
+<value xid="1366934400">04/26 00:00</value>
+<value xid="1366938000">04/26 01:00</value>
+<value xid="1366941600">04/26 02:00</value>
+<value xid="1366945200">04/26 03:00</value>
+<value xid="1366948800">04/26 04:00</value>
+<value xid="1366952400">04/26 05:00</value>
+<value xid="1366956000">04/26 06:00</value>
+<value xid="1366959600">04/26 07:00</value>
+<value xid="1366963200">04/26 08:00</value>
+<value xid="1366966800">04/26 09:00</value>
+<value xid="1366970400">04/26 10:00</value>
+<value xid="1366974000">04/26 11:00</value>
+<value xid="1366977600">04/26 12:00</value>
+<value xid="1366981200">04/26 13:00</value>
+<value xid="1366984800">04/26 14:00</value>
+<value xid="1366988400">04/26 15:00</value>
+<value xid="1366992000">04/26 16:00</value>
+<value xid="1366995600">04/26 17:00</value>
+<value xid="1366999200">04/26 18:00</value>
+<value xid="1367002800">04/26 19:00</value>
+<value xid="1367006400">04/26 20:00</value>
+<value xid="1367010000">04/26 21:00</value>
+<value xid="1367013600">04/26 22:00</value>
+<value xid="1367017200">04/26 23:00</value>
+<value xid="1367020800">04/27 00:00</value>
+<value xid="1367024400">04/27 01:00</value>
+<value xid="1367028000">04/27 02:00</value>
+<value xid="1367031600">04/27 03:00</value>
+<value xid="1367035200">04/27 04:00</value>
+<value xid="1367038800">04/27 05:00</value>
+<value xid="1367042400">04/27 06:00</value>
+<value xid="1367046000">04/27 07:00</value>
+<value xid="1367049600">04/27 08:00</value>
+<value xid="1367053200">04/27 09:00</value>
+<value xid="1367056800">04/27 10:00</value>
+<value xid="1367060400">04/27 11:00</value>
+<value xid="1367064000">04/27 12:00</value>
+<value xid="1367067600">04/27 13:00</value>
+<value xid="1367071200">04/27 14:00</value>
+<value xid="1367074800">04/27 15:00</value>
+<value xid="1367078400">04/27 16:00</value>
+<value xid="1367082000">04/27 17:00</value>
+<value xid="1367085600">04/27 18:00</value>
+<value xid="1367089200">04/27 19:00</value>
+<value xid="1367092800">04/27 20:00</value>
+<value xid="1367096400">04/27 21:00</value>
+<value xid="1367100000">04/27 22:00</value>
+<value xid="1367103600">04/27 23:00</value>
+<value xid="1367107200">04/28 00:00</value>
+<value xid="1367110800">04/28 01:00</value>
+<value xid="1367114400">04/28 02:00</value>
+<value xid="1367118000">04/28 03:00</value>
+<value xid="1367121600">04/28 04:00</value>
+<value xid="1367125200">04/28 05:00</value>
+<value xid="1367128800">04/28 06:00</value>
+<value xid="1367132400">04/28 07:00</value>
+<value xid="1367136000">04/28 08:00</value>
+<value xid="1367139600">04/28 09:00</value>
+<value xid="1367143200">04/28 10:00</value>
+<value xid="1367146800">04/28 11:00</value>
+<value xid="1367150400">04/28 12:00</value>
+<value xid="1367154000">04/28 13:00</value>
+<value xid="1367157600">04/28 14:00</value>
+<value xid="1367161200">04/28 15:00</value>
+<value xid="1367164800">04/28 16:00</value>
+<value xid="1367168400">04/28 17:00</value>
+<value xid="1367172000">04/28 18:00</value>
+<value xid="1367175600">04/28 19:00</value>
+<value xid="1367179200">04/28 20:00</value>
+<value xid="1367182800">04/28 21:00</value>
+<value xid="1367186400">04/28 22:00</value>
+<value xid="1367190000">04/28 23:00</value>
+<value xid="1367193600">04/29 00:00</value>
+<value xid="1367197200">04/29 01:00</value>
+<value xid="1367200800">04/29 02:00</value>
+<value xid="1367204400">04/29 03:00</value>
+<value xid="1367208000">04/29 04:00</value>
+<value xid="1367211600">04/29 05:00</value>
+<value xid="1367215200">04/29 06:00</value>
+<value xid="1367218800">04/29 07:00</value>
+<value xid="1367222400">04/29 08:00</value>
+<value xid="1367226000">04/29 09:00</value>
+<value xid="1367229600">04/29 10:00</value>
+</series>
+<graphs>
+<graph title="Change Notes" gid="0">
+</graph>
+<graph title="ftvn
+FV_TTFB" gid="1">
+<value bullet_size="4" bullet="round" xid="1367226000" url="listResults.php?currentPage=1&amp;filterField=WPTJob.Id&amp;filterValue=1:1&amp;startDateTime=1367226000&amp;endDateTime=1367229600">1.801</value>
+
+</graph>
+<graph title="ftvn
+FV_Render" gid="2">
+<value bullet_size="4" bullet="round" xid="1367226000" url="listResults.php?currentPage=1&amp;filterField=WPTJob.Id&amp;filterValue=1:1&amp;startDateTime=1367226000&amp;endDateTime=1367229600">5.476</value>
+
+</graph>
+</graphs>
+</chart></data></settings>

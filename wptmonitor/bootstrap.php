@@ -14,9 +14,10 @@
 
   spl_autoload_register(array('Doctrine_Core', 'modelsAutoload'));
 
-// $dsn= 'sqlite:///'.dirname(__FILE__).'/db/wpt_monitor.sqlite';
-$dsn= 'mysql://wpt:P8g7;19lnU@localhost/wpt_monitor';
+//  $dsn= 'sqlite:///'.dirname(__FILE__).'/db/wpt_monitor.sqlite';
+  $dsn= 'mysql://wpt:wpt@localhost/wptmonitor';
   $dataConn = Doctrine_Manager::connection($dsn,'data');
 //
 //  $configDsn= 'sqlite:///'.dirname(__FILE__).'/db/config.sqlite';
 //  $configConn = Doctrine_Manager::connection($configDsn, 'config');
+?>

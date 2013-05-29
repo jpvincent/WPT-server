@@ -21,6 +21,37 @@ function saveWPTXmlResults($id, $xmlResults) {
   fclose($fh);
 }
 
+
+ini_set('default_socket_timeout', 2);
+// JPV : will send numeric results to a graphite instance
+function exportResultToExternal($metric_value, $metric_name, $time = null) {
+	
+	$metric_name = str_replace(' ', '.', $metric_name);
+	
+	if($time === null)
+		$time = time();
+	
+	$msg = "WPT.".$metric_name
+		.' '.$metric_value
+		.' '.$time
+		."\n";
+	logOutput('[INFO] [exportResultTo] '.$msg);
+	/*if(!is_numeric($metric_value))
+		return false;
+	if(!is_string($metric_name))
+		return false;
+	*/
+	//logOutput('[INFO] [exportResultTo] ');
+	
+	$url = 'http://88.190.226.67:8081/graphite?body='.urlencode($msg);
+	$body = file_get_contents($url, false);
+	
+	if($body === false) {
+		logOutput('[WARN] [exportResultTo] failed to reach '.$url);
+	}
+}
+
+
 /**
  * Fetch all result assets and save locally
  * 
@@ -477,9 +508,9 @@ function processJobsForUser($userId, $jobId = null, $force = false, $runLabel=""
             // Default DSL settings
 
             $private = 1;
-            $bwDown = 1500;
-            $bwUp = 384;
-            $latency = 50;
+            $bwDown = 2500;
+            $bwUp = 400;
+            $latency = 110;
             $plr = 0;
 
             if ( $row['WPTBandwidthDown'])
@@ -632,14 +663,15 @@ function processResultsForAll( $resultId = null ) {
       // Only fetch jobs that are "100" / still processing
       $q = Doctrine_Query::create()->from('WPTResult r')->where('r.Status = ?', '100');
       $results = $q->execute();
+		exportResultToExternal( count($results), 'global.nbtests');
     } else {
       $q = Doctrine_Query::create()->from('WPTResult r')->where('r.WPTResultId = ?', $resultId);
       $results = $q->execute();
     }
     $q->free(true);
 
-// logOutput( print_r($results, true));
-
+	// logOutput('[INFO] [exportResultTo] '.count($results));
+	
     foreach ($results as $result)
     {
 		logOutput('[INFO] [processResultsForAll] reading JobId '.$result['WPTJobId'].' of TestID '.$result['WPTResultId'] );
@@ -1006,12 +1038,76 @@ logOutput('[LOG] '.print_r($result, true));
         updateJobstatus($id, $status);
       }
     }
+
+	exportResultToExternal(
+		$xml->data->median->firstView->titleTime,
+		'results.'.makeLabelFromJobID($wptJobId).'.timeToTitle' );
+
+	exportResultToExternal(
+			$xml->data->median->firstView->TTFB,
+			'results.'.makeLabelFromJobID($wptJobId).'.timeToFirstByte' );
+
+	exportResultToExternal(
+			$xml->data->median->firstView->bytesIn,
+			'results.'.makeLabelFromJobID($wptJobId).'.nbBytesIn' );
+
+	// $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
+	exportResultToExternal(
+			$xml->data->median->firstView->score_gzip,
+			'results.'.makeLabelFromJobID($wptJobId).'.scoreGzip' );
+	exportResultToExternal(
+			$xml->data->median->firstView->score_cache,
+			'results.'.makeLabelFromJobID($wptJobId).'.scoreCache' );
+	exportResultToExternal(
+			$xml->data->median->firstView->render,
+			'results.'.makeLabelFromJobID($wptJobId).'.timeToRender' );
+	exportResultToExternal(
+			$xml->data->median->firstView->requestsDoc,
+			'results.'.makeLabelFromJobID($wptJobId).'.nbHttpQueries' );
+	exportResultToExternal(
+			$xml->data->median->firstView->responses_404,
+			'results.'.makeLabelFromJobID($wptJobId).'.nb404' );
+	
+	
+	if(property_exists($xml->data->median, 'repeatView') === true) {
+		exportResultToExternal(
+			( $xml->data->median->firstView->requests - $xml->data->median->repeatView->requests ),
+			'results.'.makeLabelFromJobID($wptJobId).'.requetesEconomisees' );
+		exportResultToExternal(
+			( $xml->data->median->firstView->bytesIn - $xml->data->median->repeatView->bytesIn ),
+			'results.'.makeLabelFromJobID($wptJobId).'.poidsEconomise' );
+	}
+
+	// $xml->data->median->firstView->score_gzip
+		// score_compress
   } catch (Exception $e) {
     error_log("[WPTMonitor] Failed while Listing jobs: " . $wptResultId . " message: " . $e->getMessage());
     logOutput('[ERROR] [processResultsForAll] Exception : ' . $e->getMessage() . "");
   }
   unset($result);
 }
+
+function makeLabelFromJobID($jobId) {
+	$folderId = getFolderIdFor($jobId, 'WPTJob');
+
+	$job = Doctrine_Core::getTable('WPTJob')
+	                        ->find($jobId);
+
+	$folderTable = Doctrine_Core::getTable('WPTJobFolder');
+	$folder = $folderTable->find($folderId);
+	$folder->Label = preg_replace('/éè/', 'e', $folder->Label );
+	$alertLabel = preg_replace('/[^a-zA-Z1-9]/', '_', $folder->Label );
+
+	$job['Label'] = preg_replace( '/[éè]/', 'e', $job['Label'] );
+	$alertLabel .= '.'. preg_replace( '/[^a-zA-Z1-9éè]/', '_', $job['Label'] );
+	$alertLabel = preg_replace( '/\.+/', '.', $alertLabel);
+	$alertLabel = preg_replace( '/_+/', '_', $alertLabel);
+
+	logOutput('[LOG] [makeLabelFromJobID] Label:"'.$alertLabel.'" , Job:"'.$job['Label'].'" , Folder:"'.$folder->Label.'"');
+	return $alertLabel;
+}
+
+
 function retrieveRequestsData($location){
   $requests = array();
   try {

@@ -9,7 +9,8 @@ function processAlertsForJob($jobId) {
 
   $jobTable = Doctrine_Core::getTable('WPTJob');
   $job = $jobTable->find($jobId);
-  $link = $baseurl."listResults.php?currentPage=1&orderBy=Date&orderByDir=DESC&filterField=WPTJob.Id&filterValue=" . $jobId;
+  // $link = $baseurl."listResults.php?currentPage=1&orderBy=Date&orderByDir=DESC&filterField=WPTJob.Id&filterValue=" . $jobId;
+  // direct link to the WPT test result
 
   // Fetch all related alert ids from the link table
   $q = Doctrine_Query::create()->from('WPTJob_Alert a')->where('a.WPTJobId = ?', $jobId);
@@ -17,7 +18,7 @@ function processAlertsForJob($jobId) {
   $q->free(true);
 
   $alertsTable = Doctrine_Core::getTable('Alert');
-
+	$nbAlerts = 0;
   foreach ($alerts as $alertId) {
     $alert = $alertsTable->find($alertId['AlertId']);
 
@@ -25,7 +26,7 @@ function processAlertsForJob($jobId) {
     if (!$alert['Active']) {
       continue;
     }
-    logOutput("[INFO] [processAlertsForJob] Job: ".$job['Label']);
+    // logOutput("[INFO] [processAlertsForJob] Job: ".$job['Label']);
 
     // Set last alert to 0 if not set already
     if (!$lastAlert = $alert['LastAlertTime']) {
@@ -55,11 +56,17 @@ function processAlertsForJob($jobId) {
         ->andWhere('r.WPTJobId = ?', $jobId)
         ->andWhere('r.Status > ?', 100);
 
-    // Return if non found
-    if ($q->count() < 1) {
-      return;
-    }
+	$alertLabel = makeLabelFromJobID($jobId);
 
+    // Return if non found
+	if ($q->count() < 1) {
+		exportResultToExternal(0 , 'alerts.'.$alertLabel.'.AvgFirstViewFirstByte');
+		exportResultToExternal(0 , 'alerts.'.$alertLabel.'.AvgFirstViewStartRender');
+		return;
+	}
+	
+	// jobId;
+	
     // Response code type
     if ($alertType == "Response Code") {
       $q = Doctrine_Query::create()->from('WPTResult r')
@@ -85,6 +92,7 @@ function processAlertsForJob($jobId) {
             "Threshold: " . $alert['AlertThreshold'];
         $message = $message . " \n" . $link;
         sendEmailAlert($alertEmailAddresses, $message);
+		$nbAlerts++;
       }
     } else if ($alertType == "Validation Code") {
 
@@ -108,6 +116,7 @@ function processAlertsForJob($jobId) {
 
         $message = $message . " \n" . $link;
         sendEmailAlert($alertEmailAddresses, $message);
+		$nbAlerts++;
       }
 
     } else if ($alertType == "Response Time") {
@@ -130,10 +139,15 @@ function processAlertsForJob($jobId) {
             $alert['AlertOnComparator'] . ' ' . $alert['AlertOnValue'] . " \n" .
             "Threshold: " . $alert['AlertThreshold'];
         $message = $message . " \n" . $link;
+
+		exportResultToExternal(1 , 'alerts.'.$alertLabel.'.'.$alert['AlertOn']);
+
         sendEmailAlert($alertEmailAddresses, $message);
+		$nbAlerts++;
       }
     }
   }
+	return $nbAlerts;
 }
 
 function sendEmailAlert($emailAddresses, $message) {
@@ -168,4 +182,3 @@ function sendEmailAlert($emailAddresses, $message) {
   return $success;
 }
 
-?>

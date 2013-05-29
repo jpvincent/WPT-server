@@ -5,6 +5,9 @@ set_time_limit(0);
 $page_keywords = array('Log','History','Webpagetest','Website Speed Test');
 $page_description = "History of website performance speed tests run on WebPagetest.";
 
+if ($supportsAuth && ((array_key_exists('google_email', $_COOKIE) && strpos($_COOKIE['google_email'], '@google.com') !== false)))
+    $admin = true;
+
 // shared initializiation/loading code
 error_reporting(0);
 $days = (int)$_GET["days"];
@@ -43,7 +46,7 @@ if( $csv )
 else
 {
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
     <head>
         <title>WebPagetest - Test Log</title>
@@ -107,8 +110,10 @@ else
                         <?php
                         if( $includeip )
                             echo '<th>Requested By</th>';
-                        if( $admin )
+                        if( $admin ) {
                             echo '<th>User</th>';
+                            echo '<th>Page Loads</th>';
+                        }
                         ?>
                         <th>Label</th>
 				        <th>Url</th>
@@ -157,6 +162,7 @@ else
                                     $private = false;
                                     $video = false;
                                     $label = NULL;
+                                    $count = '';
 						            
 						            // tokenize the line
 						            $parseLine = str_replace("\t", "\t ", $line);
@@ -181,6 +187,7 @@ else
                                                 case 11: $video = ($token == '1'); break;
                                                 case 12: $label = htmlspecialchars($token); break;
                                                 case 13: $o = $token; break;
+                                                case 15: $count = $token; break;
 								            }
 							            }
 							            
@@ -266,6 +273,7 @@ else
                                                         echo '<td class="uid">' . "$testUser ($testUID)" . '</td>';
                                                     else
                                                         echo '<td class="uid"></td>';
+                                                    echo "<td class=\"count\">$count</td>";
                                                 }
                                                 $link = "/results.php?test=$guid";
                                                 if( FRIENDLY_URLS )

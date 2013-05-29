@@ -72,7 +72,6 @@
             $test['ignoreSSL'] = $req_ignoreSSL;
             $test['script'] = trim($req_script);
             $test['block'] = $req_block;
-            $test['authType'] = (int)$req_authType;
             $test['notify'] = trim($req_notify);
             $test['video'] = $req_video;
             $test['label'] = htmlspecialchars(trim($req_label));
@@ -93,13 +92,12 @@
                 $test['bwOut'] = (int)$req_bwUp;
             $test['latency'] = (int)$req_latency;
             $test['testLatency'] = (int)$req_latency;
-            $test['plr'] = trim($req_plr);
+            $test['plr'] = isset($req_plr) ? trim($req_plr) : 0;
             $test['callback'] = $req_pingback;
             if (!$json && !isset($req_pingback) && isset($req_callback)) {
                 $test['callback'] = $req_callback;
             }
             $test['agent'] = $req_agent;
-            $test['aft'] = $req_aft;
             $test['aftEarlyCutoff'] = (int)$req_aftec;
             $test['aftMinChanges'] = (int)$req_aftmc;
             $test['tcpdump'] = $req_tcpdump;
@@ -133,6 +131,9 @@
             }
             $test['pss_advanced'] = $req_pss_advanced;
             $test['shard_test'] = $req_shard ? 1 : $settings['shard_tests'];
+            $test['mobile'] = array_key_exists('mobile', $_REQUEST) && $_REQUEST['mobile'] ? 1 : 0;
+            $test['clearcerts'] = array_key_exists('clearcerts', $_REQUEST) && $_REQUEST['clearcerts'] ? 1 : 0;
+            $test['orientation'] = array_key_exists('orientation', $_REQUEST) ? trim($_REQUEST['orientation']) : 'default';
             
             // see if we need to process a template for these requests
             if (isset($req_k) && strlen($req_k)) {
@@ -251,7 +252,7 @@
             if (array_key_exists('spam', $test))
                 unset($test['spam']);
         }
-
+        
         // the API key requirements are for all test paths
         $test['vd'] = $req_vd;
         $test['vh'] = $req_vh;
@@ -539,6 +540,7 @@
                         echo "<summaryCSV>http://$host$uri/csv.php?test={$test['id']}</summaryCSV>\n";
                         echo "<detailCSV>http://$host$uri/csv.php?test={$test['id']}&amp;requests=1</detailCSV>\n";
                     }
+                    echo "<jsonUrl>http://$host$uri/jsonResult.php?test={$test['id']}/</jsonUrl>\n";
                     echo "</data>\n";
                     echo "</response>\n";
                     
@@ -566,6 +568,7 @@
                         $ret['data']['summaryCSV'] = "http://$host$uri/csv.php?test={$test['id']}";
                         $ret['data']['detailCSV'] = "http://$host$uri/csv.php?test={$test['id']}&amp;requests=1";
                     }
+                    $ret['data']['jsonUrl'] = "http://$host$uri/jsonResult.php?test={$test['id']}";
                     json_response($ret);
                 }
                 else
@@ -861,14 +864,7 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
             $test['bodies'] = $test['bodies'] ? 1 : 0;
             $test['pss_advanced'] = $test['pss_advanced'] ? 1 : 0;
             $test['noheaders'] = $test['noheaders'] ? 1 : 0;
-                
-            if( $test['aft'] )
-            {
-                $test['aft'] = 1;
-                $test['video'] = 1;
-            }
-            else
-                $test['aft'] = 0;
+            $test['aft'] = 0;
 
             if( !$test['aftMinChanges'] && $settings['aftMinChanges'] )
                 $test['aftMinChanges'] = $settings['aftMinChanges'];
@@ -942,9 +938,6 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
             
             if( !$test['aftEarlyCutoff'] && $settings['aftEarlyCutoff'] )
                 $test['aftEarlyCutoff'] = $settings['aftEarlyCutoff'];
-            
-            if( $test['aft'] && $test['runs'] > 1 )
-                $error = "Above the Fold Time testing is currently limited to 1 test at a time because it is extremely resource intensive.";
         }
     }
     elseif( !strlen($error) )
@@ -961,6 +954,7 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
 */
 function ValidateScript(&$script, &$error)
 {
+    global $test;
     $url = null;
     if (stripos($script, 'webdriver.Builder(') === false) {
         global $test;
@@ -988,6 +982,8 @@ function ValidateScript(&$script, &$error)
             elseif( !strcasecmp($command, 'fileDialog') )
                 $error = "fileDialog is not a supported command for uploaded scripts.";
         }
+        
+        $test['navigateCount'] = $navigateCount;
         
         if( !$ok )
             $error = "Invalid Script (make sure there is at least one navigate command and that the commands are tab-delimited).  Please contact us if you need help with your test script.";
@@ -1128,33 +1124,6 @@ function ValidateURL(&$url, &$error, &$settings)
 }
 
 /**
-* Generate a SNS authentication script for the given URL
-* 
-* @param mixed $test
-*/
-function GenerateSNSScript($test)
-{
-    $script = "logdata\t0\n\n";
-    
-    $script .= "setEventName\tLaunch\n";
-    $script .= "setDOMElement\tname=loginId\n";
-    $script .= "navigate\t" . 'https://my.screenname.aol.com/_cqr/login/login.psp?mcState=initialized&sitedomain=search.aol.com&authLev=1&siteState=OrigUrl%3Dhttp%253A%252F%252Fsearch.aol.com%252Faol%252Fwebhome&lang=en&locale=us&seamless=y' . "\n\n";
-
-    $script .= "setValue\tname=loginId\t{$test['login']}\n";
-    $script .= "setValue\tname=password\t{$test['password']}\n";
-    $script .= "setEventName\tLogin\n";
-    $script .= "submitForm\tname=AOLLoginForm\n\n";
-    
-    $script .= "logData\t1\n\n";
-    
-    if( strlen($test['domElement']) )
-        $script .= "setDOMElement\t{$test['domElement']}\n";
-    $script .= "navigate\t{$test['url']}\n";
-    
-    return $script;
-}    
-
-/**
 * Submit the test request file to the server
 * 
 * @param mixed $run
@@ -1167,56 +1136,20 @@ function SubmitUrl($testId, $testData, &$test, $url)
     global $error;
     global $locations;
     
+    $script = ProcessTestScript($url, $test);
+    
     $out = "Test ID=$testId\r\nurl=";
-    if( !strlen($test['script']) )
-        $out .= $url;
-    else
+    if (isset($script) && strlen($script))
         $out .= "script://$testId.pts";
+    else
+        $out .= $url;
 
     // add the actual test configuration
     $out .= $testData;
+
+    if (isset($script) && strlen($script))
+      $out .= "\r\n[Script]\r\n" . $script;
     
-    // add the script data (if we're running a script)
-    if( strlen($test['script']) )
-    {
-        $script = trim($test['script']);
-        if (strlen($url))
-        {
-            if( strncasecmp($url, 'http:', 5) && strncasecmp($url, 'https:', 6))
-                $url = 'http://' . $url;
-            $script = str_ireplace('%URL%', $url, $script);
-            $parts = parse_url($url);
-            $host = $parts['host'];
-            if( strlen($host) )
-            {
-                $script = str_ireplace('%HOST%', $host, $script);
-                $script = str_ireplace('%HOST_REGEX%', str_replace('.', '\\.', $host), $script);
-                if( stripos($script, '%HOSTR%') !== false )
-                {
-                    // do host substitution but also clone the command for a final redirected domain if there are redirects involved
-                    if( GetRedirect($url, $rhost, $rurl) )
-                    {
-                        $lines = explode("\r\n", $script);
-                        $script = '';
-                        foreach( $lines as $line )
-                        {
-                            if( stripos($line, '%HOSTR%') !== false )
-                            {
-                                $script .= str_ireplace('%HOSTR%', $host, $line) . "\r\n";
-                                $script .= str_ireplace('%HOSTR%', $rhost, $line) . "\r\n";
-                            }
-                            else
-                                $script .= $line . "\r\n";
-                        }
-                    }
-                    else
-                        $script = str_ireplace('%HOSTR%', $host, $script);
-                }
-            }
-        }
-        $out .= "\r\n[Script]\r\n" . $script;
-    }
-        
     // write out the actual test file
     $ext = 'url';
     if( $test['priority'] )
@@ -1438,11 +1371,16 @@ function LogTest(&$test, $testId, $url)
         $ip = $_SERVER['REMOTE_ADDR'];
         if( array_key_exists('ip',$test) && strlen($test['ip']) )
             $ip = $test['ip'];
+        $pageLoads = $test['runs'];
+        if (!$test['fvonly'])
+            $pageLoads *= 2;
+        if (array_key_exists('navigateCount', $test) && $test['navigateCount'] > 0)
+            $pageLoads *= $test['navigateCount'];
         
         $log = gmdate("Y-m-d G:i:s") . "\t$ip" . "\t0" . "\t0";
         $log .= "\t$testId" . "\t$url" . "\t{$test['locationText']}" . "\t{$test['private']}";
         $log .= "\t{$test['uid']}" . "\t{$test['user']}" . "\t$video" . "\t{$test['label']}";
-        $log .= "\t{$test['owner']}" . "\t{$test['key']}" . "\r\n";
+        $log .= "\t{$test['owner']}" . "\t{$test['key']}" . "\t$pageLoads" . "\r\n";
 
         // flock will block until we acquire the lock or the script times out and is killed
         if( flock($file, LOCK_EX) )
@@ -1594,7 +1532,6 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
         $testInfo .= "id=$testId\r\n";
         $testInfo .= "batch=$batch\r\n";
         $testInfo .= "batch_locations=$batch_locations\r\n";
-        $testInfo .= "aft={$test['aft']}\r\n";
         $testInfo .= "sensitive={$test['sensitive']}\r\n";
         if( strlen($test['login']) )
             $testInfo .= "authenticated=1\r\n";
@@ -1663,12 +1600,6 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
                 $testFile .= "\r\nblockads=1";
             if( $test['video'] )
                 $testFile .= "\r\nCapture Video=1";
-            if( $test['aft'] )
-            {
-                $testFile .= "\r\naft=1";
-                $testFile .= "\r\naftMinChanges={$test['aftMinChanges']}";
-                $testFile .= "\r\naftEarlyCutoff={$test['aftEarlyCutoff']}";
-            }
             if( strlen($test['type']) )
                 $testFile .= "\r\ntype={$test['type']}";
             if( $test['block'] )
@@ -1709,6 +1640,12 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
                 $testFile .= "clearRV={$test['clear_rv']}\r\n";
             if( $test['keepua'] )
                 $testFile .= "keepua=1\r\n";
+            if( $test['mobile'] )
+                $testFile .= "mobile=1\r\n";
+            if( $test['clearcerts'] )
+                $testFile .= "clearcerts=1\r\n";
+            if( $test['orientation'] )
+                $testFile .= "orientation={$test['orientation']}\r\n";
             
             // see if we need to add custom scan rules
             if (array_key_exists('custom_rules', $test)) {
@@ -1720,15 +1657,6 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
                 }
             }
 
-            // see if we need to generate a SNS authentication script
-            if( strlen($test['login']) && strlen($test['password']) )
-            {
-                if( $test['authType'] == 1 )
-                    $test['script'] = GenerateSNSScript($test);
-                else
-                    $testFile .= "\r\nBasic Auth={$test['login']}:{$test['password']}\r\n";
-            }
-                
             if( !SubmitUrl($testId, $testFile, $test, $url) )
                 $testId = null;
         }
@@ -1894,10 +1822,10 @@ function RelayTest()
         $test['job'] = $rkey . '.' . $test['job'];
         $testPath = './' . GetTestPath($id);
         @mkdir($testPath, 0777, true);
-        file_put_contents("$testPath/testinfo.ini", $ini);
-        gz_file_put_contents("$testPath/testinfo.json", json_encode($test));
         $job = str_replace($test['id'], $id, $job);
-        WriteJob($location, $test, $job);
+        file_put_contents("$testPath/testinfo.ini", $ini);
+        WriteJob($location, $test, $job, $id);
+        gz_file_put_contents("$testPath/testinfo.json", json_encode($test));
     }
     
     if( isset($error) )
@@ -2071,7 +1999,7 @@ function NumToString($num) {
 
 function ErrorPage($error) {
     ?>
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+    <!DOCTYPE html>
     <html>
         <head>
             <title>WebPagetest - Test Error</title>
@@ -2091,4 +2019,55 @@ function ErrorPage($error) {
     </html>
     <?php
 }
+
+/**
+* Automatically create a script if we have test options that need to be translated
+* 
+* @param mixed $test
+*/
+function ProcessTestScript($url, &$test) {
+  $script = null;
+  // add the script data (if we're running a script)
+  if (strlen($test['script'])) {
+    $script = trim($test['script']);
+    if (strlen($url)) {
+      if (strncasecmp($url, 'http:', 5) && strncasecmp($url, 'https:', 6))
+        $url = 'http://' . $url;
+      $script = str_ireplace('%URL%', $url, $script);
+      $parts = parse_url($url);
+      $host = $parts['host'];
+      if (strlen($host)) {
+        $script = str_ireplace('%HOST%', $host, $script);
+        $script = str_ireplace('%HOST_REGEX%', str_replace('.', '\\.', $host), $script);
+        if (stripos($script, '%HOSTR%') !== false) {
+          if (GetRedirect($url, $rhost, $rurl)) {
+            $lines = explode("\r\n", $script);
+            $script = '';
+            foreach ($lines as $line) {
+              if (stripos($line, '%HOSTR%') !== false) {
+                $script .= str_ireplace('%HOSTR%', $host, $line) . "\r\n";
+                $script .= str_ireplace('%HOSTR%', $rhost, $line) . "\r\n";
+              }
+              else
+                $script .= $line . "\r\n";
+            }
+          }
+          else
+            $script = str_ireplace('%HOSTR%', $host, $script);
+        }
+      }
+    }
+  }
+  
+  // Handle HTTP Basic Auth
+  if (strlen($test['login']) && strlen($test['password'])) {
+    $header = "Authorization: Basic " . base64_encode("{$test['login']}:{$test['password']}");
+    $testFile .= "Basic Auth={$test['login']}:{$test['password']}\r\n";
+    if (!isset($script) || !strlen($script))
+      $script = "navigate\t$url";
+    $script = "addHeader\t$header\r\n" . $script;
+  }
+  return $script;
+}
+
 ?>

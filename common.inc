@@ -46,18 +46,20 @@ if (function_exists('apache_request_headers')) {
         $_SERVER["REMOTE_ADDR"] = $headers['X-Forwarded-For'];
     }
 }
-if (array_key_exists('HTTP_MOD_REWRITE', $_SERVER) && $_SERVER['HTTP_MOD_REWRITE'] == 'On')
+if (array_key_exists('HTTP_MOD_REWRITE', $_SERVER) && $_SERVER['HTTP_MOD_REWRITE'] == 'On') {
     define('FRIENDLY_URLS', true);
-else
+    define('VER_TIMELINE', '1/');       // version of the timeline javascript
+} else {
     define('FRIENDLY_URLS', false);
+    define('VER_TIMELINE', '');       // Leave the timeline version empty
+}
 
 // constants
 define('VER_WEBPAGETEST', '2.2.1');   // webpagetest version
 define('VER_CSS', 59);           // version of the sitewide css file
 define('VER_JS', 28);            // version of the sitewide javascript file
-define('VER_JS_TEST', 21);       // version of the javascript specific to the test pages
+define('VER_JS_TEST', 25);       // version of the javascript specific to the test pages
 define('VER_JS_RUNNING', 1);     // version of the javascript specific to the test running status page
-define('VER_TIMELINE', 1);       // version of the timeline javascript
 define('UNKNOWN_TIME', -1);      // Value used as a flag for an unknown time.
                                  // To find code that fails to check that a time
                                  // is unknown, change this constant to a large
@@ -87,7 +89,7 @@ if (!array_key_exists('nogzip', $settings))
     $settings['nogzip'] = false;
 if (!array_key_exists('nolinks', $settings))
     $settings['nolinks'] = 0;
-if (!array_key_exists('shardTests', $settings))
+if (!array_key_exists('shard_tests', $settings))
     $settings['shard_tests'] = 0;
 
 $privateInstall = true;
@@ -297,6 +299,8 @@ function ShortenUrl($url) {
 function GetFileUrl($url)
 {
   $parts = parse_url($url);
+  if (!array_key_exists('path', $parts))
+    $parts['path'] = '';
   return trim(preg_replace( '/[^\w.]/', '_', substr("{$parts['host']}/{$parts['path']}", 0, 50)), '_');
 }
 
@@ -350,10 +354,13 @@ function SetLocaleFromBrowser()
   $langs = generate_languages();
   foreach ($langs as $lang)
   {
-    if (strlen($lang > 2))
-      $lang = substr($lang['lang'], 0, 3) . strtoupper(substr($lang['lang'], 3, 2));
-    if (setlocale(LC_TIME, $lang['lang']) !== FALSE)
-      break;   // it worked!
+    if (array_key_exists('lang', $lang)) {
+      $language = $lang['lang'];
+      if (strlen($language > 2))
+        $language = substr($language, 0, 3) . strtoupper(substr($language, 3, 2));
+      if (setlocale(LC_TIME, $language) !== FALSE)
+        break;   // it worked!
+    }
   }
 }
 
@@ -998,6 +1005,8 @@ function ParseLocations(&$locations) {
                 $location['comment'] = str_replace(
                     "'", '"', $locations[$name]['comment']);  // "
             }
+            if (array_key_exists('group', $locations[$name]))
+                $location['group'] = $locations[$name]['group'];
             $location['name'] = $name;
             $loc['locations'][$name] = $location;
         }
@@ -1158,7 +1167,7 @@ function GetTestInfoHtml($includeScript = true)
         $html .= 'Test runs: <b>' . $test['test']['runs'] . '</b><br>';
     if( array_key_exists('authenticated', $test['test']) && (int)$test['test']['authenticated'] == 1) 
         $html .= '<b>Authenticated: ' . $login . '</b><br>';
-    if( isset($test['testinfo']) && !strcasecmp($test['testinfo']['connectivity'], 'custom') )
+    if( array_key_exists('testinfo', $test) && array_key_exists('connectivity', $test['testinfo']) && !strcasecmp($test['testinfo']['connectivity'], 'custom') )
     {
         $html .= "<b>Connectivity:</b> {$test['testinfo']['bwIn']}/{$test['testinfo']['bwOut']} Kbps, {$test['testinfo']['latency']}ms Latency";
         if( $test['testinfo']['plr'] )
@@ -1169,7 +1178,7 @@ function GetTestInfoHtml($includeScript = true)
     {
         $show = false;
         if ($includeScript) {
-            if ($admin || $settings['show_script_in_results']) {
+            if ($admin || (array_key_exists('show_script_in_results', $settings) && $settings['show_script_in_results'])) {
                 $show = true;
             } elseif ($isOwner && !$test['testinfo']['sensitive']) {
                 $show = true;
@@ -1262,8 +1271,12 @@ function RestoreTest($id)
         }
         else
             $ret = true;
+
+        // Handle AVI processing here if necessary
+        require_once('./video/avi2frames.inc.php');
+        ProcessAllAVIVideos($testPath);
     }
-        
+    
     return $ret;
 }
 
@@ -1318,6 +1331,7 @@ function fastimagecopyresampled (&$dst_image, $src_image, $dst_x, $dst_y, $src_x
 */
 function GetPendingTests($loc, &$count, &$avgTime)
 {
+    global $settings;
     $total = 0;
     $locations = explode(',', $loc);
     foreach($locations as $location) {
@@ -1325,8 +1339,9 @@ function GetPendingTests($loc, &$count, &$avgTime)
         $location = $parts[0];
         $count = 0;
         $avgTime = 0;
-        $tests = json_decode(file_get_contents("./tmp/$location.tests"), true);
-        if( $tests )
+        if (is_file("./tmp/$location.tests"))
+          $tests = json_decode(file_get_contents("./tmp/$location.tests"), true);
+        if( isset($tests) && is_array($tests) && array_key_exists('times', $tests) )
         {
             $count = (int)$tests['tests'];
             $timeCount = count($tests['times']);
@@ -1339,7 +1354,20 @@ function GetPendingTests($loc, &$count, &$avgTime)
             }
         }
         // now count just the low priority tests
-        if( LoadJobQueue("./work/jobs/$location", $queue) ) {
+        if (array_key_exists('beanstalkd', $settings)) {
+            require_once('./lib/beanstalkd/pheanstalk_init.php');
+            $pheanstalk = new Pheanstalk_Pheanstalk($settings['beanstalkd']);
+            for ($priority = 0; $priority < 9; $priority++) {
+                $tube = 'wpt.' . md5("./work/jobs/$location") . ".$priority";
+                try {
+                    $stats = $pheanstalk->statsTube($tube);
+                    $total += intval($stats['current-jobs-ready']);
+                    if (!$priority)
+                        $count = intval($stats['current-jobs-ready']);
+                } catch(Exception $e) {
+                }
+            }
+        } elseif( LoadJobQueue("./work/jobs/$location", $queue) ) {
             foreach( $queue as $priority => &$q ) {
                 if ($priority < 9)
                     $total += count($q);
@@ -1351,6 +1379,33 @@ function GetPendingTests($loc, &$count, &$avgTime)
 }
 
 /**
+* Get the lengths of each of the test queues for the given location
+* 
+* @param mixed $location
+*/
+function GetQueueLengths($location) {
+    global $settings;
+    $queues = array();
+    if (array_key_exists('beanstalkd', $settings)) {
+        require_once('./lib/beanstalkd/pheanstalk_init.php');
+        $pheanstalk = new Pheanstalk_Pheanstalk($settings['beanstalkd']);
+        for ($priority = 0; $priority <= 9; $priority++) {
+            $queues[$priority] = 0;
+            $tube = 'wpt.' . md5("./work/jobs/$location") . ".$priority";
+            try {
+                $stats = $pheanstalk->statsTube($tube);
+                $queues[$priority] = intval($stats['current-jobs-ready']);
+            } catch(Exception $e) {
+            }
+        }
+    } elseif( LoadJobQueue("./work/jobs/$location", $queue) ) {
+        foreach( $queue as $priority => &$q )
+            $queues[$priority] = count($q);
+    }
+    return $queues;
+}
+
+/**
 * Get the number of active testers at the given location
 */
 function GetTesterCount($location)
@@ -1358,13 +1413,17 @@ function GetTesterCount($location)
     $parts = explode(':', $location);
     $location = $parts[0];
     $count = 0;
-    $testers = json_decode(file_get_contents("./tmp/$location.tm"), true);
-    if( count($testers) )
+    if (is_file("./tmp/$location.tm"))
+      $testers = json_decode(file_get_contents("./tmp/$location.tm"), true);
+    if( isset($testers) && is_array($testers) && count($testers) )
     {
         $now = time();
         foreach( $testers as &$tester )
         {
-            if( !$tester['offline'] && $tester['updated'] && $now - $tester['updated'] < 3600 )
+            if( (!array_key_exists('offline', $tester) ||
+                 !$tester['offline']) &&
+                $tester['updated'] &&
+                $now - $tester['updated'] < 3600 )
                 $count++;
         }
     }
@@ -1377,12 +1436,24 @@ function GetTesterCount($location)
 */
 function AddJobFile($workDir, $file, $priority, $queue_limit = 0)
 {
+    global $settings;
     $ret = false;
-    if (LoadJobQueue($workDir, $queue)) {
+
+    if (array_key_exists('beanstalkd', $settings)) {
+        try {
+            $tube = 'wpt.' . md5($workDir) . ".$priority";
+            require_once('./lib/beanstalkd/pheanstalk_init.php');
+            $pheanstalk = new Pheanstalk_Pheanstalk($settings['beanstalkd']);
+            $pheanstalk->putInTube($tube, $file);
+            $ret = true;
+        } catch(Exception $e) {
+        }
+    } elseif (LoadJobQueue($workDir, $queue)) {
         if( !$queue_limit || count($queue[$priority]) < $queue_limit )
             if( array_push($queue[$priority], $file) )
                 $ret = SaveJobQueue($workDir, $queue);
     }
+    
     return $ret;
 }
 
@@ -1391,8 +1462,19 @@ function AddJobFile($workDir, $file, $priority, $queue_limit = 0)
 */
 function AddJobFileHead($workDir, $file, $priority, $atFront = false)
 {
+    global $settings;
     $ret = false;
-    if (LoadJobQueue($workDir, $queue)) {
+
+    if (array_key_exists('beanstalkd', $settings)) {
+        try {
+            $tube = 'wpt.' . md5($workDir) . ".$priority";
+            require_once('./lib/beanstalkd/pheanstalk_init.php');
+            $pheanstalk = new Pheanstalk_Pheanstalk($settings['beanstalkd']);
+            $pheanstalk->putInTube($tube, $file, '0');
+            $ret = true;
+        } catch(Exception $e) {
+        }
+    } elseif (LoadJobQueue($workDir, $queue)) {
         // we actually want to insert it as the second test if there is already a queue
         if (!$atFront && count($queue[$priority]))
             $first = array_shift($queue[$priority]);
@@ -1410,25 +1492,44 @@ function AddJobFileHead($workDir, $file, $priority, $atFront = false)
 */
 function GetJobFile($workDir, &$priority) {
     $file = null;
-    $modified = false;
+    global $settings;
     
-    if (LoadJobQueue($workDir, $queue)) {
+    if (array_key_exists('beanstalkd', $settings)) {
+        require_once('./lib/beanstalkd/pheanstalk_init.php');
+        $pheanstalk = new Pheanstalk_Pheanstalk($settings['beanstalkd']);
+        $priority = 0;
+        while (!isset($file) && $priority <= 9) {
+            $found = false;
+            try {
+                $tube = 'wpt.' . md5($workDir) . ".$priority";
+                $job = $pheanstalk->reserveFromTube($tube, 0);
+                if ($job !== false) {
+                    $found = true;
+                    $file = $job->getData();
+                    if (isset($file) && !is_file("$workDir/$file"))
+                        unset($file);
+                    $pheanstalk->delete($job);
+                }
+            } catch(Exception $e) {
+            }
+            if (!$found && !isset($file))
+                $priority++;
+        }
+    } elseif (LoadJobQueue($workDir, $queue)) {
+        $modified = false;
         $priority = 0;
         while (!isset($file) && $priority <= 9) {
             $file = array_shift($queue[$priority]);
-            if (isset($file)) {
+            if (isset($file))
                 $modified = true;
-            }
-            if (isset($file) && !is_file("$workDir/$file")) {
+            if (isset($file) && !is_file("$workDir/$file"))
                 unset($file);
-            } else if (!isset($file)) {
+            elseif (!isset($file))
                 $priority++;
-            }
         }
 
-        if ($modified) {
+        if ($modified)
             SaveJobQueue($workDir, $queue);
-        }
     }
 
     return $file;
@@ -1441,16 +1542,15 @@ function FindJobPosition($workDir, $testId)
 {
     $count = 0;
     $found = false;
+    global $settings;
     
-    if( LoadJobQueue($workDir, $queue) )
-    {
+    if (array_key_exists('beanstalkd', $settings)) {
+        $found = true;
+    } elseif( LoadJobQueue($workDir, $queue) ) {
         $priority = 0;
-        while( !$found && $priority <= 9 )
-        {
-            foreach($queue[$priority] as $file)
-            {
-                if( stripos($file, $testId) !== false )
-                {
+        while( !$found && $priority <= 9 ) {
+            foreach($queue[$priority] as $file) {
+                if( stripos($file, $testId) !== false ) {
                     $found = true;
                     break;
                 }
@@ -1489,9 +1589,8 @@ function LoadJobQueue($workDir, &$queue)
                             break;
                         }
                     }
-                    if ($empty) {
+                    if ($empty)
                         unset($queue);
-                    }
                 } else {
                     unset($queue);
                 }
@@ -1545,7 +1644,7 @@ function SaveJobQueue($workDir, &$queue)
 {
     $ret = false;
     $queueName = sha1($workDir);
-    if( file_put_contents("./tmp/$queueName.queue", json_encode($queue)) )
+    if (file_put_contents("./tmp/$queueName.queue", json_encode($queue)) )
         $ret = true;
         
     return $ret;
@@ -1649,34 +1748,30 @@ function UnlockLocation($lock)
 * 
 * @param mixed $path
 */
-function loadVideo($path)
+function loadVideo($path, &$frames)
 {
+    $ret = false;
     $frames = null;
-    
-    if( is_dir($path) )
-    {
+    if (is_dir($path)) {
         $files = glob( $path . '/frame_*.jpg', GLOB_NOSORT );
-        if( $files && count($files) )
-        {
+        if ($files && count($files)) {
+            $ret = true;
             $frames = array();
-            foreach( $files as $file )
-            {
+            foreach ($files as $file) {
                 $file = basename($file);
                 $parts = explode('_', $file);
-                if( count($parts) >= 2 )
-                {
+                if (count($parts) >= 2) {
                     $index = (int)$parts[1];
                     $frames[$index] = $file;
                 }
             }
-            
             
             // sort the frames in order
             ksort($frames, SORT_NUMERIC);
         }
     }
     
-    return $frames;
+    return $ret;
 }
 
 /**
@@ -1897,25 +1992,20 @@ function ShardKey($test_num) {
     
     return $key;
 }
-
 function logOutput($msg, $file="wpt_log.html") {
-  //$timeStamp = date(DATE_W3C);
-    $timeStamp = date("m/d/Y h:i:s");
-  $a = "";
-  $m = "[ " . $timeStamp . " ] " . $msg . "\n";
-  if (!($fp = fopen($file, 'a'))) {
-    echo "[ERROR] [logOutput] Cannot open log file";
-  } else {
-    fwrite($fp, $a . "" . $m);
-  }
-
-  // truncate only once per 
-  static $already_truncated = false;
-
-  if($already_truncated === false) {
-    ftruncate($fp, 100000); // 100Kb max
-    $already_truncated = true;
-  }
-    
-  fclose($fp);
+	$timeStamp = date("m/d/Y h:i:s");
+	$a = "";
+	$m = "[ " . $timeStamp . " ] " . $msg . "\n";
+	if (!($fp = fopen($file, 'a'))) {
+		echo "[ERROR] [logOutput] Cannot open log file";
+	} else {
+		fwrite($fp, $a . "" . $m);
+	}
+	// truncate only once per PHP process
+	static $already_truncated = false;
+	if($already_truncated === false) {
+		ftruncate($fp, 100000); // 100Kb max
+		$already_truncated = true;
+	}
+	fclose($fp);
 }

@@ -1005,144 +1005,26 @@ logoutput(print_r($parsedHar['log']['pages'], true));
 
         // Write the title line
         file_put_contents($curPageData["runFileName"],
-            "Date\t".
-"Time\t".
-"Event Name\t".
-"IP Address\t".
-"Action\t".
-"Host\t".
-"URL\t".
-"Response Code\t".
-"" . 
-            "Time to Load (ms)\t".
-"Time to First Byte (ms)\t".
-"Start Time (ms)\t".
-"Bytes Out\t".
-"".
-            "Bytes In\t".
-"Object Size\t".
-"Cookie Size (out)\t".
-"Cookie Count(out)\t".
-"Expires\t".
-"" .
-            "Cache Control\t".
-"Content Type\t".
-"Content Encoding\t".
-"Transaction Type\t".
-"Socket ID\t".
-"" . 
-            "Document ID\t".
-"End Time (ms)\t".
-"Descriptor\t".
-"Lab ID\t".
-"Dialer ID\t".
-"Connection Type\t".
-"" .
-            "Cached\t".
-"Event URL\t".
-"Pagetest Build\t".
-"Measurement Type\t".
-"Experimental\t".
-"Event GUID\t".
-"" . 
-            "Sequence Number\t".
-"Cache Score\t".
-"Static CDN Score\t".
-"GZIP Score\t".
-"Cookie Score\t".
-"" .
-            "Keep-Alive Score\t".
-"DOCTYPE Score\t".
-"Minify Score\t".
-"Combine Score\t".
-"Compression Score\t".
-"" .
-            "ETag Score\t".
-"Flagged\t".
-"Secure\t".
-"DNS Time\t".
-"Connect Time\t".
-"SSL Time\t".
-"Gzip Total Bytes\t".
-"" .
-            "Gzip Savings\t".
-"Minify Total Bytes\t".
-"Minify Savings\t".
-"Image Total Bytes\t".
-"Image Savings\t".
-"" .
-            "Cache Time (sec)\t".
-"Real Start Time (ms)\t".
-"Full Time to Load (ms)\t".
-"Optimization Checked\r\n");
+            "Date\tTime\tEvent Name\tIP Address\tAction\tHost\tURL\tResponse Code\t" . 
+            "Time to Load (ms)\tTime to First Byte (ms)\tStart Time (ms)\tBytes Out\t".
+            "Bytes In\tObject Size\tCookie Size (out)\tCookie Count(out)\tExpires\t" .
+            "Cache Control\tContent Type\tContent Encoding\tTransaction Type\tSocket ID\t" . 
+            "Document ID\tEnd Time (ms)\tDescriptor\tLab ID\tDialer ID\tConnection Type\t" .
+            "Cached\tEvent URL\tPagetest Build\tMeasurement Type\tExperimental\tEvent GUID\t" . 
+            "Sequence Number\tCache Score\tStatic CDN Score\tGZIP Score\tCookie Score\t" .
+            "Keep-Alive Score\tDOCTYPE Score\tMinify Score\tCombine Score\tCompression Score\t" .
+            "ETag Score\tFlagged\tSecure\tDNS Time\tConnect Time\tSSL Time\tGzip Total Bytes\t" .
+            "Gzip Savings\tMinify Total Bytes\tMinify Savings\tImage Total Bytes\tImage Savings\t" .
+            "Cache Time (sec)\tReal Start Time (ms)\tFull Time to Load (ms)\tOptimization Checked\r\n");
 
         // Write the page line line
         file_put_contents($curPageData["runFileName"],
-            "{$curPageData['startDate']}\t".
-        "{$curPageData['startTime']}\t".
-        "".
-                    "{$curPageData['title']}\t".
-        "\t".
-        "\t".
-        "{$curPageData['host']}\t".
-        "{$curPageData['url']}\t".
-        "".
-                    "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "\t".
-        "\t".
-        "\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "Launch\t".
-        "-1\t".
-        "0\t".
-        "-1\t".
-        "".
-        "{$curPageData['cached']}\t".
-        "{$curPageData['url']}\t".
-        "".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "-1\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "\t".
-        "\t".
-        "\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "0\t".
-        "".
-                    "\t".
-        "0\t".
-        "\t".
-        "0".PHP_EOL.PHP_EOL, FILE_APPEND);
+            "{$curPageData['startDate']}\t{$curPageData['startTime']}\t".
+            "{$curPageData['title']}\t\t\t{$curPageData['host']}\t{$curPageData['url']}\t".
+            "0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t\t\t\t0\t0\t0\t0\tLaunch\t-1\t0\t-1\t".
+            "{$curPageData['cached']}\t{$curPageData['url']}\t".
+            "0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t-1\t0\t0\t0\t0\t0\t0\t\t\t\t0\t0\t0\t0\t0\t0\t".
+            "\t0\t\t0\r\n", FILE_APPEND);
 
         // Write the raw data in the report (not accurate, may need to fix after)
         // TODO: Write real data
@@ -1482,74 +1364,7 @@ logoutput(print_r($parsedHar['log']['pages'], true));
         // Create the page title line
         $curPageData["resourceFileName"] = $curPageData["runFilePrefix"] . "IEWPG.txt";
         file_put_contents($curPageData["resourceFileName"],
-            "Date\tTime\tEvent Name\tURL\tLoad Time (ms)\t".
-            "Time to First Byte (ms)\t".
-            "unused\t".
-            "Bytes Out\t".
-            "Bytes In\t".
-            "DNS Lookups\t".
-            "Connections\t".
-            "Requests\t".
-            "OK Responses\t".
-            "Redirects\t".
-            "Not Modified\t".
-            "Not Found\t".
-            "Other Responses\t".
-            "Error Code\t".
-            "Time to Start Render (ms)\t".
-            "Segments Transmitted\t".
-            "Segments Retransmitted\t".
-            "Packet Loss (out)\t".
-            "Activity Time(ms)\t".
-            "Descriptor\t".
-            "Lab ID\t".
-            "Dialer ID\t".
-            "Connection Type\t".
-            "Cached\t".
-            "Event URL\t".
-            "Pagetest Build\t".
-            "Measurement Type\t".
-            "Experimental\t".
-            "Doc Complete Time (ms)\t".
-            "Event GUID\t".
-            "Time to DOM Element (ms)\t".
-            "Includes Object Data\t".
-            "Cache Score\t".
-            "Static CDN Score\t".
-            "One CDN Score\t".
-            "GZIP Score\t".
-            "Cookie Score\t".
-            "Keep-Alive Score\t".
-            "DOCTYPE Score\t".
-            "Minify Score\t".
-            "Combine Score\t".
-            "Bytes Out (Doc)\t".
-            "Bytes In (Doc)\t".
-            "DNS Lookups (Doc)\t".
-            "Connections (Doc)\t".
-            "Requests (Doc)\t".
-            "OK Responses (Doc)\t".
-            "Redirects (Doc)\t".
-            "Not Modified (Doc)\t".
-            "Not Found (Doc)\t".
-            "Other Responses (Doc)\t".
-            "Compression Score\t".
-            "Host\t".
-            "IP Address\t".
-            "ETag Score\t".
-            "Flagged Requests\t".
-            "Flagged Connections\t".
-            "Max Simultaneous Flagged Connections\t".
-            "Time to Base Page Complete (ms)\t".
-            "Base Page Result\t".
-            "Gzip Total Bytes\t".
-            "Gzip Savings\t".
-            "Minify Total Bytes\t".
-            "Minify Savings\t".
-            "Image Total Bytes\t".
-            "Image Savings\t".
-            "Base Page Redirects\t".
-            "Optimization Checked\r\n");
+            "Date\tTime\tEvent Name\tURL\tLoad Time (ms)\tTime to First Byte (ms)\tunused\tBytes Out\tBytes In\tDNS Lookups\tConnections\tRequests\tOK Responses\tRedirects\tNot Modified\tNot Found\tOther Responses\tError Code\tTime to Start Render (ms)\tSegments Transmitted\tSegments Retransmitted\tPacket Loss (out)\tActivity Time(ms)\tDescriptor\tLab ID\tDialer ID\tConnection Type\tCached\tEvent URL\tPagetest Build\tMeasurement Type\tExperimental\tDoc Complete Time (ms)\tEvent GUID\tTime to DOM Element (ms)\tIncludes Object Data\tCache Score\tStatic CDN Score\tOne CDN Score\tGZIP Score\tCookie Score\tKeep-Alive Score\tDOCTYPE Score\tMinify Score\tCombine Score\tBytes Out (Doc)\tBytes In (Doc)\tDNS Lookups (Doc)\tConnections (Doc)\tRequests (Doc)\tOK Responses (Doc)\tRedirects (Doc)\tNot Modified (Doc)\tNot Found (Doc)\tOther Responses (Doc)\tCompression Score\tHost\tIP Address\tETag Score\tFlagged Requests\tFlagged Connections\tMax Simultaneous Flagged Connections\tTime to Base Page Complete (ms)\tBase Page Result\tGzip Total Bytes\tGzip Savings\tMinify Total Bytes\tMinify Savings\tImage Total Bytes\tImage Savings\tBase Page Redirects\tOptimization Checked\r\n");
 
         // Write the page's data
         file_put_contents($curPageData["resourceFileName"],
@@ -1893,3 +1708,5 @@ $headerLocal = "Date Time Event Name URL Load Time (ms) Time to First Byte (ms) 
 $content = $headerLocal.gz_file_get_contents($iewpg);
 $iewpg = $testPath."/".$runNumber."_IEWPG.txt";
 gz_file_put_contents($iewpg, $content);
+
+?>

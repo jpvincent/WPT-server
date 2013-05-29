@@ -16,8 +16,13 @@ function GetDevToolsProgress($testPath, $run, $cached) {
             $startTime = 0;
             $fullScreen = 0;
             $regions = array();
-            $didLayout = false;
-            $didReceiveResponse = false;
+            if (DevToolsHasLayout($timeline)) {
+              $didLayout = false;
+              $didReceiveResponse = false;
+            } else {
+              $didLayout = true;
+              $didReceiveResponse = true;
+            }
             global $eventList;
             $eventList = array();
             foreach($timeline as &$entry) {
@@ -120,15 +125,6 @@ function ProcessPaintEntry(&$entry, &$startTime, &$fullScreen, &$regions, $frame
     $ret = false;
     if (isset($entry) && is_array($entry)) {
         $hadPaintChildren = false;
-/*
-        if (array_key_exists('type', $entry) && array_key_exists('startTime', $entry)) {
-            global $eventList;
-            $key = "{$entry['startTime']}";
-            while (array_key_exists($key, $eventList))
-                $key .= '0';
-            $eventList[$key] = $entry;
-        }
-*/
         if (!$didReceiveResponse &&
             array_key_exists('type', $entry) &&
             !strcasecmp($entry['type'], 'ResourceReceiveResponse')) {
@@ -460,14 +456,6 @@ function DevToolsFilterNetRequests($events, &$requests, &$pageData) {
     $requests = array();
     $rawRequests = array();
     foreach ($events as $event) {
-        if (array_key_exists('timestamp', $event) &&
-            (!$pageData['startTime'] ||
-             $event['timestamp'] < $pageData['startTime']))
-            $pageData['startTime'] = $event['timestamp'];
-        if (array_key_exists('timestamp', $event) &&
-            (!$pageData['endTime'] ||
-             $event['timestamp'] > $pageData['endTime']))
-            $pageData['endTime'] = $event['timestamp'];
         if ($event['method'] == 'Page.loadEventFired' &&
             array_key_exists('timestamp', $event) &&
             $event['timestamp'] > $pageData['onload'])
@@ -482,6 +470,7 @@ function DevToolsFilterNetRequests($events, &$requests, &$pageData) {
                 $request = $event['request'];
                 $request['id'] = $id;
                 $request['startTime'] = $event['timestamp'];
+                $request['endTime'] = $event['timestamp'];
                 if (array_key_exists('initiator', $event))
                     $request['initiator'] = $event['initiator'];
                 $rawRequests[$id] = $request;
@@ -514,11 +503,17 @@ function DevToolsFilterNetRequests($events, &$requests, &$pageData) {
                     $rawRequests[$id]['response'] = $event['response'];
                 }
                 if ($event['method'] == 'Network.loadingFinished') {
+                    if (!array_key_exists('firstByteTime', $rawRequests[$id]))
+                        $rawRequests[$id]['firstByteTime'] = $event['timestamp'];
                     if (!array_key_exists('endTime', $rawRequests[$id]) || 
                         $event['timestamp'] > $rawRequests[$id]['endTime'])
                         $rawRequests[$id]['endTime'] = $event['timestamp'];
                 }
                 if ($event['method'] == 'Network.loadingFailed') {
+                    $rawRequests[$id]['fromNet'] = true;
+                    $rawRequests[$id]['errorCode'] = 12999;
+                    if (!array_key_exists('firstByteTime', $rawRequests[$id]))
+                        $rawRequests[$id]['firstByteTime'] = $event['timestamp'];
                     if (!array_key_exists('endTime', $rawRequests[$id]) || 
                         $event['timestamp'] > $rawRequests[$id]['endTime'])
                         $rawRequests[$id]['endTime'] = $event['timestamp'];
@@ -532,6 +527,14 @@ function DevToolsFilterNetRequests($events, &$requests, &$pageData) {
     }
     // pull out just the requests that were served on the wire
     foreach ($rawRequests as $request) {
+        if (array_key_exists('startTime', $request) &&
+            (!$pageData['startTime'] ||
+             $request['startTime'] < $pageData['startTime']))
+            $pageData['startTime'] = $request['startTime'];
+        if (array_key_exists('endTime', $request) &&
+            (!$pageData['endTime'] ||
+             $request['endTime'] > $pageData['endTime']))
+            $pageData['endTime'] = $request['endTime'];
         if (array_key_exists('fromNet', $request) &&
             $request['fromNet'])
             $requests[] = $request;
@@ -592,5 +595,52 @@ function GetDevToolsEvents($filter, $testPath, $run, $cached, &$events) {
     if (count($events))
         $ok = true;
     return $ok;
+}
+
+/**
+* See if there are layout and network events in the trace
+* 
+* @param mixed $timeline
+*/
+function DevToolsHasLayout(&$timeline) {
+  $hasLayout = false;
+  $hasResponse = false;
+  $ret = false;
+  foreach ($timeline as &$entry) {
+    DevToolsEventHasLayout($entry, $hasLayout, $hasResponse);
+    if ($hasLayout && $hasResponse) {
+      $ret = true;
+      break;
+    }
+  }
+  return $ret;
+}
+
+/**
+* Recursively check the given event for layout or response
+* 
+* @param mixed $event
+*/
+function DevToolsEventHasLayout(&$entry, &$hasLayout, &$hasResponse) {
+  if (isset($entry) && is_array($entry)) {
+      if (!$hasResponse &&
+          array_key_exists('type', $entry) &&
+          !strcasecmp($entry['type'], 'ResourceReceiveResponse')) {
+          $hasResponse = true;
+      }
+      if ($hasResponse &&
+          !$hasLayout &&
+          array_key_exists('type', $entry) &&
+          !strcasecmp($entry['type'], 'Layout')) {
+          $hasLayout = true;
+      }
+      if (array_key_exists('params', $entry) && array_key_exists('record', $entry['params']))
+          DevToolsEventHasLayout($entry['params']['record'], $hasLayout, $hasResponse);
+      if(array_key_exists('children', $entry) &&
+         is_array($entry['children'])) {
+          foreach($entry['children'] as &$child)
+              DevToolsEventHasLayout($child, $hasLayout, $hasResponse);
+      } 
+  }
 }
 ?>
