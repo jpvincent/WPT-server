@@ -15,7 +15,8 @@
   spl_autoload_register(array('Doctrine_Core', 'modelsAutoload'));
 
 // $dsn= 'sqlite:///'.dirname(__FILE__).'/db/wpt_monitor.sqlite';
-$dsn= 'mysql://wpt:P8g7;19lnU@localhost/wpt_monitor';
+  $logins = parse_ini_file("settings/bootstrap.ini");
+  $dsn= 'mysql://'.$logins['login'].':'.$logins['password'].'@localhost/wptmerge_monitor';
   $dataConn = Doctrine_Manager::connection($dsn,'data');
 //
 //  $configDsn= 'sqlite:///'.dirname(__FILE__).'/db/config.sqlite';
