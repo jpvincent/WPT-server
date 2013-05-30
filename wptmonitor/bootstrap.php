@@ -14,10 +14,10 @@
 
   spl_autoload_register(array('Doctrine_Core', 'modelsAutoload'));
 
-//  $dsn= 'sqlite:///'.dirname(__FILE__).'/db/wpt_monitor.sqlite';
-  $dsn= 'mysql://wpt:wpt@localhost/wptmonitor';
+// $dsn= 'sqlite:///'.dirname(__FILE__).'/db/wpt_monitor.sqlite';
+  $logins = parse_ini_file("settings/bootstrap.ini");
+  $dsn= 'mysql://'.$logins['login'].':'.$logins['password'].'@localhost/wptmerge_monitor';
   $dataConn = Doctrine_Manager::connection($dsn,'data');
 //
 //  $configDsn= 'sqlite:///'.dirname(__FILE__).'/db/config.sqlite';
 //  $configConn = Doctrine_Manager::connection($configDsn, 'config');
-?>
