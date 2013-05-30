@@ -21,6 +21,7 @@
   else{
     $dsn= 'mysql://'.$logins['login'].':'.$logins['password'].'@localhost/wpt_monitor';
   }
+
   $dataConn = Doctrine_Manager::connection($dsn,'data');
 //
 //  $configDsn= 'sqlite:///'.dirname(__FILE__).'/db/config.sqlite';

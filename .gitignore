@@ -9,3 +9,4 @@ work/jobs/uniqueId.dat
 tmp/wpt_cron.dat
 .svn
 settings/locations.ini
+bootstrap.ini
