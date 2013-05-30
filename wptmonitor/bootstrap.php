@@ -19,7 +19,7 @@
     $dsn= 'sqlite:///'.dirname(__FILE__).'/db/wpt_monitor.sqlite';
   }
   else{
-    $dsn= 'mysql://'.$logins['login'].':'.$logins['password'].'@localhost/wptmerge_monitor';
+    $dsn= 'mysql://'.$logins['login'].':'.$logins['password'].'@localhost/wpt_monitor';
   }
   $dataConn = Doctrine_Manager::connection($dsn,'data');
 //
