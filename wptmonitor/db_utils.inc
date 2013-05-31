@@ -10,7 +10,9 @@ function deleteRecord($table, $column, $id) {
   if ( $table != "WPTResult"
           && $table  != "WPTLocation"
           && $table != "Share"
-          && $table != "User"){
+          && $table != "User"
+          && $table != "wptjob_wptlocation"
+          ){
 
     $folderId = $record[$table . 'FolderId'];
 
