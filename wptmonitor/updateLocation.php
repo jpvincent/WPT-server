@@ -32,17 +32,16 @@
       $wptLocation = new WPTLocation();
     }
     $wptLocation['Active'] = $active;
-//    $wptLocation['WPTHostId']=$host;
-//    $wptLocation['Label'] = $label;
-//    $wptLocation['Browser'] = $browser;
+    $wptLocation['WPTHostId']=$host;
+    $wptLocation['Label'] = $label;
+    $wptLocation['Browser'] = $browser;
     $wptLocation['ActiveAgents'] = $activeagents;
     $wptLocation['QueueThreshold'] = $queuethreshold;
     $wptLocation['QueueThresholdGreenLimit'] = $queuethresholdgreenlimit;
     $wptLocation['QueueThresholdYellowLimit'] = $queuethresholdyellowlimit;
     $wptLocation['QueueThresholdRedLimit'] = $queuethresholdredlimit;
-//    $wptLocation['Location'] = $location;
+    $wptLocation['Location'] = $location;
     $wptLocation->save();
-
   } catch (Exception $e) {
     error_log("[WPTMonitor] Failed while updating location" . $e->getMessage());
   }
