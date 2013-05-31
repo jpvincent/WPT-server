@@ -43,12 +43,15 @@ function exportResultToExternal($metric_value, $metric_name, $time = null) {
 	*/
 	//logOutput('[INFO] [exportResultTo] ');
 	
-	$url = 'http://88.190.226.67:8081/graphite?body='.urlencode($msg);
+	/*
+  here your favorite visualisation tool, like Graphite
+  $url = 'http://yourserver/graphite?body='.urlencode($msg);
 	$body = file_get_contents($url, false);
 	
 	if($body === false) {
 		logOutput('[WARN] [exportResultTo] failed to reach '.$url);
 	}
+  */
 }
 
 
