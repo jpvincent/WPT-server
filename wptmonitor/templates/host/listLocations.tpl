@@ -72,6 +72,13 @@
               </tr>
             {/foreach}
           </table>
+          <table class="pretty" width="100%">
+            <tr>
+              <form action="addLocation.php" name="addLocation">
+                <td align="center"><input class="actionIcon" type="image" src="img/add_icon.png" alt="add Location"></td>
+              </form>
+            </tr>
+          </table>
         </div>
       </div>
     </div>
