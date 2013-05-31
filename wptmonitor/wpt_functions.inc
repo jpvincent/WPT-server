@@ -474,25 +474,11 @@ function processJobsForUser($userId, $jobId = null, $force = false, $runLabel=""
   //              $url = $url.'?__wptmjid='.$mjid.'_'.$wptResult['Date'];
   //            }
   //          }
-            // Default DSL settings
-
-            $private = 1;
-            $bwDown = 1500;
-            $bwUp = 384;
-            $latency = 50;
-            $plr = 0;
-
-            if ( $row['WPTBandwidthDown'])
-              $bwDown = $row['WPTBandwidthDown'];
-
-            if ( $row['WPTBandwidthUp'])
-              $bwUp = $row['WPTBandwidthUp'];
-
-            if ( $row['WPTBandwidthLatency'])
-              $latency = $row['WPTBandwidthLatency'];
-
-            if ( $row['WPTBandwidthPacketLoss'])
-              $plr = $row['WPTBandwidthPacketLoss'];
+            //DSL settings
+            $bwDown = $row['WPTBandwidthDown'];
+            $bwUp = $row['WPTBandwidthUp'];
+            $latency = $row['WPTBandwidthLatency'];
+            $plr = $row['WPTBandwidthPacketLoss'];
 
             $format = "xml";
 

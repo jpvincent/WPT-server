@@ -310,20 +310,20 @@
               <tr><td colspan="4"><hr></td></tr>
               <tr><td></td><td style="font-size: larger;font-style: italic;;font-weight: bold;">Bandwidth shaping Requires WPT agents configured with IPFW Dummynet.</td></tr>
               <tr>
-                <td align="right"><label title="The WPT BW Down setting to use.">Bandwidth Down</label></td>
-                <td align="left"><input type="text" name="bandwidthDown" value="{$job.WPTBandwidthDown}" size="5" style="text-align:right;"> Kbps</td>
+                <td align="right"><label title="The WPT BW Down setting to use.">Bandwidth Down *</label></td>
+                <td align="left"><input type="text" name="bandwidthDown" value="{$job.WPTBandwidthDown}" size="5" style="text-align:right;" class="required"> Kbps</td>
               </tr>
               <tr>
-                <td align="right"><label title="The WPT BW Up setting to use.">Bandwidth Up</label></td>
-                <td align="left"><input type="text" name="bandwidthUp" value="{$job.WPTBandwidthUp}" size="5" style="text-align:right;"> Kbps</td>
+                <td align="right"><label title="The WPT BW Up setting to use.">Bandwidth Up *</label></td>
+                <td align="left"><input type="text" name="bandwidthUp" value="{$job.WPTBandwidthUp}" size="5" style="text-align:right;" class="required"> Kbps</td>
               </tr>
               <tr>
-                <td align="right"><label title="The WPT Latency setting to use.">Latency</label></td>
-                <td align="left"><input type="text" name="bandwidthLatency" value="{$job.WPTBandwidthLatency}" size="5" style="text-align:right;"> ms</td>
+                <td align="right"><label title="The WPT Latency setting to use.">Latency *</label></td>
+                <td align="left"><input type="text" name="bandwidthLatency" value="{$job.WPTBandwidthLatency}" size="5" style="text-align:right;" class="required"> ms</td>
               </tr>
               <tr>
-                <td align="right"><label title="The WPT Packet Loss setting to use.">Packet Loss</label></td>
-                <td align="left"><input type="text" name="bandwidthPacketLoss" value="{$job.WPTBandwidthPacketLoss}" size="5" style="text-align:right;"> %</td>
+                <td align="right"><label title="The WPT Packet Loss setting to use.">Packet Loss *</label></td>
+                <td align="left"><input type="text" name="bandwidthPacketLoss" value="{$job.WPTBandwidthPacketLoss}" size="5" style="text-align:right;" class="required"> %</td>
               </tr>
               <tr>
 
