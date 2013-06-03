@@ -44,6 +44,9 @@
 
               <script>
                 var allowUpdate = true;
+                {/literal}
+                var cTab = {$Connectivity};
+                {literal}
                 function updateJobCount() {
                   maxJobsPerMonth = document.getElementById('maxJobsPerMonth').value;
 
@@ -89,7 +92,44 @@
                 }
                 $(document).ready(function() {
                   $("#updateForm").validate();
+                  {/literal}
+                  $("#bandwidthDown").val({$job.WPTBandwidthDown});
+                  $("#bandwidthUp").val({$job.WPTBandwidthUp});
+                  $("#bandwidthLatency").val({$job.WPTBandwidthLatency});
+                  $("#bandwidthPacketLoss").val({$job.WPTBandwidthPacketLoss});
+                  {literal}
                 });
+
+                dropDownConnectivity = function(){
+                  var option = document.getElementById("connectivity").options;
+                  var index = document.getElementById("connectivity").selectedIndex;
+                  var cValue = option[index].value;
+                  var bandwidthDown=document.getElementById('bandwidthDown'); 
+                  var bandwidthUp=document.getElementById('bandwidthUp'); 
+                  var bandwidthLatency=document.getElementById('bandwidthLatency'); 
+                  var bandwidthPacketLoss=document.getElementById('bandwidthPacketLoss');
+                  if(cValue!='Custom'){ 
+                    //bandwidthDown.disabled = true;
+                    //bandwidthUp.disabled = true;
+                    //bandwidthLatency.disabled = true;
+                    //bandwidthPacketLoss.disabled = true;
+                    bandwidthDown.value = (cTab[cValue]['bwIn']/1000);
+                    bandwidthUp.value = (cTab[cValue]['bwOut']/1000);
+                    bandwidthLatency.value = cTab[cValue]['latency'];
+                    bandwidthPacketLoss.value = cTab[cValue]['plr'];
+
+                  }
+                  else{
+                    bandwidthDown.disabled = false;
+                    bandwidthUp.disabled = false;
+                    bandwidthLatency.disabled = false;
+                    bandwidthPacketLoss.disabled = false;
+                  }
+                }
+
+                inputConnectivity = function(){
+                  document.getElementById("custom").selected=true;
+                }
               </script>
             {/literal}
           <div class="translucent" align="center">
@@ -310,23 +350,32 @@
               <tr><td colspan="4"><hr></td></tr>
               <tr><td></td><td style="font-size: larger;font-style: italic;;font-weight: bold;">Bandwidth shaping Requires WPT agents configured with IPFW Dummynet.</td></tr>
               <tr>
-                <td align="right"><label title="The WPT BW Down setting to use.">Bandwidth Down *</label></td>
-                <td align="left"><input type="text" name="bandwidthDown" value="{$job.WPTBandwidthDown}" size="5" style="text-align:right;" class="required"> Kbps</td>
+                <td align="right"></td>
+                <td align="left">
+                  <select id="connectivity" onchange="dropDownConnectivity();">
+                    {$listConnectivity}
+                  <option value="Custom" id="custom">Custom</option>
+                  </select>
+                </td>
               </tr>
+                <tr>
+                  <td align="right"><label title="The WPT BW Down setting to use.">Bandwidth Down *</label></td>
+                  <td align="left"><input type="text" id="bandwidthDown" name="bandwidthDown" value="" size="5" style="text-align:right;" class="required" onkeyup="inputConnectivity();"> Kbps</td>
+                </tr>
+                <tr>
+                  <td align="right"><label title="The WPT BW Up setting to use.">Bandwidth Up *</label></td>
+                  <td align="left"><input type="text" id="bandwidthUp" name="bandwidthUp" value="" size="5" style="text-align:right;" class="required" onkeyup="inputConnectivity();"> Kbps</td>
+                </tr>
+                <tr>
+                  <td align="right"><label title="The WPT Latency setting to use.">Latency *</label></td>
+                  <td align="left"><input type="text" id="bandwidthLatency" name="bandwidthLatency" value="" size="5" style="text-align:right;" class="required" onkeyup="inputConnectivity();"> ms</td>
+                </tr>
+                <tr>
+                  <td align="right"><label title="The WPT Packet Loss setting to use.">Packet Loss *</label></td>
+                  <td align="left"><input type="text" id="bandwidthPacketLoss" name="bandwidthPacketLoss" value="" size="5" style="text-align:right;" class="required" onkeyup="inputConnectivity();"> %</td>
+                </tr>
               <tr>
-                <td align="right"><label title="The WPT BW Up setting to use.">Bandwidth Up *</label></td>
-                <td align="left"><input type="text" name="bandwidthUp" value="{$job.WPTBandwidthUp}" size="5" style="text-align:right;" class="required"> Kbps</td>
-              </tr>
-              <tr>
-                <td align="right"><label title="The WPT Latency setting to use.">Latency *</label></td>
-                <td align="left"><input type="text" name="bandwidthLatency" value="{$job.WPTBandwidthLatency}" size="5" style="text-align:right;" class="required"> ms</td>
-              </tr>
-              <tr>
-                <td align="right"><label title="The WPT Packet Loss setting to use.">Packet Loss *</label></td>
-                <td align="left"><input type="text" name="bandwidthPacketLoss" value="{$job.WPTBandwidthPacketLoss}" size="5" style="text-align:right;" class="required"> %</td>
-              </tr>
-              <tr>
-
+                <td></td>
                 <td></td>
                 <td><input type="submit" value="Save"></td>
               </tr>
