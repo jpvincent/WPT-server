@@ -1,6 +1,7 @@
 <?php
   require("login/login.php");
   include 'monitor.inc';
+  include 'common.inc';
   $ownerId="";
   $userId = getCurrentUserId();
   if ( isset($_REQUEST['id']) ){
@@ -161,6 +162,12 @@
     }
   }
 
+  //Fix shaping connectivity for jobs
+  $connectivity = parse_ini_file('../settings/connectivity.ini', true);
+  $cTab = json_encode($connectivity);
+  foreach ($connectivity as $conn_key => $value) {
+    $listConnectivity .= '<option value="'.$conn_key.'"id="'.$conn_key.'">'.$value['label'].'</option>';
+  }
 
   // Set vars for smarty
   if(!isset($maxJobsPerMonth)){
@@ -182,5 +189,8 @@
   $smarty->assign('ownerId', $ownerId);
   $smarty->assign('scripts', $scriptArray);
   $smarty->assign('wptLocations', $wptLocs);
+  $smarty->assign('selectedLocations',$selectedLocations);
+  $smarty->assign('listConnectivity', $listConnectivity);
+  $smarty->assign('Connectivity', $cTab);
   $smarty->display('job/addJob.tpl');
 ?>
