@@ -21,8 +21,8 @@ error_reporting(-1);
   }
 
   checkQueueGrowthCountAndEmailAlert();
-  try
-  {
+  /*try
+  {/*/
     $users = Doctrine_Core::getTable('User')->findAll();
     foreach ($users as $user) {
       if ($user->IsActive) {
@@ -40,14 +40,11 @@ error_reporting(-1);
 
 	exportResultToExternal($nbAlerts, 'global.alerts');
 
-  } catch (Exception $e) {
+/*  } catch (Exception $e) {
     error_log("[WPTMonitor] Failed while Listing Users: " . $wptResultId . " message: " . $e->getMessage());
     logOutput('[ERROR] [jobProcessor] Exception : ' . $e->getMessage());
   }
-
+*/
 
   updateQueueProcessRate();
   checkTesterRatioAndEmailAlert();
-
-?>
- 
