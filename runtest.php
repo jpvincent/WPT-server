@@ -1885,7 +1885,7 @@ function GetClosestLocation($url, $browser) {
             }
             if (!isset($location)) {
                 $ip = gethostbyname($host);
-                try {
+                //try {
                     require_once('./Net/GeoIP.php');
                     $geoip = Net_GeoIP::getInstance('./Net/GeoLiteCity.dat', Net_GeoIP::MEMORY_CACHE);
                     if ($geoip) {
@@ -1910,7 +1910,7 @@ function GetClosestLocation($url, $browser) {
                             }
                         }
                     }
-                }catch(Exception $e) { }
+                //}catch(Exception $e) { }
             }
         }
         if (!isset($location)) {

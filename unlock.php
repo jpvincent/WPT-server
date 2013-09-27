@@ -6,7 +6,8 @@ function clearFolder($folder) {
 		if ($File != '.' && $File != '..') {
 			$Vidage= $folder.$File;
 			unlink($Vidage);
-			echo '<p>'.$folder.' is now empty</p>';
+			rmdir($Vidage);
+			echo '<p>'.$Vidage.' is now empty</p>';
 		}
 	}
 	closedir($dossier);
