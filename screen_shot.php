@@ -2,6 +2,7 @@
 include 'common.inc';
 require_once('video.inc');
 require_once('page_data.inc');
+require_once('devtools.inc.php');
 $pageRunData = loadPageRunData($testPath, $run, $cached);
 
 $videoPath = "$testPath/video_{$run}";
@@ -10,9 +11,7 @@ if( $cached )
     
 // get the status messages
 $messages = LoadStatusMessages($testPath . '/' . $run . $cachedText . '_status.txt');
-$console_log_file = $testPath . '/' . $run . $cachedText . '_console_log.json';
-if (gz_is_file($console_log_file))
-    $console_log = json_decode(gz_file_get_contents($console_log_file), true);
+$console_log = DevToolsGetConsoleLog($testPath, $run, $cached);
     
 // re-build the videos
 MoveVideoFiles($testPath);
@@ -181,7 +180,12 @@ $userImages = true;
                         $rowClass = '';
                         if ($row % 2 == 0)
                             $rowClass = ' class="even"';
-                        echo "<tr$rowClass><td class=\"source\">{$log_entry['source']}</td><td class=\"level\">{$log_entry['level']}</td><td class=\"message\"><div>{$log_entry['text']}</div></td><td class=\"url\"><div><a href=\"{$log_entry['url']}\">{$log_entry['url']}</a></div></td><td class=\"line\">{$log_entry['line']}</td></tr>\n";
+                        echo "<tr$rowClass><td class=\"source\">" . htmlspecialchars($log_entry['source']) .
+                             "</td><td class=\"level\">" . htmlspecialchars($log_entry['level']) .
+                             "</td><td class=\"message\"><div>" . htmlspecialchars($log_entry['text']) . 
+                             "</div></td><td class=\"url\"><div><a href=\"" . htmlspecialchars($log_entry['url']) . 
+                             "\">" . htmlspecialchars($log_entry['url']) .
+                             "</a></div></td><td class=\"line\">" . htmlspecialchars($log_entry['line']) . "</td></tr>\n";
                     }
                     echo "</table>\n";
                 }
@@ -203,23 +207,23 @@ $userImages = true;
 function LoadStatusMessages($path)
 {
     $messages = array();
-    $lines = gz_file($path);
-
-    foreach( $lines as $line )
-    {
-        $line = trim($line);
-        if( strlen($line) )
-        {
+    if (is_file($path)) {
+      $lines = gz_file($path);
+      if (isset($lines) && is_array($lines)) {
+        foreach( $lines as $line ) {
+          $line = trim($line);
+          if( strlen($line) ) {
             $parts = explode("\t", $line);
             $time = (float)$parts[0] / 1000.0;
             $message = trim($parts[1]);
-            if( $time >= 0.0 )
-            {
+            if( $time >= 0.0 ) {
                 $msg = array(   'time' => $time,
                                 'message' => $message );
                 $messages[] = $msg;
             }
+          }
         }
+      }
     }
 
     return $messages;

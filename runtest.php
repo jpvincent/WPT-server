@@ -54,6 +54,7 @@
             $test = json_decode(gz_file_get_contents("$path/testinfo.json"), true);
             unset($test['completed']);
             unset($test['started']);
+            unset($test['tester']);
         }
         
         // pull in the test parameters
@@ -74,6 +75,7 @@
             $test['block'] = $req_block;
             $test['notify'] = trim($req_notify);
             $test['video'] = $req_video;
+            $test['continuousVideo'] = isset($req_continuousVideo) && $req_continuousVideo ? 1 : 0;
             $test['label'] = htmlspecialchars(trim($req_label));
             $test['industry'] = trim($req_ig);
             $test['industry_page'] = trim($req_ip);
@@ -94,14 +96,14 @@
             $test['testLatency'] = (int)$req_latency;
             $test['plr'] = isset($req_plr) ? trim($req_plr) : 0;
             $test['callback'] = $req_pingback;
-            if (!$json && !isset($req_pingback) && isset($req_callback)) {
+            if (!$json && !isset($req_pingback) && isset($req_callback))
                 $test['callback'] = $req_callback;
-            }
             $test['agent'] = $req_agent;
             $test['aftEarlyCutoff'] = (int)$req_aftec;
             $test['aftMinChanges'] = (int)$req_aftmc;
             $test['tcpdump'] = $req_tcpdump;
             $test['timeline'] = $req_timeline;
+            $test['swrender'] = $req_swrender;
             $test['trace'] = $req_trace;
             $test['standards'] = $req_standards;
             $test['netlog'] = $req_netlog;
@@ -126,14 +128,23 @@
             $test['max_retries'] = min((int)$req_retry, 10);
             if (array_key_exists('keepua', $_REQUEST) && $_REQUEST['keepua'])
                 $test['keepua'] = 1;
-            if (is_file('./settings/customrules.txt')) {
+            if (is_file('./settings/customrules.txt'))
                 $test['custom_rules'] = file('./settings/customrules.txt',FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            }
             $test['pss_advanced'] = $req_pss_advanced;
-            $test['shard_test'] = $req_shard ? 1 : $settings['shard_tests'];
+            $test['shard_test'] = $settings['shard_tests'];
+            if (array_key_exists('shard', $_REQUEST))
+              $test['shard_test'] = $_REQUEST['shard'];
             $test['mobile'] = array_key_exists('mobile', $_REQUEST) && $_REQUEST['mobile'] ? 1 : 0;
             $test['clearcerts'] = array_key_exists('clearcerts', $_REQUEST) && $_REQUEST['clearcerts'] ? 1 : 0;
             $test['orientation'] = array_key_exists('orientation', $_REQUEST) ? trim($_REQUEST['orientation']) : 'default';
+            
+            // custom options
+            $test['cmdLine'] = '';
+            $test['addCmdLine'] = '';
+            if (isset($req_disableThreadedParser) && $req_disableThreadedParser)
+              $test['addCmdLine'] .= '--disable-threaded-html-parser ';
+            if (isset($req_spdyNoSSL) && $req_spdyNoSSL)
+              $test['addCmdLine'] .= '--use-spdy=no-ssl ';
             
             // see if we need to process a template for these requests
             if (isset($req_k) && strlen($req_k)) {
@@ -733,7 +744,11 @@ function ValidateKey(&$test, &$error, $key = null)
       if( isset($test['key']) && strlen($test['key']) && !isset($key) )
         $key = $test['key'];
       // validate their API key and enforce any rate limits
-      if( isset($keys[$key]) ){
+      if( array_key_exists($key, $keys) ){
+        if (array_key_exists('default location', $keys[$key]) &&
+            strlen($keys[$key]['default location']) &&
+            !strlen($test['location']))
+            $test['location'] = $keys[$key]['default location'];
         if (isset($keys[$key]['priority']))
             $test['priority'] = $keys[$key]['priority'];
         if( isset($keys[$key]['limit']) ){
@@ -744,10 +759,8 @@ function ValidateKey(&$test, &$error, $key = null)
               mkdir('./dat', 0777, true);
               
           $lock = fopen( "./dat/keys.lock", 'w',  false);
-          if( $lock )
-          {
-            if( flock($lock, LOCK_EX) )
-            {
+          if( $lock ) {
+            if( flock($lock, LOCK_EX) ) {
                 $keyfile = './dat/keys_' . gmdate('Ymd') . '.dat';
                 $usage = null;
                 if( is_file($keyfile) )
@@ -777,6 +790,7 @@ function ValidateKey(&$test, &$error, $key = null)
               }
               if( !strlen($error) )
                 file_put_contents($keyfile, json_encode($usage));
+              flock($lock, LOCK_UN);
             }
             fclose($lock);
           }
@@ -854,6 +868,7 @@ function ValidateParameters(&$test, $locations, &$error, $destination_url = null
             $test['tcpdump'] = $test['tcpdump'] ? 1 : 0;
             $test['standards'] = $test['standards'] ? 1 : 0;
             $test['timeline'] = $test['timeline'] ? 1 : 0;
+            $test['swrender'] = $test['swrender'] ? 1 : 0;
             $test['trace'] = $test['trace'] ? 1 : 0;
             $test['netlog'] = $test['netlog'] ? 1 : 0;
             $test['spdy3'] = $test['spdy3'] ? 1 : 0;
@@ -1186,8 +1201,7 @@ function WriteJob($location, &$test, &$job, $testId)
         $lockFile = fopen( "./tmp/$location.lock", 'w',  false);
         if( $lockFile )
         {
-            if( flock($lockFile, LOCK_EX) )
-            {
+            if( flock($lockFile, LOCK_EX) ) {
                 $fileName = $test['job'];
                 $file = "$workDir/$fileName";
                 if( file_put_contents($file, $job) ) {
@@ -1223,6 +1237,7 @@ function WriteJob($location, &$test, &$job, $testId)
                         $error = "Sorry, that test location already has too many tests pending.  Pleasy try again later.";
                     }
                 }
+                flock($lockFile, LOCK_UN);
             }
             fclose($lockFile);
         }
@@ -1362,32 +1377,24 @@ function LogTest(&$test, $testId, $url)
         
     // open the log file
     $filename = "./logs/" . gmdate("Ymd") . ".log";
-    $file = fopen( $filename, "a+b",  false);
     $video = 0;
     if( strlen($test['video']) )
         $video = 1;
-    if( $file )
-    {
-        $ip = $_SERVER['REMOTE_ADDR'];
-        if( array_key_exists('ip',$test) && strlen($test['ip']) )
-            $ip = $test['ip'];
-        $pageLoads = $test['runs'];
-        if (!$test['fvonly'])
-            $pageLoads *= 2;
-        if (array_key_exists('navigateCount', $test) && $test['navigateCount'] > 0)
-            $pageLoads *= $test['navigateCount'];
-        
-        $log = gmdate("Y-m-d G:i:s") . "\t$ip" . "\t0" . "\t0";
-        $log .= "\t$testId" . "\t$url" . "\t{$test['locationText']}" . "\t{$test['private']}";
-        $log .= "\t{$test['uid']}" . "\t{$test['user']}" . "\t$video" . "\t{$test['label']}";
-        $log .= "\t{$test['owner']}" . "\t{$test['key']}" . "\t$pageLoads" . "\r\n";
+    $ip = $_SERVER['REMOTE_ADDR'];
+    if( array_key_exists('ip',$test) && strlen($test['ip']) )
+        $ip = $test['ip'];
+    $pageLoads = $test['runs'];
+    if (!$test['fvonly'])
+        $pageLoads *= 2;
+    if (array_key_exists('navigateCount', $test) && $test['navigateCount'] > 0)
+        $pageLoads *= $test['navigateCount'];
+    
+    $log = gmdate("Y-m-d G:i:s") . "\t$ip" . "\t0" . "\t0";
+    $log .= "\t$testId" . "\t$url" . "\t{$test['locationText']}" . "\t{$test['private']}";
+    $log .= "\t{$test['uid']}" . "\t{$test['user']}" . "\t$video" . "\t{$test['label']}";
+    $log .= "\t{$test['owner']}" . "\t{$test['key']}" . "\t$pageLoads" . "\r\n";
 
-        // flock will block until we acquire the lock or the script times out and is killed
-        if( flock($file, LOCK_EX) )
-            fwrite($file, $log);
-        
-        fclose($file);
-    }
+    error_log($log, 3, $filename);
 }
 
 
@@ -1401,7 +1408,7 @@ function CheckIp(&$test)
     global $user;
     global $usingAPI;
     $date = gmdate("Ymd");
-    if (!isset($user) && !$usingAPI) {
+    if (!$usingAPI) {
         $ip2 = @$test['ip'];
         $ip = $_SERVER['REMOTE_ADDR'];
         $blockIps = file('./settings/blockip.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -1497,7 +1504,7 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
     global $settings;
     $testId = null;
     
-    if (CheckUrl($url)) {
+    if (CheckUrl($url) && WptHookValidateTest($test)) {
         // generate the test ID
         $test_num;
         $id = uniqueId($test_num);
@@ -1588,6 +1595,8 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
                 $testFile .= "\r\nstandards=1";
             if( $test['timeline'] )
                 $testFile .= "\r\ntimeline=1";
+            if( $test['swrender'] )
+                $testFile .= "\r\nswRender=1";
             if( $test['trace'] )
                 $testFile .= "\r\ntrace=1";
             if( $test['netlog'] )
@@ -1646,6 +1655,12 @@ function CreateTest(&$test, $url, $batch = 0, $batch_locations = 0)
                 $testFile .= "clearcerts=1\r\n";
             if( $test['orientation'] )
                 $testFile .= "orientation={$test['orientation']}\r\n";
+            //if (array_key_exists('continuousVideo', $test) && $test['continuousVideo'])
+            //    $testFile .= "continuousVideo=1\r\n";
+            if (array_key_exists('cmdLine', $test) && strlen($test['cmdLine']))
+                $testFile .= "cmdLine={$test['cmdLine']}\r\n";
+            if (array_key_exists('addCmdLine', $test) && strlen($test['addCmdLine']))
+                $testFile .= "addCmdLine={$test['addCmdLine']}\r\n";
             
             // see if we need to add custom scan rules
             if (array_key_exists('custom_rules', $test)) {
@@ -1885,7 +1900,7 @@ function GetClosestLocation($url, $browser) {
             }
             if (!isset($location)) {
                 $ip = gethostbyname($host);
-                //try {
+                try {
                     require_once('./Net/GeoIP.php');
                     $geoip = Net_GeoIP::getInstance('./Net/GeoLiteCity.dat', Net_GeoIP::MEMORY_CACHE);
                     if ($geoip) {
@@ -1910,7 +1925,7 @@ function GetClosestLocation($url, $browser) {
                             }
                         }
                     }
-                //}catch(Exception $e) { }
+                }catch(Exception $e) { }
             }
         }
         if (!isset($location)) {
@@ -1963,6 +1978,7 @@ function uniqueId(&$test_num) {
             fseek($file, 0, SEEK_SET);
             ftruncate($file, 0);
             fwrite($file, json_encode($testData));
+            flock($file, LOCK_UN);
         }
 
         fclose($file);

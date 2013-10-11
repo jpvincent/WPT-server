@@ -3,6 +3,8 @@ if(extension_loaded('newrelic')) {
     newrelic_add_custom_tracer('RestoreTest');
 }
 
+require_once('./plugins.php.inc');
+
 // if any query parameter includes a .., exit right away - likely a hack attempt
 foreach($_REQUEST as $key => $val) {
     if (is_string($val) && strlen($val) && strpos($val, '/../') !== false) {
@@ -48,7 +50,7 @@ if (function_exists('apache_request_headers')) {
 }
 if (array_key_exists('HTTP_MOD_REWRITE', $_SERVER) && $_SERVER['HTTP_MOD_REWRITE'] == 'On') {
     define('FRIENDLY_URLS', true);
-    define('VER_TIMELINE', '1/');       // version of the timeline javascript
+    define('VER_TIMELINE', '28/');       // version of the timeline javascript
 } else {
     define('FRIENDLY_URLS', false);
     define('VER_TIMELINE', '');       // Leave the timeline version empty
@@ -56,9 +58,9 @@ if (array_key_exists('HTTP_MOD_REWRITE', $_SERVER) && $_SERVER['HTTP_MOD_REWRITE
 
 // constants
 define('VER_WEBPAGETEST', '2.2.1');   // webpagetest version
-define('VER_CSS', 59);           // version of the sitewide css file
-define('VER_JS', 28);            // version of the sitewide javascript file
-define('VER_JS_TEST', 25);       // version of the javascript specific to the test pages
+define('VER_CSS', 61);           // version of the sitewide css file
+define('VER_JS', 29);            // version of the sitewide javascript file
+define('VER_JS_TEST', 27);       // version of the javascript specific to the test pages
 define('VER_JS_RUNNING', 1);     // version of the javascript specific to the test running status page
 define('UNKNOWN_TIME', -1);      // Value used as a flag for an unknown time.
                                  // To find code that fails to check that a time
@@ -69,10 +71,10 @@ define('UNKNOWN_TIME', -1);      // Value used as a flag for an unknown time.
 $page_keywords = array('Webpagetest','Website Speed Test','Page Speed');
 $page_description = "Run a free website speed test from around the globe using real browsers at consumer connection speeds with detailed optimization recommendations.";
 
-$tempDir = realpath('./tmp');
+$tempDir = './tmp';
 if (!is_dir($tempDir))
     mkdir($tempDir, 0777, true);
-$tempDir .= '/';
+$tempDir = realpath($tempDir) . '/';
 define('PCLZIP_TEMPORARY_DIR', $tempDir);
 
 if (isset($req_embed)) {
@@ -1677,9 +1679,9 @@ function GetTesters($locationId)
             $location['testers'] = array();
             foreach( $testers as $index => $tester )
             {
-                if( !$tester['offline'] )
+                if( !array_key_exists('offline', $tester) || !$tester['offline'] )
                 {
-                    $entry = array('pc' => $tester['pc'], 'ec2' => $tester['ec2'], 'ip' => $tester['ip'], 'version' => $tester['ver'], 'freedisk' => $tester['freedisk'], 'ie' => $tester['ie'], 'dns' => $tester['dns']);
+                    $entry = array('pc' => @$tester['pc'], 'ec2' => @$tester['ec2'], 'ip' => @$tester['ip'], 'version' => @$tester['ver'], 'freedisk' => @$tester['freedisk'], 'ie' => @$tester['ie'], 'dns' => @$tester['dns']);
                     
                     // last time it checked in
                     if( isset($tester['updated']) )
@@ -1719,19 +1721,16 @@ function GetTesters($locationId)
 */
 function LockLocation($location)
 {
-    if( !is_dir('./tmp') )
-        mkdir('./tmp');
-    $lock = fopen( "./tmp/$location.lock", 'w',  false);
-    if( $lock )
-    {
-        if( !flock($lock, LOCK_EX) )
-        {
-            fclose($lock);
-            $lock = false;
-        }
+  if( !is_dir('./tmp') )
+    mkdir('./tmp');
+  $lock = fopen( "./tmp/$location.lock", 'w',  false);
+  if( $lock ) {
+    if( !flock($lock, LOCK_EX) ) {
+      fclose($lock);
+      $lock = false;
     }
-
-    return $lock;
+  }
+  return $lock;
 }
 
 /**
@@ -1739,8 +1738,10 @@ function LockLocation($location)
 */
 function UnlockLocation($lock)
 {
-    if( $lock )
-        fclose($lock);
+  if( $lock ) {
+    flock($lock, LOCK_UN);
+    fclose($lock);
+  }
 }
 
 /**
@@ -1779,8 +1780,11 @@ function loadVideo($path, &$frames)
 */
 function xml_entities($text, $charset = 'UTF-8')
 {
-    // First we encode html characters that are also invalid in xml
-    $text = htmlentities($text, ENT_COMPAT, $charset, false);
+    // strip out any unprintable characters
+    $text = preg_replace('/[\x00-\x1F\x80-\x9F]/u', '', $text);
+    
+    // encode html characters that are also invalid in xml
+    $text = htmlentities($text, ENT_COMPAT | ENT_SUBSTITUTE, $charset, false);
    
     // XML character entity array from Wiki
     // Note: &apos; is useless in UTF-8 or in UTF-16
@@ -1788,13 +1792,12 @@ function xml_entities($text, $charset = 'UTF-8')
    
     // Building the regex string to exclude all strings with xml special char
     $arr_xml_special_char_regex = "(?";
-    foreach($arr_xml_special_char as $key => $value){
+    foreach($arr_xml_special_char as $key => $value)
         $arr_xml_special_char_regex .= "(?!$value)";
-    }
     $arr_xml_special_char_regex .= ")";
    
     // Scan the array for &something_not_xml; syntax
-    $pattern = "/$arr_xml_special_char_regex&([a-zA-Z0-9]+;)/";
+    $pattern = "/$arr_xml_special_char_regex&([a-zA-Z0-9]*;)/";
    
     // Replace the &something_not_xml; with &amp;something_not_xml;
     $replacement = '&amp;${1}';
@@ -1992,20 +1995,4 @@ function ShardKey($test_num) {
     
     return $key;
 }
-function logOutput($msg, $file="wpt_log.html") {
-	$timeStamp = date("m/d/Y h:i:s");
-	$a = "";
-	$m = "[ " . $timeStamp . " ] " . $msg . "\n";
-	if (!($fp = fopen($file, 'a'))) {
-		echo "[ERROR] [logOutput] Cannot open log file";
-	} else {
-		fwrite($fp, $a . "" . $m);
-	}
-	// truncate only once per PHP process
-	static $already_truncated = false;
-	if($already_truncated === false) {
-		ftruncate($fp, 100000); // 100Kb max
-		$already_truncated = true;
-	}
-	fclose($fp);
-}
+?>

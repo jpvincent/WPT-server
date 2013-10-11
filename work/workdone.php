@@ -12,6 +12,7 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 ignore_user_abort(true);
 set_time_limit(60*5*10);
 require_once('harTiming.inc');
+require_once('./video/avi2frames.inc.php');
 
 
 $location = $_REQUEST['location'];
@@ -239,6 +240,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
         // pre-process any background processing we need to do for this run
         if (isset($runNumber) && isset($cacheWarmed)) {
             loadPageRunData($testPath, $runNumber, $cacheWarmed);
+            ProcessAVIVideo($testPath, $runNumber, $cacheWarmed);
         }
             
         // see if the test is complete
@@ -258,7 +260,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
             $perTestTime = 0;
             $testCount = 0;
             $beaconUrl = null;
-            if (strlen($settings['showslow']))
+            if (strpos($id, '.') === false && strlen($settings['showslow']))
             {
                 $beaconUrl = $settings['showslow'] . '/beacon/webpagetest/';
                 if (array_key_exists('showslow_key', $settings) &&
@@ -343,6 +345,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                                     $tests['tests'] = max(0, $tests['tests'] - $testCount);
                                 file_put_contents("./tmp/$location.tests", json_encode($tests));
                             }
+                            flock($lockFile, LOCK_UN);
                         }
                         fclose($lockFile);
                     }
@@ -363,13 +366,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                 $elapsed = $time - $testInfo['started'];
                 if ($elapsed > $settings['slow_test_time']) {
                     $log_entry = gmdate("m/d/y G:i:s", $testInfo['started']) . "\t$elapsed\t{$testInfo['ip']}\t{$testInfo['url']}\t{$testInfo['location']}\t$id\n";
-                    $log_file = fopen('./tmp/slow_tests.log', 'a+');
-                    if ($log_file) {
-                        if (flock($log_file, LOCK_EX)) {
-                            fwrite($log_file, $log_entry);
-                        }
-                        fclose($log_file);
-                    }
+                    error_log($log_entry, 3, './tmp/slow_tests.log');
                 }
             }
             
@@ -399,6 +396,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                         $ind[$ini['industry']][$ini['industry_page']] = $update;
                         $data = json_encode($ind);
                         file_put_contents('./video/dat/industry.dat', $data);
+                        flock($lockFile, LOCK_UN);
                     }
                         
                     fclose($lockFile);
@@ -889,8 +887,6 @@ function ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad) {
 
     // Keep meta data about a page from iterating the entries
     $pageData;
-
-logoutput(print_r($parsedHar['log']['pages'], true));
 
     // Iterate over the page records.
     foreach ($parsedHar['log']['pages'] as $pagecount => $page)
@@ -1573,9 +1569,17 @@ function StartProcessingIncrementalResult() {
     global $cacheWarmed;
     global $testLock;
     global $location;
+    global $admin;
 
     if( $testLock = fopen( "$testPath/test.lock", 'w',  false) )
         flock($testLock, LOCK_EX);
+
+    // re-load the testinfo from disk so we don't write stale data acquired from outside the lock
+    $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
+    if( isset($testInfo) ) {
+        $testInfo['last_updated'] = $time;
+        $testInfo_dirty = true;
+    }
 
     if ($done) {
         if (!array_key_exists('test_runs', $testInfo)) {
@@ -1594,7 +1598,7 @@ function StartProcessingIncrementalResult() {
             if (!$testInfo['test_runs'][$run]['done'])
                 $done = false;
         }
-
+        
         if (!$done &&
             array_key_exists('discarded', $testInfo['test_runs'][$runNumber]) &&
             $testInfo['test_runs'][$runNumber]['discarded']) {
@@ -1618,8 +1622,10 @@ function FinishProcessingIncrementalResult() {
     global $testPath;
     global $testLock;
     global $done;
-    if ($testLock)
+    if (isset($testLock) && $testLock) {
+        flock($testLock, LOCK_UN);
         fclose($testLock);
+    }
     if ($done)
         unlink("$testPath/test.lock");
 }
@@ -1639,6 +1645,7 @@ function CheckForSpam() {
 
     if (isset($testInfo) && 
         !array_key_exists('spam', $testInfo) &&
+        strpos($id, '.') == false &&
         !strlen($testInfo['uid']) &&
         !strlen($testInfo['key']) &&
         is_file('./settings/blockurl.txt')) {
@@ -1700,13 +1707,11 @@ function CheckForSpam() {
         $testInfo['spam'] = $blocked;
         $testInfo_dirty = true;
     }
+    
+    //Patch to add Headers in IEWPG.txt.gz for Local instance
+/*    $iewpg = $testPath."/".$runNumber."_IEWPG.txt.gz";
+    $headerLocal = "Date Time Event Name URL Load Time (ms) Time to First Byte (ms) unused Bytes Out Bytes In DNS Lookups Connections Requests OK Responses Redirects Not Modified Not Found Other Responses Error Code Time to Start Render (ms) Segments Transmitted Segments Retransmitted Packet Loss (out) Activity Time(ms) Descriptor Lab ID Dialer ID Connection Type Cached Event URL Pagetest Build Measurement Type Experimental Doc Complete Time (ms) Event GUID Time to DOM Element (ms) Includes Object Data Cache Score Static CDN Score One CDN Score GZIP Score Cookie Score Keep-Alive Score DOCTYPE Score Minify Score Combine Score Bytes Out (Doc) Bytes In (Doc) DNS Lookups (Doc) Connections (Doc) Requests (Doc) OK Responses (Doc) Redirects (Doc) Not Modified (Doc) Not Found (Doc) Other Responses (Doc) Compression Score Host IP Address ETag Score Flagged Requests Flagged Connections Max Simultaneous Flagged Connections Time to Base Page Complete (ms) Base Page Result Gzip Total Bytes Gzip Savings Minify Total Bytes Minify Savings Image Total Bytes Image Savings Base Page Redirects Optimization Checked \r\n";
+    $content = $headerLocal.gz_file_get_contents($iewpg);
+    $iewpg = $testPath."/".$runNumber."_IEWPG.txt";
+    gz_file_put_contents($iewpg, $content);*/
 }
-
-//Patch to add Headers in IEWPG.txt.gz for Local instance
-$iewpg = $testPath."/".$runNumber."_IEWPG.txt.gz";
-$headerLocal = "Date Time Event Name URL Load Time (ms) Time to First Byte (ms) unused Bytes Out Bytes In DNS Lookups Connections Requests OK Responses Redirects Not Modified Not Found Other Responses Error Code Time to Start Render (ms) Segments Transmitted Segments Retransmitted Packet Loss (out) Activity Time(ms) Descriptor Lab ID Dialer ID Connection Type Cached Event URL Pagetest Build Measurement Type Experimental Doc Complete Time (ms) Event GUID Time to DOM Element (ms) Includes Object Data Cache Score Static CDN Score One CDN Score GZIP Score Cookie Score Keep-Alive Score DOCTYPE Score Minify Score Combine Score Bytes Out (Doc) Bytes In (Doc) DNS Lookups (Doc) Connections (Doc) Requests (Doc) OK Responses (Doc) Redirects (Doc) Not Modified (Doc) Not Found (Doc) Other Responses (Doc) Compression Score Host IP Address ETag Score Flagged Requests Flagged Connections Max Simultaneous Flagged Connections Time to Base Page Complete (ms) Base Page Result Gzip Total Bytes Gzip Savings Minify Total Bytes Minify Savings Image Total Bytes Image Savings Base Page Redirects Optimization Checked \r\n";
-$content = $headerLocal.gz_file_get_contents($iewpg);
-$iewpg = $testPath."/".$runNumber."_IEWPG.txt";
-gz_file_put_contents($iewpg, $content);
-
-?>

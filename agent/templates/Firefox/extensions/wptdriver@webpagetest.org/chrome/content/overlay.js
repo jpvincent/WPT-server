@@ -46,11 +46,14 @@ var TEST_TASK_INTERVAL = 5000;
 var TASK_INTERVAL = 1000;
 var TASK_INTERVAL_SHORT = 0;
 var DOM_ELEMENT_POLL_INTERVAL = 100;
+var STARTUP_FAILSAFE_INTERVAL = 5000;
 
 var g_active = false;
 var g_tabId = -1;
 var g_requesting_task = false;
+var g_processing_task = false;
 var g_started = false;
+var g_initialized = false;
 
 // Set to true to pull commands from a static list in fakeCommandSource.js.
 var RUN_FAKE_COMMAND_SEQUENCE = false;
@@ -62,7 +65,7 @@ wpt.moz.clearAllBookmarks();
 /**
  * Inform the driver that an event occurred.
  */
-wpt.moz.main.sendEventToDriver_ = function(eventName, opt_params) {
+wpt.moz.main.sendEventToDriver_ = function(eventName, opt_params, opt_data) {
   var url = ('http://127.0.0.1:8888/event/' + eventName);
   if (opt_params) {
     var paramArray = [];
@@ -79,7 +82,7 @@ wpt.moz.main.sendEventToDriver_ = function(eventName, opt_params) {
   try {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
-    xhr.send();
+    xhr.send(opt_data);
 
   } catch (err) {
     wpt.moz.logInfo("Error sending dom element xhr: " + err);
@@ -131,7 +134,7 @@ wpt.moz.main.onStartup = function() {
 
 // Get the next task from the wptdriver.
 wpt.moz.main.getTask = function() {
-  if (!g_requesting_task) {
+  if (!g_requesting_task && !g_processing_task) {
     g_requesting_task = true;
     try {
       var xhr = new XMLHttpRequest();
@@ -170,22 +173,12 @@ wpt.moz.main.onNavigate = function() {
 // Send onload & W3C navigation timing events.
 wpt.moz.main.onLoad = function(win) {
   g_active = false;
-  wpt.moz.main.sendEventToDriver_('load');
-  setTimeout(function() {
-      var timingParams = {};
-      function addTime(name) {
-        if (win.performance.timing[name] > 0) {
-          timingParams[name] = Math.max(0, (
-              win.performance.timing[name] -
-              win.performance.timing['navigationStart']));
-        }
-      };
-      addTime('domContentLoadedEventStart');
-      addTime('domContentLoadedEventEnd');
-      addTime('loadEventStart');
-      addTime('loadEventEnd');
-      wpt.moz.main.sendEventToDriver_('window_timing', timingParams);
-  }, 0);
+  var fixedViewport = 0;
+  if (document.querySelector("meta[name=viewport]"))
+    fixedViewport = 1;
+  var domCount = document.getElementsByTagName("*").length;
+  wpt.moz.main.sendEventToDriver_('load?fixedViewport=' +
+      fixedViewport + '&domCount=' + domCount);
 };
 
 /**
@@ -257,14 +250,23 @@ var wptExtension = {
   init: function() {
     // Use the load event on the global browser object to see when the
     // page gets the onload event.
-    gBrowser.addEventListener('load', onPageLoad, true);
-    gBrowser.addEventListener('pagehide', onPageHide, true);
+	if (!g_initialized) {
+		gBrowser.addEventListener('load', onPageLoad, true);
+		gBrowser.addEventListener('pagehide', onPageHide, true);
 		gBrowser.addProgressListener(progressListener);
+		g_initialized = true;
+		setTimeout(function() {
+			if (!g_started)
+				onPageLoad();
+		}, STARTUP_FAILSAFE_INTERVAL);
+	}
   },
   uninit: function() {
-    gBrowser.removeEventListener('load', onPageLoad, true);
-    gBrowser.removeEventListener('pagehide', onPageHide, true);
+	if (g_initialized) {
+		gBrowser.removeEventListener('load', onPageLoad, true);
+		gBrowser.removeEventListener('pagehide', onPageHide, true);
 		gBrowser.removeProgressListener(progressListener);
+	}
   },
   loadStart: function() {
 	wpt.moz.main.onNavigate();
@@ -276,6 +278,10 @@ var wptExtension = {
 window.addEventListener('load', function() { wptExtension.init(); }, false);
 window.addEventListener('unload', function() { wptExtension.uninit(); }, false);
 
+// Create a startup failsafe in case the events we attach to have already fired
+setTimeout(function() {
+	wptExtension.init();
+}, STARTUP_FAILSAFE_INTERVAL);
 
 /***********************************************************
                       Utility Functions
@@ -287,6 +293,11 @@ function trim(stringToTrim) {
 /***********************************************************
                       Script Commands
 ***********************************************************/
+wpt.moz.main.callback = function() {
+  g_processing_task = false;
+  if (!g_active)
+    setTimeout(function() {wpt.moz.main.getTask();}, TASK_INTERVAL_SHORT);
+}
 
 /** execute a single task/script command */
 wpt.moz.main.executeTask = function(task) {
@@ -327,12 +338,16 @@ wpt.moz.main.executeTask = function(task) {
       case 'setdomelement':
         wpt.moz.main.setDomElement(task.target);
         break;
+      case 'collectstats':
+        g_processing_task = true;
+        wpt.moz.main.collectStats(wpt.moz.main.callback);
+        break;
 
       default:
         wpt.moz.logError('Unknown command: ', JSON.stringify(task, null, 2));
     }
 
-    if (!g_active) {
+    if (!g_active && !g_processing_task) {
       setTimeout(function() {wpt.moz.main.getTask();}, TASK_INTERVAL_SHORT);
     }
   }
@@ -524,6 +539,42 @@ wpt.moz.main.pollForDomElements = function() {
     wpt.moz.main.domElementsPollingId_ = undefined;
     wpt.moz.main.sendEventToDriver_('all_dom_elements_loaded', {});
   }
+};
+
+wpt.moz.main.collectStats = function(callback) {
+  var win = window.content.document.defaultView.wrappedJSObject;
+  
+  // look for any user timing data
+  if (win.performance && win.performance.getEntriesByType) {
+    var marks = win.performance.getEntriesByType("mark");
+    for (var i = 0; i < marks.length; i++) {
+      var mark = marks[i];
+      mark.type = 'mark';
+      wpt.moz.main.sendEventToDriver_('timed_event', '', JSON.stringify(mark));
+    }
+  }
+
+  var domCount = win.document.getElementsByTagName("*").length;
+  wpt.moz.main.sendEventToDriver_('domCount', {'domCount':domCount});
+
+  if (win.performance && win.performance.timing) {
+    var timingParams = {};
+    function addTime(name) {
+      if (win.performance.timing[name] > 0) {
+        timingParams[name] = Math.max(0, (
+            win.performance.timing[name] -
+            win.performance.timing['navigationStart']));
+      }
+    };
+    addTime('domContentLoadedEventStart');
+    addTime('domContentLoadedEventEnd');
+    addTime('loadEventStart');
+    addTime('loadEventEnd');
+    wpt.moz.main.sendEventToDriver_('window_timing', timingParams);
+  }
+  
+  if (callback)
+    callback();
 };
 
 })();  // End closure

@@ -88,9 +88,10 @@ if( (int)$test[test][fvonly] == 0 )
                     'run_id' => $run,
                     'is_cached' => $cached,
                     'use_cpu' => true,
+                    'show_labels' => true,
                     'is_mime' => $mime
                     );
-                $map = GetWaterfallMap($connection_rows, $url, $options);
+                $map = GetWaterfallMap($connection_rows, $url, $options, $pageData);
                 foreach($map as $entry)
                 {
                     if( $entry['request'] !== NULL )
@@ -154,9 +155,10 @@ if( (int)$test[test][fvonly] == 0 )
                     'run_id' => $run,
                     'is_cached' => $cached,
                     'use_cpu' => true,
+                    'show_labels' => true,
                     'is_mime' => $mime
                     );
-                $map = GetWaterfallMap($connection_rows, $url, $options);
+                $map = GetWaterfallMap($connection_rows, $url, $options, $pageData);
                 foreach($map as $entry)
                 {
                     if( $entry['request'] !== NULL )
@@ -241,9 +243,11 @@ if( (int)$test[test][fvonly] == 0 )
             tableBytesFv.draw(viewBytesFv, {showRowNumber: false, sortColumn: 1, sortAscending: false});
             
             var pieRequestsFv = new google.visualization.PieChart(document.getElementById('pieRequestsFv_div'));
+            google.visualization.events.addListener(pieRequestsFv, 'ready', function(){markUserTime('aft.Requests Pie');});
             pieRequestsFv.draw(fvRequests, {width: 450, height: 300, title: 'Requests', colors: fvColors});
 
             var pieBytesFv = new google.visualization.PieChart(document.getElementById('pieBytesFv_div'));
+            google.visualization.events.addListener(pieBytesFv, 'ready', function(){markUserTime('aft.Bytes Pie');});
             pieBytesFv.draw(fvBytes, {width: 450, height: 300, title: 'Bytes', colors: fvColors});
 
             <?php if( count($breakdownRv) ) { ?>

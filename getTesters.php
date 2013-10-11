@@ -2,13 +2,22 @@
 
 include 'common.inc';
 $remote_cache = array();
+if ($CURL_CONTEXT !== false) {
+  curl_setopt($CURL_CONTEXT, CURLOPT_CONNECTTIMEOUT, 30);
+  curl_setopt($CURL_CONTEXT, CURLOPT_TIMEOUT, 30);
+}
 
 // load the locations
-$locations = &GetAllTesters();
+$locations = GetAllTesters();
 
 // kick out the data
-if( $_REQUEST['f'] == 'json' )
+if( array_key_exists('f', $_REQUEST) && $_REQUEST['f'] == 'json' )
 {
+  $ret = array();
+  $ret['statusCode'] = 200;
+  $ret['statusText'] = 'Ok';
+  $ret['data'] = $locations;
+  json_response($ret);
 }
 else
 {
@@ -18,7 +27,7 @@ else
     echo "<response>\n";
     echo "<statusCode>200</statusCode>\n";
     echo "<statusText>Ok</statusText>\n";
-    if( strlen($_REQUEST['r']) )
+    if( array_key_exists('r', $_REQUEST) && strlen($_REQUEST['r']) )
         echo "<requestId>{$_REQUEST['r']}</requestId>\n";
     echo "<data>\n";
     
@@ -38,6 +47,8 @@ else
                     echo "<index>$count</index>\n";
                     foreach( $tester as $k => &$v )
                     {
+                        if (is_array($v))
+                          $v = '';
                         if (htmlspecialchars($v)!=$v)
                             echo "<$k><![CDATA[$v]]></$k>\n";
                         else
@@ -104,23 +115,34 @@ function GetRemoteTesters($server, $remote_location) {
     
     $server_hash = md5($server);
     
-    // see if we need to populate the cache from the remote server
-    if (!array_key_exists($server_hash, $remote_cache)) {
-        $remote = json_decode(json_encode((array)simplexml_load_file("$server/getTesters.php?hidden=1")), true);
-        if (is_array($remote) && array_key_exists('data', $remote) && array_key_exists('location', $remote['data'])) {
-            $cache_entry = array();
-            foreach($remote['data']['location'] as &$location) {
-                $parts = explode(':', $location['id']);
-                $id = $parts[0];
-                $cache_entry[$id] = array(  'elapsed' => $location['elapsed'],
-                                                        'testers' => $location['testers']['tester']);
-            }
-            $remote_cache[$server_hash] = $cache_entry;
+    if (array_key_exists('relay', $_REQUEST) && $_REQUEST['relay']) {
+      // see if we need to populate the cache from the remote server
+      if (!array_key_exists($server_hash, $remote_cache)) {
+        $xml = http_fetch("$server/getTesters.php?hidden=1");
+        if ($xml) {
+          $remote = json_decode(json_encode((array)simplexml_load_string($xml)), true);
+          if (is_array($remote) && array_key_exists('data', $remote) && array_key_exists('location', $remote['data'])) {
+              $cache_entry = array();
+              foreach($remote['data']['location'] as &$location) {
+                  if (array_key_exists('testers', $location) && array_key_exists('tester', $location['testers'])) {
+                    $parts = explode(':', $location['id']);
+                    $id = $parts[0];
+                    if (array_key_exists(0, $location['testers']['tester']))
+                      $cache_entry[$id] = array(  'elapsed' => $location['elapsed'],
+                                                              'testers' => $location['testers']['tester']);
+                    else
+                      $cache_entry[$id] = array(  'elapsed' => $location['elapsed'],
+                                                              'testers' => array($location['testers']['tester']));
+                  }
+              }
+              $remote_cache[$server_hash] = $cache_entry;
+          }
         }
-    }
+      }
 
-    if (array_key_exists($server_hash, $remote_cache) && array_key_exists($remote_location,$remote_cache[$server_hash])) {
-        $testers = $remote_cache[$server_hash][$remote_location];
+      if (array_key_exists($server_hash, $remote_cache) && array_key_exists($remote_location,$remote_cache[$server_hash])) {
+          $testers = $remote_cache[$server_hash][$remote_location];
+      }
     }
     
     return $testers;

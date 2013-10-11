@@ -820,10 +820,10 @@ function processResultsForAll( $resultId = null ) {
           $pageDataArray = delimitedToArray($pageData,"\t",false);
 			
 			if(!empty($pageDataLocationRepeatView)) {
-				logOutput('[LOG] will process pageDataArrayRepeatView:'.$pageDataLocationRepeatView);
-		          $pageDataRepeatView = file_get_contents(trim($pageDataLocationRepeatView));
-		          $pageDataArrayRepeatView = delimitedToArray($pageDataRepeatView,"\t",false);
-				
+        logOutput('[LOG] will process pageDataArrayRepeatView:'.$pageDataLocationRepeatView);
+        $pageDataRepeatView = file_get_contents(trim($pageDataLocationRepeatView));
+        $pageDataArrayRepeatView = delimitedToArray($pageDataRepeatView,"\t",false);
+
 			}
 		logOutput('[LOG] ended  pageDataArrayRepeatView');
         } catch (Exception $ex){
@@ -913,164 +913,71 @@ logOutput('[LOG] will process pageDataArray ');
           $result['AvgRepeatViewFullyLoadedRequests'] = $repeatViewData['Requests'];
           $result['AvgRepeatViewFullyLoadedBytesIn'] = $repeatViewData['Bytes In'];
 
-// DONE: Replaced XML with processing of raw data in order to capture all pages in a sequence 2012/01/08
-//        if ($avgFV) {
-//          $result['AvgFirstViewLoadTime'] = $avgFV->loadTime;
-//          $result['AvgFirstViewFirstByte'] = $avgFV->TTFB;
-//          $result['AvgFirstViewStartRender'] = $avgFV->render;
-//          $result['AvgFirstViewDocCompleteTime'] = $avgFV->docTime;
-//          $result['AvgFirstViewDocCompleteRequests'] = $avgFV->requestsDoc;
-//          $result['AvgFirstViewDocCompleteBytesIn'] = $avgFV->bytesInDoc;
-//          $result['AvgFirstViewDomTime'] = $avgFV->domTime;
-//          $result['AvgFirstViewFullyLoadedTime'] = $avgFV->fullyLoaded;
-//          $result['AvgFirstViewFullyLoadedRequests'] = $avgFV->requests;
-//          $result['AvgFirstViewFullyLoadedBytesIn'] = $avgFV->bytesIn;
-//        }
-//        if ($avgRV) {
-//          $result['AvgRepeatViewLoadTime'] = $avgRV->loadTime;
-//          $result['AvgRepeatViewFirstByte'] = $avgRV->TTFB;
-//          $result['AvgRepeatViewStartRender'] = $avgRV->render;
-//          $result['AvgRepeatViewDocCompleteTime'] = $avgRV->docTime;
-//          $result['AvgRepeatViewDocCompleteRequests'] = $avgRV->requestsDoc;
-//          $result['AvgRepeatViewDocCompleteBytesIn'] = $avgRV->bytesInDoc;
-//          $result['AvgRepeatViewDomTime'] = $avgRV->domTime;
-//          $result['AvgRepeatViewFullyLoadedTime'] = $avgRV->fullyLoaded;
-//          $result['AvgRepeatViewFullyLoadedRequests'] = $avgRV->requests;
-//          $result['AvgRepeatViewFullyLoadedBytesIn'] = $avgRV->bytesIn;
-//        }
+          if ($testComplete) {
+            $result['Date'] = $testComplete;
+          } else {
+            $result['Date'] = current_seconds();
+          }
 
-
-        if ($testComplete) {
-          $result['Date'] = $testComplete;
-        } else {
-          $result['Date'] = current_seconds();
-        }
-        // TODO: Deprecated
-//        if ($result['DownloadResultXml']) {
-//          saveWPTXmlResults($wptResultId, $resultXml);
-//        }
-//        if ($result['DownloadDetails']) {
-//          saveWPTAssets($wptResultId, $resultXml);
-//        }
-
-//        if ($result['Validate']){
-//          $validationRequest = $result['ValidationRequest'];
-//          $validationType = $result['ValidationType'];
-//          $validationMarkAs = $result['ValidationMarkAs'];
-//          $validationMarkAsElse = $result['ValidationMarkAsElse'];
-//          $requestData = retrieveRequestsData($requestDataLocation );
-//          $requestDataRepeatView = retrieveRequestsData($requestDataLocationRepeatView );
-//          $requestDataArray[] = $requestData;
-//          $requestDataArray[] = $requestDataRepeatView;
-//          $result['ValidationState'] = $validationMarkAsElse;
-//          foreach($requestDataArray as $reqData){
-//            foreach ($reqData as $request){
-//              if ( preg_match($validationRequest, $request['url']) ){
-//                if ( $validationType == VALIDATION_TYPE_MATCH ){
-//                  $result['ValidationState'] = $validationMarkAs;
-//                  break;
-//                } else {
-//                  if ($validationType == VALIDATION_TYPE_NOMATCH){
-//                    break;
-//                  } else {
-//                    $result['ValidationState'] = $validationMarkAs;
-//                  }
-//                }
-//              }
-//            }
-//          }
-//        }
-//        if ( $result['AvgFirstViewLoadTime']=0
-//            && $result['AvgFirstViewFirstByte']=0
-//            && $result['AvgFirstViewDocCompleteTime']=0
-//            && $result['AvgFirstViewStartRender']=0){
-//          $result['ValidationState'] = 2;
-//        }
-        // If this is a multi page job page test will report incorrect numbers. This routine
-        // Will calculate correct numbers from the actual request data.
-        // Sums up the total for each element across all pages.
-        // multi page/sequence jobs are detected by the raw page data having more than a single entry.
-        // Also, if it is a multi sequence job we add entries for each page in the run to provide the ability
-        // to do finer grain reporting
-//        if ( sizeof($pageDataArray) > 1){
-//          if ($pageData){
-//            if ( $pageDataArray ){
-//              $result['AvgFirstViewDocCompleteTime'] = array_sum(getArrayFor($pageDataArray,'Doc Complete Time (ms)'));
-//              $result['AvgFirstViewDocCompleteRequests'] = array_sum(getArrayFor($pageDataArray,'Requests (Doc)'));
-//              $result['AvgFirstViewDocCompleteBytesIn'] = array_sum(getArrayFor($pageDataArray,'Bytes In (Doc)'));
-//              $result['AvgFirstViewFullyLoadedTime'] = array_sum(getArrayFor($pageDataArray,'Activity Time(ms)'));
-//              $result['AvgFirstViewFullyLoadedRequests'] = array_sum(getArrayFor($pageDataArray,'Requests'));
-//              $result['AvgFirstViewFullyLoadedBytesIn'] = array_sum(getArrayFor($pageDataArray,'Bytes In'));
-//              $result['AvgFirstViewFirstByte'] = array_sum(getArrayFor($pageDataArray,'Time to First Byte (ms)'));
-//              $result['AvgFirstViewStartRender'] = array_sum(getArrayFor($pageDataArray,'Time to Start Render (ms)'));
-//            }
-//          }
-//          if ($pageDataRepeatView){
-//            if ( $pageDataArrayRepeatView ){
-//              $result['AvgRepeatViewDocCompleteTime'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Doc Complete Time (ms)'));
-//              $result['AvgRepeatViewDocCompleteRequests'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Requests (Doc)'));
-//              $result['AvgRepeatViewDocCompleteBytesIn'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Bytes In (Doc)'));
-//              $result['AvgRepeatViewFullyLoadedTime'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Activity Time(ms)'));
-//              $result['AvgRepeatViewFullyLoadedRequests'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Requests'));
-//              $result['AvgRepeatViewFullyLoadedBytesIn'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Bytes In'));
-//              $result['AvgRepeatViewFirstByte'] = array_sum(getArrayFor($pageDataArray,'Time to Repeat Byte (ms)'));
-//              $result['AvgRepeatViewStartRender'] = array_sum(getArrayFor($pageDataArray,'Time to Start Render (ms)'));
-//            }
-//          }
-//        }
-/*
-logOutput('[LOG] coucou');
-logOutput('[LOG] '.print_r($result, true));
-*/
-        $result->save();
-        }
+          $result->save();
+        } // end foreach pageDataArray
         updateJobstatus($id, $status);
-      }
-    }
+        
+        if ( $runToUse === '0' ) {
+          $thisRun = $xml->data->run[$avgRun-1];
+        } else {
+          $thisRun = $xml->data->run[$runToUse-1];
+        }
 
-	exportResultToExternal(
-		$xml->data->median->firstView->titleTime,
-		'results.'.makeLabelFromJobID($wptJobId).'.timeToTitle' );
+          exportResultToExternal(
+            $thisRun->firstView->titleTime,
+            'results.'.makeLabelFromJobID($wptJobId).'.timeToTitle' );
 
-	exportResultToExternal(
-			$xml->data->median->firstView->TTFB,
-			'results.'.makeLabelFromJobID($wptJobId).'.timeToFirstByte' );
+          exportResultToExternal(
+              $thisRun->firstView->TTFB,
+              'results.'.makeLabelFromJobID($wptJobId).'.timeToFirstByte' );
 
-	exportResultToExternal(
-			$xml->data->median->firstView->bytesIn,
-			'results.'.makeLabelFromJobID($wptJobId).'.nbBytesIn' );
+          exportResultToExternal(
+              $thisRun->firstView->bytesIn,
+              'results.'.makeLabelFromJobID($wptJobId).'.nbBytesIn' );
 
-	// $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
-	exportResultToExternal(
-			$xml->data->median->firstView->score_gzip,
-			'results.'.makeLabelFromJobID($wptJobId).'.scoreGzip' );
-	exportResultToExternal(
-			$xml->data->median->firstView->score_cache,
-			'results.'.makeLabelFromJobID($wptJobId).'.scoreCache' );
-	exportResultToExternal(
-			$xml->data->median->firstView->render,
-			'results.'.makeLabelFromJobID($wptJobId).'.timeToRender' );
-	exportResultToExternal(
-			$xml->data->median->firstView->requestsDoc,
-			'results.'.makeLabelFromJobID($wptJobId).'.nbHttpQueries' );
-	exportResultToExternal(
-			$xml->data->median->firstView->responses_404,
-			'results.'.makeLabelFromJobID($wptJobId).'.nb404' );
-	
-	
-	if(property_exists($xml->data->median, 'repeatView') === true) {
-		exportResultToExternal(
-			( $xml->data->median->firstView->requests - $xml->data->median->repeatView->requests ),
-			'results.'.makeLabelFromJobID($wptJobId).'.requetesEconomisees' );
-		exportResultToExternal(
-			( $xml->data->median->firstView->bytesIn - $xml->data->median->repeatView->bytesIn ),
-			'results.'.makeLabelFromJobID($wptJobId).'.poidsEconomise' );
-	}
+          // $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
+          exportResultToExternal(
+              $thisRun->firstView->score_gzip,
+              'results.'.makeLabelFromJobID($wptJobId).'.scoreGzip' );
+          exportResultToExternal(
+              $thisRun->firstView->score_cache,
+              'results.'.makeLabelFromJobID($wptJobId).'.scoreCache' );
+          exportResultToExternal(
+              $thisRun->firstView->render,
+              'results.'.makeLabelFromJobID($wptJobId).'.timeToRender' );
+          exportResultToExternal(
+              $thisRun->firstView->requestsDoc,
+              'results.'.makeLabelFromJobID($wptJobId).'.nbHttpQueries' );
+          exportResultToExternal(
+              $thisRun->firstView->responses_404,
+              'results.'.makeLabelFromJobID($wptJobId).'.nb404' );
+          
+          
+          if(property_exists($thisRun, 'repeatView') === true) {
+            exportResultToExternal(
+              ( $thisRun->firstView->requests - $thisRun->repeatView->requests ),
+              'results.'.makeLabelFromJobID($wptJobId).'.requetesEconomisees' );
+            exportResultToExternal(
+              ( $thisRun->firstView->bytesIn - $thisRun->repeatView->bytesIn ),
+              'results.'.makeLabelFromJobID($wptJobId).'.poidsEconomise' );
+          }
 
-	// $xml->data->median->firstView->score_gzip
+      } // end result = 200
+      
+    } // end foreach results
+
+
+
+	// $thisRun->firstView->score_gzip
 		// score_compress
   } catch (Exception $e) {
-    error_log("[WPTMonitor] Failed while Listing jobs: " . $wptResultId . " message: " . $e->getMessage());
+    error_log("[WPTMonitor] processResultsForAll Failed while Listing jobs: " . $wptResultId . " message: " . $e->getMessage());
     logOutput('[ERROR] [processResultsForAll] Exception : ' . $e->getMessage() . "");
   }
   unset($result);
@@ -1335,7 +1242,8 @@ function checkQueueGrowthCountAndEmailAlert(){
   $config = $configTable->find(1);
   $siteContactEmailAddress = $config['SiteContactEmailAddress'];
   foreach( $queueStatus as $key=>$status){
-    if ($status['QueueGrowthCount'] > 4 ){
+    if (array_key_exists('QueueGrowthCount', $status) 
+        && $status['QueueGrowthCount'] > 4 ){
       logOutput('[INFO] [checkQueueGrowthCountAndEmailAlert] QueueGrowthCheck has grown over 4 times for: '.$key);
       // Growth rate has exceeded threshold, but only send an alert once per hour.
       // Check time stamp

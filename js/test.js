@@ -1,4 +1,7 @@
-var wptStorage = window.localStorage || {};
+if (window['wptForgetSettings'])
+  var wptStorage = {};
+else  
+  var wptStorage = window.localStorage || {};
 
 function ValidateInput(form)
 {

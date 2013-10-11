@@ -7,15 +7,27 @@ if( !isset($pageData) && isset($id) && isset($testPath) ) {
     $pageData = loadAllPageData($testPath, $options);
 }
 if (isset($pageData) && is_array($pageData)) {
-    foreach($pageData as &$run_data) {
-        foreach($run_data as &$test_data) {
-            if( array_key_exists('adult_site', $test_data) && $test_data['adult_site']) {
-                define('ADULT_SITE', true);
-                $adult_site = true;
-                break 2;
-            }
-        }
-    }
+  $adultKeywords = array();
+  if (is_file('./settings/adult.txt'))
+    $adultKeywords = file('./settings/adult.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+  foreach($pageData as &$run_data) {
+      foreach($run_data as &$test_data) {
+          $isAdult = false;
+          if (array_key_exists('URL', $test_data))
+            foreach ($adultKeywords as $keyword)
+              if ((stripos($test_data['URL'], $keyword) !== false) ||
+                  (array_key_exists('title', $test_data) &&
+                  stripos($test_data['title'], $keyword) !== false)) {
+                $isAdult = true;
+                break;
+              }
+          if ($isAdult || (array_key_exists('adult_site', $test_data) && $test_data['adult_site'])) {
+              define('ADULT_SITE', true);
+              $adult_site = true;
+              break 2;
+          }
+      }
+  }
 }
 
 if( $supportsAuth && !defined('EMBED') )
@@ -114,10 +126,10 @@ if (!defined('EMBED')) {
                 $opens = '';
                 if( !strcasecmp($tabName, $tab) )
                     $current = ' class="current"';
-                /*if (substr($tabUrl, 0, 4) == 'http') {
+                if (substr($tabUrl, 0, 4) == 'http') {
                     $target = ' target="_blank"';
                     $opens = ' (opens in a new tab)';
-                }*/
+                }
                 echo "<li$current><a title=\"$tabName$opens\" href=\"$tabUrl\"$target>$tabName</a></li>";
             }
         }
@@ -217,7 +229,10 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
                 $grades = GetGrades($pageData[$gradeRun][0], $test, $id, $gradeRun);
                 if( count($grades) )
                 {
-                    echo '<ul class="grades">';
+                    $smaller = '';
+                    if( count($grades) > 6 )
+                      $smaller = ' smaller';
+                    echo "<ul class=\"grades$smaller\">";
                     $optlink = FRIENDLY_URLS ? "/result/$id/$gradeRun/performance_optimization/" : "performance_optimization.php?test=$id&run=$gradeRun";
                     foreach( $grades as $check => &$grade )
                         echo "<li class=\"$check\"><a href=\"$optlink#$check\"><h2 class=\"{$grade['class']}\">{$grade['grade']}</h2></a>{$grade['description']}</li>";
@@ -298,8 +313,6 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
             $tabs['PageSpeed'] = "/pagespeed.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Content Breakdown'] = "/breakdown.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Domains'] = "/domains.php?test=$id&run=$gradeRun&cached=$cached$end";
-		//if(file_exists($testPath.'/'.$run.'_progress.csv'))
-		$tabs['User Experience'] = $GLOBALS['basePath']."/front-experience.php?test=$id&run=$run&cached=$cached";
         
         if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
             $tabs['Screen Shot'] = "/screen_shot.php?test=$id&run=$gradeRun&cached=$cached$end";
@@ -359,9 +372,15 @@ function GetGrades(&$pageData, &$test, $id, $run)
         $grades['keep_alive_enabled'] = array( 'class' => $opt['keep-alive']['class'], 'grade' => $opt['keep-alive']['grade'], 'description' => $opt['keep-alive']['label']);
         $grades['compress_text'] = array( 'class' => $opt['gzip']['class'], 'grade' => $opt['gzip']['grade'], 'description' => $opt['gzip']['label']);
         $grades['compress_images'] = array( 'class' => $opt['image_compression']['class'], 'grade' => $opt['image_compression']['grade'], 'description' => $opt['image_compression']['label']);
+        if (array_key_exists('progressive_jpeg', $opt))
+          $grades['progressive_jpeg'] = array( 'class' => $opt['progressive_jpeg']['class'], 'grade' => $opt['progressive_jpeg']['grade'], 'description' => $opt['progressive_jpeg']['label']);
         $grades['cache_static_content'] = array( 'class' => $opt['caching']['class'], 'grade' => $opt['caching']['grade'], 'description' => $opt['caching']['label']);
         $grades['use_of_cdn'] = array( 'class' => $opt['cdn']['class'], 'grade' => $opt['cdn']['grade'], 'description' => $opt['cdn']['label']);
     }
     
     return $grades;
 }
+?>
+<script type="text/javascript">
+  markUserTime('aft.Site Header');
+</script>

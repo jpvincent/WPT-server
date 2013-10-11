@@ -56,7 +56,28 @@ window.goog['isNull'] = window.goog['isNull'] || function(val) {
 /**
  * @private
  */
-wpt.contentScript.reportTiming_ = function() {
+wpt.contentScript.collectStats_ = function() {
+  // look for any user timing data
+  try {
+    if (window['performance'] != undefined &&
+        (window.performance.getEntriesByType ||
+         window.performance.webkitGetEntriesByType)) {
+      if (window.performance.getEntriesByType)
+        var marks = window.performance.getEntriesByType("mark");
+      else
+        var marks = window.performance.webkitGetEntriesByType("mark");
+      if (marks.length)
+        chrome.extension.sendRequest({'message': 'wptMarks', 
+                                      'marks': marks },
+                                     function(response) {});
+    }
+  } catch(e){
+  }
+
+  var domCount = document.getElementsByTagName("*").length;
+  chrome.extension.sendRequest({'message': 'wptStats',
+                                'domCount': domCount}, function(response) {});
+  
   var timingRequest = { 'message': 'wptWindowTiming' };
   function addTime(name) {
     if (window.performance.timing[name] > 0) {
@@ -78,8 +99,15 @@ wpt.contentScript.reportTiming_ = function() {
 // We need to use it to register for the earliest onLoad callback
 // since the navigation timing times are sometimes questionable.
 window.addEventListener('load', function() {
-  chrome.extension.sendRequest({'message': 'wptLoad'}, function(response) {});
-  window.setTimeout(wpt.contentScript.reportTiming_, 0);
+  var timestamp = 0;
+  if (window['performance'] != undefined)
+    timestamp = window.performance.now();
+  var fixedViewport = 0;
+  if (document.querySelector("meta[name=viewport]"))
+    fixedViewport = 1;
+  chrome.extension.sendRequest({'message': 'wptLoad',
+                                'fixedViewport': fixedViewport,
+                                'timestamp': timestamp}, function(response) {});
 }, false);
 
 
@@ -164,6 +192,8 @@ chrome.extension.onRequest.addListener(
       g_intervalId = window.setInterval(
           function() { pollDOMElement(); },
           DOM_ELEMENT_POLL_INTERVAL);
+    } else if (request.message == 'collectStats') {
+      wpt.contentScript.collectStats_();
     }
     sendResponse({});
 });

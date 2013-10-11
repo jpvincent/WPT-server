@@ -15,7 +15,6 @@ publishTo=www.webpagetest.org
 ;map=1
 
 ; test options available
-enableSNS=0
 enableVideo=1
 
 ; disable gzip compressing the result text files
@@ -31,12 +30,12 @@ showslow_key=<your showslow API key>
 tcpdump_view="http://cloudshark.org/view?url="
 
 ; image quality (defaults to 30)
-iq=75
+;iq=75
 ;save png full-resolution screen shots
 ;pngss=1
 
 ; Run tests concurrently across test machines
-;shardTests=1
+;shard_tests=1
 
 ;Log tests that take longer than X seconds
 ;slow_test_time=240
@@ -46,4 +45,10 @@ iq=75
 ;archive_s3_key=<access key>
 ;archive_s3_secret=<secret>
 ;archive_s3_bucket=<bucket>
-;archive_s3_url=http://s3.amazonaws.com/<bucket>/
+;archive_s3_url=http://s3.amazonaws.com/
+
+;Number of days to keep tests locally before archiving
+;archive_days=2
+
+; beanstalkd memory queue for tests (only the default 11300 port is supported right now)
+;beanstalkd=127.0.0.1

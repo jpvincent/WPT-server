@@ -14,24 +14,26 @@ function loadAllPageData($testPath, $options = null)
     $ret = array();
     
     // go in order for the number of runs there are supposed to be
-    $ini = parse_ini_file("$testPath/testinfo.ini", true);
-    if( gz_is_file("$testPath/testinfo.json") )
-        $ini['testinfo'] = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
-    $runs = $ini['test']['runs'];
-    $fvonly = $ini['test']['fvonly'];
-    for( $run = 1; $run <= $runs; $run++ )
-    {
-        $data = loadPageRunData($testPath, $run, 0, $options);
-        if( isset($data) )
-            $ret[$run][0] = $data;
-        
-        if( !$fvonly )
-        {
-            unset( $data );
-            $data = loadPageRunData($testPath, $run, 1, $options);
-            if( isset($data) )
-                $ret[$run][1] = $data;
-        }
+    if (is_file("$testPath/testinfo.ini")) {
+      $ini = parse_ini_file("$testPath/testinfo.ini", true);
+      if( gz_is_file("$testPath/testinfo.json") )
+          $ini['testinfo'] = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
+      $runs = $ini['test']['runs'];
+      $fvonly = $ini['test']['fvonly'];
+      for( $run = 1; $run <= $runs; $run++ )
+      {
+          $data = loadPageRunData($testPath, $run, 0, $options);
+          if( isset($data) )
+              $ret[$run][0] = $data;
+          
+          if( !$fvonly )
+          {
+              unset( $data );
+              $data = loadPageRunData($testPath, $run, 1, $options);
+              if( isset($data) )
+                  $ret[$run][1] = $data;
+          }
+      }
     }
     
     return $ret;
@@ -58,6 +60,12 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
     
     // see if we have video files to calculate a visually complete time from
     if (isset($ret)) {
+        loadUserTimingData($ret, $testPath, $run, $cached);
+        if (array_key_exists('loadTime', $ret) &&
+            !$ret['loadTime'] &&
+            array_key_exists('fullyLoaded', $ret) &&
+            $ret['fullyLoaded'] > 0)
+            $ret['loadTime'] = $ret['fullyLoaded'];
         $video_dir = "$testPath/video_$run";
         if ($cached)
             $video_dir .= '_cached';
@@ -115,6 +123,25 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
                 }
                 $ret['visualCompleteCustom'] = $progress['visualComplete'];
             }
+        }
+        // clean up any insane values (from negative numbes as unsigned most likely)
+        $times = array('loadTime',
+                       'TTFB',
+                       'render',
+                       'fullyLoaded',
+                       'docTime',
+                       'domTime',
+                       'aft',
+                       'titleTime',
+                       'loadEventStart',
+                       'loadEventEnd',
+                       'domContentLoadedEventStart',
+                       'domContentLoadedEventEnd',
+                       'lastVisualChange',
+                       'server_rtt');
+        foreach ($times as $key) {
+          if ($ret[$key] > 3600000 || $ret[$key] < 0)
+            $ret[$key] = 0;
         }
     }
     
@@ -193,6 +220,9 @@ function loadPageData($file, $options = null)
                                 'base_page_cdn' => @trim($fields[86]),
                                 'adult_site' => @(int)trim($fields[87])
                             );
+
+                $ret['fixed_viewport'] = (array_key_exists(88, $fields) && strlen(trim($fields[88]))) ? (int)trim($fields[88]) : -1;
+                $ret['score_progressive_jpeg'] = (array_key_exists(89, $fields) && strlen(trim($fields[89]))) ? (int)trim($fields[89]) : -1;
                 
                 $ret['date'] = strtotime(trim($fields[0]) . ' ' . trim($fields[1]));
                 if (!strlen($ret['pageSpeedVersion']))
@@ -469,5 +499,39 @@ function PageDataStandardDeviation($pageData, $metric, $cached) {
         $ret = (int)sqrt($sum / $count);
     }
     return $ret;
+}
+
+/**
+* Load the reported user timings data for the given run
+* 
+* @param mixed $testPath
+* @param mixed $run
+* @param mixed $cached
+*/
+function loadUserTimingData(&$pageData, $testPath, $run, $cached) {
+  if( $cached )
+    $file = "$testPath/{$run}_Cached_timed_events.json";
+  else
+    $file = "$testPath/{$run}_timed_events.json";
+  if (gz_is_file($file)) {
+    $events = json_decode(gz_file_get_contents($file), true);
+    if (isset($events) && is_array($events) && count($events)) {
+      $lastEvent = 0;
+      foreach ($events as $event) {
+        if (is_array($event) &&
+            array_key_exists('name', $event) &&
+            array_key_exists('startTime', $event)) {
+          $name = preg_replace('/[^a-zA-Z0-9\.\-_\(\) ]/', '_', $event['name']);
+          $time = intval($event['startTime'] + 0.5);
+          if ($time > 0 && $time < 3600000) {
+            if ($event['startTime'] > $lastEvent)
+              $lastEvent = $event['startTime'];
+            $pageData["userTime.$name"] = $time;
+          }
+        }
+      }
+      $pageData["userTime"] = intval($lastEvent + 0.5);
+    }
+  }
 }
 ?>

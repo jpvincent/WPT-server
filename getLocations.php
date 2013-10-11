@@ -1,9 +1,13 @@
 <?php
 include 'common.inc';
 $remote_cache = array();
+if ($CURL_CONTEXT !== false) {
+  curl_setopt($CURL_CONTEXT, CURLOPT_CONNECTTIMEOUT, 30);
+  curl_setopt($CURL_CONTEXT, CURLOPT_TIMEOUT, 30);
+}
 
 // load the locations
-$locations = &LoadLocations();
+$locations = LoadLocations();
 
 // get the backlog for each location
 foreach( $locations as $id => &$location )
@@ -19,8 +23,13 @@ foreach( $locations as $id => &$location )
 }
 
 // kick out the data
-if( $_REQUEST['f'] == 'json' )
+if( array_key_exists('f', $_REQUEST) && $_REQUEST['f'] == 'json' )
 {
+  $ret = array();
+  $ret['statusCode'] = 200;
+  $ret['statusText'] = 'Ok';
+  $ret['data'] = $locations;
+  json_response($ret);
 }
 else
 {
@@ -85,7 +94,9 @@ function LoadLocations()
     while( isset($loc['locations'][$i]) )
     {
         $group = &$loc[$loc['locations'][$i]];
-        if( !$group['hidden'] || $_REQUEST['hidden'] )
+        if( !array_key_exists('hidden', $group) ||
+            !$group['hidden'] ||
+            $_REQUEST['hidden'] )
         {
             $label = $group['label'];
             
@@ -98,13 +109,15 @@ function LoadLocations()
             while( isset($group[$j]) )
             {
                 if (array_key_exists($group[$j], $loc)) {
-                    if (!$loc[$group[$j]]['hidden'] || $_REQUEST['hidden']) {
+                    if (!array_key_exists('hidden', $loc[$group[$j]]) ||
+                        !$loc[$group[$j]]['hidden'] ||
+                        $_REQUEST['hidden']) {
                         $locations[$group[$j]] = array( 'Label' => $label, 
                                                         'location' => $loc[$group[$j]]['location'],
                                                         'Browser' => $loc[$group[$j]]['browser'],
                                                         'localDir' => $loc[$group[$j]]['localDir'],
-                                                        'relayServer' => $loc[$group[$j]]['relayServer'],
-                                                        'relayLocation' => $loc[$group[$j]]['relayLocation']
+                                                        'relayServer' => @$loc[$group[$j]]['relayServer'],
+                                                        'relayLocation' => @$loc[$group[$j]]['relayLocation']
                                                         );
 
                         if( $default == $loc['locations'][$i] && $def == $group[$j] )
@@ -173,23 +186,28 @@ function GetRemoteBacklog($server, $remote_location) {
     global $remote_cache;
     
     $server_hash = md5($server);
-    
-    // see if we need to populate the cache from the remote server
-    if (!array_key_exists($server_hash, $remote_cache)) {
-        $remote = json_decode(json_encode((array)simplexml_load_file("$server/getLocations.php?hidden=1")), true);
-        if (is_array($remote) && array_key_exists('data', $remote) && array_key_exists('location', $remote['data'])) {
-            $cache_entry = array();
-            foreach($remote['data']['location'] as &$location) {
-                $parts = explode(':', $location['id']);
-                $id = $parts[0];
-                $cache_entry[$id] = $location['PendingTests'];
-            }
-            $remote_cache[$server_hash] = $cache_entry;
-        }
-    }
 
-    if (array_key_exists($server_hash, $remote_cache) && array_key_exists($remote_location,$remote_cache[$server_hash])) {
-        $backlog = $remote_cache[$server_hash][$remote_location];
+    if (array_key_exists('relay', $_REQUEST) && $_REQUEST['relay']) {
+      // see if we need to populate the cache from the remote server
+      if (!array_key_exists($server_hash, $remote_cache)) {
+          $xml = http_fetch("$server/getLocations.php?hidden=1");
+          if ($xml) {
+            $remote = json_decode(json_encode((array)simplexml_load_string($xml)), true);
+            if (is_array($remote) && array_key_exists('data', $remote) && array_key_exists('location', $remote['data'])) {
+                $cache_entry = array();
+                foreach($remote['data']['location'] as &$location) {
+                    $parts = explode(':', $location['id']);
+                    $id = $parts[0];
+                    $cache_entry[$id] = $location['PendingTests'];
+                }
+                $remote_cache[$server_hash] = $cache_entry;
+            }
+          }
+      }
+
+      if (array_key_exists($server_hash, $remote_cache) && array_key_exists($remote_location,$remote_cache[$server_hash])) {
+          $backlog = $remote_cache[$server_hash][$remote_location];
+      }
     }
     
     return $backlog;

@@ -23,7 +23,8 @@ for($offset = 0; $offset <= $days; $offset++)
         $entry['Other'] = 0;
         while( ($line = fgets($file)) !== false )
         {
-            if( strpos($line, 'Page Speed Service') !== false &&
+            if( (strpos($line, 'Page Speed Service') !== false ||
+                 strpos($line, 'PageSpeed Service') !== false) &&
                 strpos($line, 'edb046ff09404e1b90887827e1b37b06') === false )
             {
                 $entry['Total']++;
@@ -48,7 +49,7 @@ for($offset = 0; $offset <= $days; $offset++)
     $targetDate->modify('-1 day');
 }
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
     <head>
         <title>WebPagetest - PSS Report</title>

@@ -32,7 +32,7 @@ foreach($requests as $reqNum => $request)
 	if($request)
 	{
 		echo '<tr>';
-        
+
         $requestNum = $reqNum + 1;
 
 		$highlight = '';
@@ -41,23 +41,23 @@ foreach($requests as $reqNum => $request)
 			$highlight = 'error ';
 		elseif ( $result >= 300)
 			$highlight = 'warning ';
-		
+
 		if( (int)$requestNum % 2 == 1)
 			$highlight .= 'odd';
 		else
 			$highlight .= 'even';
-		
+
 		if( $request['load_start'] < $data['render'])
 			$highlight .= 'Render';
 		elseif ( $request['load_start'] < $data['docTime'])
 			$highlight .= 'Doc';
-		
+
         if ($settings['nolinks']) {
             echo '<td class="reqNum ' . $highlight . '">' . $requestNum . '</td>';
         } else {
             echo '<td class="reqNum ' . $highlight . '"><a href="#request' . $requestNum . '">' . $requestNum . '</a></td>';
         }
-		
+
 		if( $request['host'] || $request['url'] )
 		{
 			$protocol = 'http://';
@@ -74,7 +74,7 @@ foreach($requests as $reqNum => $request)
 		else
 			echo '<td class="reqUrl ' . $highlight . '">-</td>';
 
-		if( $request['contentType'])
+		if( array_key_exists('contentType', $request) && strlen($request['contentType']))
 			echo '<td class="reqMime ' . $highlight . '">' . $request['contentType'] . '</td>';
 		else
 			echo '<td class="reqMime ' . $highlight . '">-</td>';
@@ -126,31 +126,31 @@ foreach($requests as $reqNum => $request)
 				echo '<td class="reqSSL ' . $highlight . '">-</td>';
 		}
 
-		if( $request['ttfb_ms'])
+		if( array_key_exists('ttfb_ms', $request) && $request['ttfb_ms'])
 			echo '<td class="reqTTFB ' . $highlight . '">' . $request['ttfb_ms'] . ' ms</td>';
 		else
 			echo '<td class="reqTTFB ' . $highlight . '">-</td>';
 
-		if( $request['download_ms'])
+		if( array_key_exists('download_ms', $request) && $request['download_ms'])
 			echo '<td class="reqDownload ' . $highlight . '">' . $request['download_ms'] . ' ms</td>';
 		else
 			echo '<td class="reqDownload ' . $highlight . '">-</td>';
-		
-		if( $request['bytesIn'])
+
+		if( array_key_exists('bytesIn', $request) && $request['bytesIn'])
 			echo '<td class="reqBytes ' . $highlight . '">' . number_format($request['bytesIn'] / 1024, 1) . ' KB</td>';
 		else
 			echo '<td class="reqBytes ' . $highlight . '">-</td>';
 
-		if( $request['responseCode'])
+		if( array_key_exists('responseCode', $request) && $request['responseCode'])
 			echo '<td class="reqResult ' . $highlight . '">' . $request['responseCode'] . '</td>';
 		else
 			echo '<td class="reqResult ' . $highlight . '">-</td>';
-		
-		if( $request['ip_addr'])
+
+		if( array_key_exists('ip_addr', $request) && $request['ip_addr'])
 			echo '<td class="reqIP ' . $highlight . '">' . $request['ip_addr'] . '</td>';
 		else
 			echo '<td class="reqIP ' . $highlight . '">-</td>';
-			
+
 		if( $haveLocations)
 			echo '<td class="reqLocation ' . $highlight . '">' . $request['location'] . "</td>\n";
 
@@ -161,7 +161,7 @@ foreach($requests as $reqNum => $request)
 </tbody>
 </table></div>
 
-<?php 
+<?php
 	if( $haveLocations)
 		echo '<p class="center">*This product includes GeoLite data created by MaxMind, available from <a href="http://maxmind.com/">http://maxmind.com/</a>.</p>';
 ?>
@@ -183,7 +183,10 @@ echo '<div id="headers">';
         foreach($requests as $reqNum => $request) {
             if($request) {
                 $requestNum = $reqNum + 1;
-                echo "<br><h4><a name=\"request$requestNum\">Request $requestNum:</a></h4><p class=\"indented2\">\n";
+                echo "<h4><span class=\"a_request\" id=\"request$requestNum\" data-target-id=\"headers_$requestNum\">";
+                echo "+ Request $requestNum: {$request['full_url']}</span></h4>";
+                echo '<div class="header_details" id="headers_' . $requestNum . '">';
+                echo "<p class=\"indented2\">\n";
                 if ($settings['nolinks'])
                     echo "<b>URL:</b> {$request['full_url']}<br>\n";
                 else
@@ -202,6 +205,8 @@ echo '<div id="headers">';
                         echo " column {$request['initiator_column']}";
                     echo "<br>\n";
                 }
+                if (array_key_exists('client_port', $request) && intval($request['client_port']))
+                    echo "<b>Client Port:</b> {$request['client_port']}<br>\n";
                 if (array_key_exists('custom_rules', $request)) {
                     foreach($request['custom_rules'] as $rule_name => &$rule) {
                         echo "<b>Custom Rule - $rule_name: </b>({$rule['count']} matches) - " . htmlspecialchars($rule['value']) . "<br>\n";
@@ -237,6 +242,8 @@ echo '<div id="headers">';
                         echo "</p>";
                     }
                 }
+
+                echo '</div>'; // header_details
             }
         }
     }

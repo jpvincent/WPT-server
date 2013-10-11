@@ -17,7 +17,7 @@ $page_keywords = array('Comparison','Webpagetest','Website Speed Test','Page Spe
 $page_description = "Comparison Test$testLabel.";
 ?>
 
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
     <head>
         <title>WebPagetest - Comparison Test</title>
@@ -29,9 +29,9 @@ $page_description = "Comparison Test$testLabel.";
     <body>
         <div class="page">
             <?php
-            $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? $GLOBALS['basePath'].'/blink' : $GLOBALS['basePath'].'/blink.php' );
+            $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? '/blink' : '/blink.php' );
             if( strlen($_GET['bid']) )
-                $navTabs['Test Result'] = FRIENDLY_URLS ? $GLOBALS['basePath']."/result/{$_GET['bid']}/" : $GLOBALS['basePath']."/results.php?test={$_GET['bid']}";
+                $navTabs['Test Result'] = FRIENDLY_URLS ? "/result/{$_GET['bid']}/" : "/results.php?test={$_GET['bid']}";
             $tab = 'New Comparison';
             define('NAV_NO_SHARE', true);
             include 'header.inc';
@@ -43,7 +43,7 @@ $page_description = "Comparison Test$testLabel.";
             else
             {
             ?>
-            <form name="urlEntry" action="<?= $GLOBALS['basePath'] ?>runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PrepareBlinkTest(this)">
+            <form name="urlEntry" action="/runtest.php" method="POST" enctype="multipart/form-data" onsubmit="return PrepareBlinkTest(this)">
             
             <input type="hidden" name="private" value="1">
             <input type="hidden" name="view" value="blink">
@@ -61,7 +61,7 @@ $page_description = "Comparison Test$testLabel.";
               $hashStr .= $_SERVER['HTTP_USER_AGENT'];
               $hashStr .= $owner;
               
-              $now = date('c');
+              $now = gmdate('c');
               echo "<input type=\"hidden\" name=\"vd\" value=\"$now\">\n";
               $hashStr .= $now;
               
