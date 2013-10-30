@@ -1,7 +1,7 @@
 <?php
 require_once('bootstrap.php');
 include_once 'db_utils.inc';
-try{
+// try{
 // Get list of users
 echo 'Fetching Jobs<br>';
 $jobTable= Doctrine_Core::getTable('WPTJob');
@@ -31,7 +31,6 @@ foreach ($jobs as $job){
   $x->save();
 }
 echo 'Complete<br>';
-} catch (Exception $ex){
+/*} catch (Exception $ex){
   echo 'Failed with exception '.$ex->getMessage();
-}
-?>
+}*/

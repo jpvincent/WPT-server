@@ -394,7 +394,6 @@ else
         echo "<response>\n";
         if( strlen($_REQUEST['r']) )
             echo "<requestId>{$_REQUEST['r']}</requestId>\n";
-
         // see if it was a valid test
         if( $test['test']['runs'] )
         {

@@ -185,6 +185,8 @@ function getResultIDs($startDate, $endDate) {
 try {
       $info = parse_ini_file("$dirpath/$file/testinfo.ini", true);
 } catch (Exception $e){
+  error_log("[WPTMonitor] Failed while reading testinfo ini: " . $e->getMessage());
+
 print $e;
 }
       $val = array();

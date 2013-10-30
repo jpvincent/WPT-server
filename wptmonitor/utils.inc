@@ -212,16 +212,17 @@ function delimitedToArray($data, $delimiter, $header = false) {
   $lines = explode(PHP_EOL, $data);
   $headers = array();
 
-  $heads = explode($delimiter, $lines[0]);
+  /*$heads = explode($delimiter, $lines[0]);
   foreach ($heads as $key => $h) {
     $headers[] = trim($h);
-  }
+  }*/
 /*print_r($heads);
 print_r($lines);*/
+// logOutput('[LOG] delimitedToArray :'.print_r($lines, true));
   foreach ($lines as $key => $line) {
-    if (!$header && $key == 0) {
+    /*if (!$header && $key == 0) {
       continue;
-    }
+    }*/
     if (empty($line)){
       continue;
     }

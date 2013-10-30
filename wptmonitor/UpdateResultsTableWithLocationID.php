@@ -1,7 +1,7 @@
 <?php
 require_once( 'bootstrap.php' );
 include_once 'db_utils.inc';
-try {
+//try {
   // Set up location array
   $locationTable = Doctrine_Core::getTable( 'WPTLocation' );
   $locations = $locationTable->findAll();
@@ -27,7 +27,7 @@ try {
   }
 
   echo 'Complete<br>';
-} catch ( Exception $ex ) {
+/*} catch ( Exception $ex ) {
   echo 'Failed with exception ' . $ex->getMessage();
 }
-?>
+?>*/

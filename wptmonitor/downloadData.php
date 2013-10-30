@@ -57,6 +57,7 @@
       printResultData($data,$label);
     }
   } catch (Exception $e){
+    error_log("[WPTMonitor] Failed downloading data. message: " . $e->getMessage());
     print $e;
   }
     exit;

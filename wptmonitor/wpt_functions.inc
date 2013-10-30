@@ -823,14 +823,17 @@ function processResultsForAll( $resultId = null ) {
         logOutput('[LOG] will process pageDataArrayRepeatView:'.$pageDataLocationRepeatView);
         $pageDataRepeatView = file_get_contents(trim($pageDataLocationRepeatView));
         $pageDataArrayRepeatView = delimitedToArray($pageDataRepeatView,"\t",false);
-
+        logOutput('[LOG] will process pageDataArrayRepeatView :'.$pageDataLocation);
 			}
-		logOutput('[LOG] ended  pageDataArrayRepeatView');
+  		logOutput('[LOG] ended  pageDataLocation '/*.print_r($pageDataArray, true)*/);
+      if(count($pageDataArray) < 1) {
+        logOutput('[WARN]  pageDataArray contains no data'/*.print_r($pageDataArray, true)*/);
+      }
         } catch (Exception $ex){
           logOutput("[WARN] [ProcessResults] Exception processing page data. Message: ".$ex->getMessage());
           continue;
         }
-logOutput('[LOG] will process pageDataArray ');
+// logOutput('[LOG] will process pageDataArray '. print_r($pageDataArray, true));
         foreach ( $pageDataArray as $key=>$data ){
           $repeatViewData = $pageDataArrayRepeatView[$key];
 
@@ -1077,7 +1080,7 @@ function updateJobStatus($id, $status) {
 }
 
 function incrementDownloadAttempts($id) {
-  try{
+//  try{
     $q = Doctrine_Query::create()->from('WPTResult r')->where('r.Id = ?', $id);
       if ( $q->count() > 0 ){
         $result = $q->fetchOne();
@@ -1089,9 +1092,9 @@ function incrementDownloadAttempts($id) {
         $result['LastStatusUpdate'] = current_seconds();
         $result->save();
       }
-    } catch (Exception $ex){
+/*    } catch (Exception $ex){
     print $ex;
-  }
+  }*/
 }
 
 function getReportDataForLabel($label,$fromDate,$toDate,$stddev, $runLabel=null){
@@ -1450,7 +1453,9 @@ function updateLocations($id){
     }
   unset($locations);
  } catch (Exception $e){
+    error_log("[WPTMonitor] Failed while updating locations: " . $e->getMessage());
     print $e;
+
     exit;
   }
 }

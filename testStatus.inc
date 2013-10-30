@@ -14,6 +14,7 @@ function GetTestStatus($id, $includePosition = true) {
     $ret = array('statusCode' => 400, 'statusText' => 'Test not found');
     $testPath = './' . GetTestPath($id);
     $testInfoJson = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
+    // print $testPath;
     if (isset($testInfoJson['relayId'])) {
         $ret = GetRelayStatus($id, $testPath, $testInfoJson);
         $ret['remote'] = true;

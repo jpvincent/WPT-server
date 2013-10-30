@@ -22,6 +22,8 @@ foreach ($users as $user){
 }
 echo 'Complete<br>';
 } catch (Exception $ex){
+  error_log("[WPTMonitor] Failed while fixing folders. message: " . $e->getMessage());
+
   echo 'Failed with exception '.$ex->getMessage();
 }
 ?>
