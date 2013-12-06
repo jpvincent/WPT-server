@@ -9,7 +9,7 @@ require_once('logging.inc');
 * 
 * @param mixed $id
 */
-function ArchiveTest($id) {
+function ArchiveTest($id, $store_result = true) {
     global $settings;
     global $api_keys;
     $ret = false;
@@ -99,7 +99,7 @@ function ArchiveTest($id) {
                         // make sure we don't leave a file hanging around
                         if (is_file($zipFile))
                             unlink($zipFile);
-                        if ($ret) {
+                        if ($ret && $store_result) {
                             $testInfo['archived'] = true;
                             gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfo));
                         }
@@ -120,30 +120,22 @@ function RestoreArchive($id) {
     $ret = false;
     if (strpos($id, '.') === false) {
         global $settings;
-        global $debug;
-    //    $debug = true;
         $testPath = './' . GetTestPath($id);
         $url = '';
         // see if we have a http path where the file is archived
         $check_dir = $testPath;
         for ($i = 0; $i <= 4; $i++) {
             $check_dir = dirname($check_dir);
-            logMsg("Checking: $check_dir/archive.dat");
             if (is_file("$check_dir/archive.dat")) {
                 $url = trim(file_get_contents("$check_dir/archive.dat"));
                 if (strlen($url))
                     break;
             }
         }
-        logMsg("Archive URL: $url");
         if (strlen($url) || 
             array_key_exists('archive_dir', $settings) || 
             array_key_exists('archive_s3_url', $settings) ||
             array_key_exists('archive_s3_server', $settings)) {
-            if (!is_dir($testPath)) {
-                mkdir( $testPath, 0777, true );
-            }
-            $testPath = realpath($testPath);
             $zipfile = "./tmp/$id.zip";
             if (strlen($url)) {
                 $url .= "/$id.zip";

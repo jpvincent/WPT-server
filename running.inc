@@ -42,7 +42,7 @@
                 <h3>Testing...</h3>
                 <?php
                 $status = GetTestStatus($id, true);
-                if ( !$status['startTime'] )
+                if ( !array_key_exists('startTime', $status) || !$status['startTime'] )
                 {
                     ?>
                     <form action="/cancelTest.php" method="get">
@@ -59,7 +59,7 @@
             <div id="statusImg">
                 <?php
                     $img = "waiting";
-                    if( $status['startTime'] )
+                    if( array_key_exists('statusCode', $status) && $status['statusCode'] == 100 )
                         $img = "testing";
                     echo "<img id='statusImage' src=\"{$GLOBALS['cdnPath']}/images/status_$img.png\">";
                     echo "<div id=\"statusText\">$statusText</div>\n";
@@ -83,8 +83,18 @@
         </div>
         <script type="text/javascript">
             var testId = "<?php echo $id; ?>";
-            var pollingInterval = 5000;
-            var pollingIntervalTesting = 1000;
+            <?php
+            $polling_interval_testing = 1000;
+            $polling_interval = 15000;
+            if (array_key_exists('testinfo', $test) &&
+                array_key_exists('loc_type', $test['testinfo']) &&
+                $test['testinfo']['loc_type'] == 'Appurify') {
+              $polling_interval = 30000;
+              $polling_interval_testing = 15000;
+            }
+            echo "var pollingInterval = $polling_interval;\n";
+            echo "var pollingIntervalTesting = $polling_interval_testing;\n";
+            ?>
             var waitingImage = '<?php echo "{$GLOBALS['cdnPath']}/images/status_waiting.png"; ?>';
             var testingImage = '<?php echo "{$GLOBALS['cdnPath']}/images/status_testing.png"; ?>';
             var lastStatusCode = 0;

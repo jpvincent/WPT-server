@@ -1,4 +1,15 @@
 <?php
+if(extension_loaded('newrelic')) { 
+  newrelic_add_custom_tracer('StartProcessingIncrementalResult');
+  newrelic_add_custom_tracer('CheckForSpam');
+  newrelic_add_custom_tracer('loadPageRunData');
+  newrelic_add_custom_tracer('ProcessAVIVideo');
+  newrelic_add_custom_tracer('getBreakdown');
+  newrelic_add_custom_tracer('GetVisualProgress');
+  newrelic_add_custom_tracer('DevToolsGetConsoleLog');
+  newrelic_add_custom_tracer('FinishProcessingIncrementalResult');
+}
+
 chdir('..');
 //$debug = true;
 include('common.inc');
@@ -10,20 +21,36 @@ header('Content-type: text/plain');
 header("Cache-Control: no-cache, must-revalidate");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 ignore_user_abort(true);
-set_time_limit(60*5*10);
+set_time_limit(60*5);
 require_once('harTiming.inc');
 require_once('./video/avi2frames.inc.php');
-
 
 $location = $_REQUEST['location'];
 $key  = $_REQUEST['key'];
 $id   = $_REQUEST['id'];
 $testLock = null;
 
+if(extension_loaded('newrelic')) { 
+  newrelic_add_custom_parameter('test', $id);
+  newrelic_add_custom_parameter('location', $location);
+}
+
+//logmsg(json_encode($_REQUEST), './work/workdone.log', true);
+
 // The following params have a default value:
 $done = arrayLookupWithDefault('done', $_REQUEST, false);
 $har  = arrayLookupWithDefault('har',  $_REQUEST, false);
 $pcap = arrayLookupWithDefault('pcap', $_REQUEST, false);
+$cpu = arrayLookupWithDefault('cpu', $_REQUEST, 0);
+$pc = array_key_exists('pc', $_REQUEST) ? $_REQUEST['pc'] : '';
+$ec2 = array_key_exists('ec2', $_REQUEST) ? $_REQUEST['ec2'] : '';
+$tester = null;
+if (strlen($ec2))
+  $tester = $ec2;
+elseif (strlen($pc))
+  $tester = $pc . '-' . trim($_SERVER['REMOTE_ADDR']);
+else
+  $tester = trim($_SERVER['REMOTE_ADDR']);
 
 // Sometimes we need to make changes to the way the client and server
 // communicate, without updating both at the same time.  The following
@@ -86,10 +113,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
         }
     }
 } elseif (ValidateTestId($id)) {
-    $locations = parse_ini_file('./settings/locations.ini', true);
-    BuildLocations($locations);
-    $settings = parse_ini_file('./settings/settings.ini');
-    $locKey = arrayLookupWithDefault('key', $locations[$location], "");
+    $locKey = GetLocationKey($location);
     logMsg("\n\nWork received for test: $id, location: $location, key: $key\n");
     if( (!strlen($locKey) || !strcmp($key, $locKey)) || !strcmp($_SERVER['REMOTE_ADDR'], "127.0.0.1") ) {
         // update the location time
@@ -111,17 +135,22 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
             if( isset($testInfo) ) {
                 $testInfo['last_updated'] = $time;
                 $testInfo_dirty = true;
-                
-                if (array_key_exists('location', $testInfo) &&
-                    strlen($testInfo['location']) &&
+
+                if (!strlen($location) &&
+                    array_key_exists('location', $testInfo) &&
+                    strlen($testInfo['location']))
+                  $location = $testInfo['location'];
+                if (!strlen($tester) &&
                     array_key_exists('tester', $testInfo) &&
-                    strlen($testInfo['tester'])) {
+                    strlen($testInfo['tester']))
+                  $tester = $testInfo['tester'];
+                                    
+                if (strlen($location) && strlen($tester)) {
                     $testerInfo = array();
                     $testerInfo['ip'] = $_SERVER['REMOTE_ADDR'];
-                    if ($done) {
+                    if ($done)
                         $testerInfo['test'] = '';
-                    }
-                    UpdateTester($testInfo['$location'], $testInfo['tester'], $testerInfo);
+                    UpdateTester($location, $tester, $testerInfo, $cpu);
                 }
             }
         }
@@ -130,9 +159,8 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
 
         if (isset($har) && $har && isset($_FILES['file']) && isset($_FILES['file']['tmp_name'])) {
             ProcessUploadedHAR($testPath);
-        }
-        elseif(isset($pcap) && $pcap &&
-               isset($_FILES['file']) && isset($_FILES['file']['tmp_name'])) {
+        } elseif(isset($pcap) && $pcap &&
+                 isset($_FILES['file']) && isset($_FILES['file']['tmp_name'])) {
             // The results page allows a user to download a pcap file.  It
             // expects the file to be at a specific path, which encodes the
             // run number and cache state.
@@ -144,8 +172,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                               $testPath, $finalPcapFileName);
 
             ProcessPCAP($testPath, $finalPcapFileName);
-        }
-        elseif( isset($_FILES['file']) ) {
+        } elseif( isset($_FILES['file']) ) {
             // extract the zip file
             logMsg(" Extracting uploaded file '{$_FILES['file']['tmp_name']}' to '$testPath'\n");
             $archive = new PclZip($_FILES['file']['tmp_name']);
@@ -153,18 +180,14 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
         }
 
         // compress the text data files
-        if( isset($_FILES['file']) )
-        {
+        if( isset($_FILES['file']) ) {
             $f = scandir($testPath);
-            foreach( $f as $textFile )
-            {
+            foreach( $f as $textFile ) {
                 logMsg("Checking $textFile\n");
-                if( is_file("$testPath/$textFile") )
-                {
+                if( is_file("$testPath/$textFile") ) {
                     $parts = pathinfo($textFile);
                     $ext = $parts['extension'];
-                    if( !strcasecmp( $ext, 'txt') || !strcasecmp( $ext, 'json') || !strcasecmp( $ext, 'csv') )
-                    {
+                    if( !strcasecmp( $ext, 'txt') || !strcasecmp( $ext, 'json') || !strcasecmp( $ext, 'csv') ) {
                         // delete the optimization file (generated dynamically now)
                         // or any files with sensitive data if we were asked to
                         if( $ini['sensitive'] && strpos($textFile, '_report') ) {
@@ -240,7 +263,7 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
         // pre-process any background processing we need to do for this run
         if (isset($runNumber) && isset($cacheWarmed)) {
             loadPageRunData($testPath, $runNumber, $cacheWarmed);
-            ProcessAVIVideo($testPath, $runNumber, $cacheWarmed);
+            ProcessAVIVideo($testInfo, $testPath, $runNumber, $cacheWarmed);
         }
             
         // see if the test is complete
@@ -259,33 +282,16 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
             
             $perTestTime = 0;
             $testCount = 0;
-            $beaconUrl = null;
-            if (strpos($id, '.') === false && strlen($settings['showslow']))
-            {
-                $beaconUrl = $settings['showslow'] . '/beacon/webpagetest/';
-                if (array_key_exists('showslow_key', $settings) &&
-                    strlen($settings['showslow_key']))
-                    $beaconUrl .= '?key=' . trim($settings['showslow_key']);
-                if (array_key_exists('beaconRate', $settings) &&
-                    $settings['beaconRate'] && rand(1, 100) > $settings['beaconRate'] )
-                    unset($beaconUrl);
-                else {
-                    $testInfo['showslow'] = 1;
-                    $testInfo_dirty = true;
-                }
-            }
 
             // do pre-complete post-processing
             require_once('video.inc');
             require_once('./video/visualProgress.inc.php');
             MoveVideoFiles($testPath);
-            BuildVideoScripts($testPath);
             
-            if (!isset($pageData)) {
-                $pageData = loadAllPageData($testPath);
-            }
+            if (!isset($pageData))
+              $pageData = loadAllPageData($testPath);
             $medianRun = GetMedianRun($pageData, 0);
-            
+
             // calculate and cache the content breakdown and visual progress information
             if( isset($testInfo) ) {
                 require_once('breakdown.inc');
@@ -299,6 +305,10 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                 }
             }
 
+            // delete all of the videos except for the median run?
+            if( array_key_exists('median_video', $ini) && $ini['median_video'] )
+                KeepVideoForRun($testPath, $medianRun);
+            
             $test = file_get_contents("$testPath/testinfo.ini");
             $now = gmdate("m/d/y G:i:s", $time);
 
@@ -352,24 +362,6 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                 }
             }
             
-            // clean up the backup of the job file
-            $backupDir = $locations[$location]['localDir'] . '/testing';
-            if( is_dir($backupDir) )
-            {
-                $files = glob("$backupDir/*$id.*", GLOB_NOSORT);
-                foreach($files as $file)
-                    unlink($file);
-            }
-
-            // log any slow tests
-            if (isset($testInfo) && array_key_exists('slow_test_time', $settings) && array_key_exists('url', $testInfo) && strlen($testInfo['url'])) {
-                $elapsed = $time - $testInfo['started'];
-                if ($elapsed > $settings['slow_test_time']) {
-                    $log_entry = gmdate("m/d/y G:i:s", $testInfo['started']) . "\t$elapsed\t{$testInfo['ip']}\t{$testInfo['url']}\t{$testInfo['location']}\t$id\n";
-                    error_log($log_entry, 3, './tmp/slow_tests.log');
-                }
-            }
-            
             // see if it is an industry benchmark test
             if( array_key_exists('industry', $ini) && array_key_exists('industry_page', $ini) && 
                 strlen($ini['industry']) && strlen($ini['industry_page']) )
@@ -403,69 +395,15 @@ if( array_key_exists('video', $_REQUEST) && $_REQUEST['video'] )
                 }
             }
             
-            // delete all of the videos except for the median run?
-            if( array_key_exists('median_video', $ini) && $ini['median_video'] )
-                KeepVideoForRun($testPath, $medianRun);
-                
-            // archive the test (modifies the on-disk testinfo so we need to flush it and update
             if( isset($testInfo) && $testInfo_dirty ) {
                 $testInfo_dirty = false;
                 gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfo));
             }
             SecureDir($testPath);
             FinishProcessingIncrementalResult();
-
-            ArchiveTest($id);
-            $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
             
-            // do any other post-processing (e-mail notification for example)
-            if( isset($settings['notifyFrom']) && is_file("$testPath/testinfo.ini") )
-            {
-                $test = parse_ini_file("$testPath/testinfo.ini",true);
-                if( array_key_exists('notify', $test['test']) && strlen($test['test']['notify']) )
-                    notify( $test['test']['notify'], $settings['notifyFrom'], $id, $testPath, $settings['host'] );
-            }
-            
-            // send a callback request
-            if( isset($testInfo) && isset($testInfo['callback']) && strlen($testInfo['callback']) )
-            {
-                $send_callback = true;
-                $testId = $id;
-                
-                if (array_key_exists('batch_id', $testInfo) && strlen($testInfo['batch_id'])) {
-                    require_once('testStatus.inc');
-                    $testId = $testInfo['batch_id'];
-                    $status = GetTestStatus($testId);
-                    $send_callback = false;
-                    if (array_key_exists('statusCode', $status) && $status['statusCode'] == 200)
-                        $send_callback = true;
-                }
-                
-                if ($send_callback) {
-                    // build up the url we are going to ping
-                    $url = $testInfo['callback'];
-                    if( strncasecmp($url, 'http', 4) )
-                        $url = "http://" . $url;
-                    if( strpos($url, '?') == false )
-                        $url .= '?';
-                    else
-                        $url .= '&';
-                    $url .= "id=$testId";
-                    
-                    // set a 10 second timeout on the request
-                    $ctx = stream_context_create(array('http' => array('header'=>'Connection: close', 'timeout' => 10))); 
-
-                    // send the request (we don't care about the response)
-                    @file_get_contents($url, 0, $ctx);
-                }
-            }
-            
-            // send a beacon?
-            if( isset($beaconUrl) && strlen($beaconUrl) )
-            {
-                @include('./work/beacon.inc');
-                @SendBeacon($beaconUrl, $id, $testPath, $testInfo, $pageData);
-            }
+            // send an async request to the post-processing code so we don't block
+            SendAsyncRequest("/work/postprocess.php?test=$id");
         } else {
             if( isset($testInfo) && $testInfo_dirty )
                 gz_file_put_contents("$testPath/testinfo.json", json_encode($testInfo));
@@ -559,21 +497,32 @@ function notify( $mailto, $from,  $id, $testPath, $host )
 */
 function KeepVideoForRun($testPath, $run)
 {
-    if( $run )
-    {
-        $dir = opendir($testPath);
-        if( $dir )
-        {
-            while($file = readdir($dir)) 
-            {
-                $path = $testPath  . "/$file/";
-                if( is_dir($path) && !strncmp($file, 'video_', 6) && $file != "video_$run" )
-                    delTree("$path/");
+  if ($run) {
+    $dir = opendir($testPath);
+    if ($dir) {
+      while($file = readdir($dir)) {
+        $path = $testPath  . "/$file/";
+        if( is_dir($path) && !strncmp($file, 'video_', 6) && $file != "video_$run" )
+          delTree("$path/");
+        elseif (is_file("$testPath/$file")) {
+          if (preg_match('/^([0-9]+(_Cached)?)[_\.]/', $file, $matches) && count($matches) > 1) {
+            $match_run = $matches[1];
+            if (strcmp("$run", $match_run) &&
+                (strpos($file, '_bodies.zip') ||
+                 strpos($file, '.cap') ||
+                 strpos($file, '_devtools.json') ||
+                 strpos($file, '_netlog.txt') ||
+                 strpos($file, '_doc.') ||
+                 strpos($file, '_render.'))) {
+              unlink("$testPath/$file");
             }
-
-            closedir($dir);
+          }
         }
+      }
+
+      closedir($dir);
     }
+  }
 }
 
 /**
@@ -1085,7 +1034,6 @@ function ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad) {
     foreach ($sortedEntries as $entind => $entry)
     {
         // See http://www.softwareishard.com/blog/har-12-spec/#entries
-
         $pageref = $entry['pageref'];
         $startedDateTime = $entry['startedDateTime'];
         $entryTime = $entry['time'];
@@ -1094,6 +1042,9 @@ function ProcessHARData($parsedHar, $testPath, $harIsFromSinglePageLoad) {
         $cacheEnt = $entry['cache'];
         $timingsEnt = $entry['timings'];
 
+        if ($reqEnt['method'] == 'HEAD')
+          continue;
+                  
         // pcap2har doesn't set the server's IP address, so it may be unset:
         $reqIpAddr = arrayLookupWithDefault('serverIPAddress', $entry, null);
 
@@ -1646,7 +1597,7 @@ function CheckForSpam() {
     if (isset($testInfo) && 
         !array_key_exists('spam', $testInfo) &&
         strpos($id, '.') == false &&
-        !strlen($testInfo['uid']) &&
+        !strlen($testInfo['user']) &&
         !strlen($testInfo['key']) &&
         is_file('./settings/blockurl.txt')) {
         $blocked = false;
@@ -1675,7 +1626,11 @@ function CheckForSpam() {
                                 if (strlen($pageUrl)) {
                                     $parts = parse_url($pageUrl);
                                     $host = trim($parts['host']);
-                                    if (strlen($host)) {
+                                    if (strlen($host) &&
+                                        strcasecmp($host, 'www.google.com') &&
+                                        strcasecmp($host, 'google.com') &&
+                                        strcasecmp($host, 'www.youtube.com') &&
+                                        strcasecmp($host, 'youtube.com')) {
                                         // add it to the auto-block list if it isn't already there
                                         if (is_file('./settings/blockdomainsauto.txt'))
                                             $autoBlock = file('./settings/blockdomainsauto.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -1704,14 +1659,10 @@ function CheckForSpam() {
                 }
             }
         }
-        $testInfo['spam'] = $blocked;
-        $testInfo_dirty = true;
+        if ($blocked) {
+          $testInfo['spam'] = $blocked;
+          $testInfo_dirty = true;
+        }
     }
-    
-    //Patch to add Headers in IEWPG.txt.gz for Local instance
-/*    $iewpg = $testPath."/".$runNumber."_IEWPG.txt.gz";
-    $headerLocal = "Date Time Event Name URL Load Time (ms) Time to First Byte (ms) unused Bytes Out Bytes In DNS Lookups Connections Requests OK Responses Redirects Not Modified Not Found Other Responses Error Code Time to Start Render (ms) Segments Transmitted Segments Retransmitted Packet Loss (out) Activity Time(ms) Descriptor Lab ID Dialer ID Connection Type Cached Event URL Pagetest Build Measurement Type Experimental Doc Complete Time (ms) Event GUID Time to DOM Element (ms) Includes Object Data Cache Score Static CDN Score One CDN Score GZIP Score Cookie Score Keep-Alive Score DOCTYPE Score Minify Score Combine Score Bytes Out (Doc) Bytes In (Doc) DNS Lookups (Doc) Connections (Doc) Requests (Doc) OK Responses (Doc) Redirects (Doc) Not Modified (Doc) Not Found (Doc) Other Responses (Doc) Compression Score Host IP Address ETag Score Flagged Requests Flagged Connections Max Simultaneous Flagged Connections Time to Base Page Complete (ms) Base Page Result Gzip Total Bytes Gzip Savings Minify Total Bytes Minify Savings Image Total Bytes Image Savings Base Page Redirects Optimization Checked \r\n";
-    $content = $headerLocal.gz_file_get_contents($iewpg);
-    $iewpg = $testPath."/".$runNumber."_IEWPG.txt";
-    gz_file_put_contents($iewpg, $content);*/
 }
+?>

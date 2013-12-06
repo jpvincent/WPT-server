@@ -93,6 +93,7 @@ function GetPageEvents($page_data) {
         'render' => $page_data['render'],
         'dom_element' => $page_data['domTime'],
         'aft' =>  $page_data['aft'],
+        'nav_first_paint' => $page_data['firstPaint'],
         'nav_load' => array($page_data['loadEventStart'],
                             $page_data['loadEventEnd']),
         'nav_dom' => array($page_data['domContentLoadedEventStart'],
@@ -133,6 +134,8 @@ function _GetMapOrImage($rows, $url, $page_events, $options, $is_image_map, &$pa
     $show_labels = (bool)@$options['show_labels'];
 
     $row_count = count($rows);
+    if (isset($options) && array_key_exists('rowcount', $options) && $options['rowcount'] > 0)
+      $row_count = $options['rowcount'];
 
     $width = (int)@$_REQUEST['width'];
     if ((int)@$options['width']) {
@@ -377,6 +380,7 @@ function _GetMapOrImage($rows, $url, $page_events, $options, $is_image_map, &$pa
                 'load' => GetColor($im, 0, 0, 255),
                 'nav_load' => GetColor($im, 192, 192, 255),
                 'nav_dom' => GetColor($im, 216, 136, 223),
+                'nav_first_paint' => GetColor($im, 143, 188, 131),
                 'aft' => GetColor($im, 255, 0, 0),
                 'user' => GetColor($im, 105, 0, 158)
                 );
@@ -984,4 +988,52 @@ function InsertWaterfall($url, &$requests, $id, $run, $cached, &$page_data, $wat
     echo "</script>";
 }
 
+function InsertMultiWaterfall(&$waterfalls, $waterfall_options) {
+  require_once('./object_detail.inc');
+  $opacity = number_format(1.0 / count($waterfalls), 2, '.', '');
+  echo '<div class="waterfall-container" style="text-align: left;margin-top:10em;">';
+  echo 'Waterfall Opacity (adjust sliders to adjust the transparency of the given waterfall):<br>';
+  echo '<table>';
+  if (count($waterfalls) == 2) {
+    echo "<tr><td>{$waterfalls[0]['label']}</td><td><input type=\"range\" class=\"waterfall-transparency\" name=\"waterfall-1\" min=\"0.0\" max=\"1.0\" step=\"0.01\" value=\"0.5\"></td><td>{$waterfalls[1]['label']}</tr></td>";
+  } else {
+    foreach($waterfalls as $index => &$waterfall) {
+      $o = $index ? $opacity : '1.0';
+      echo '<tr>';
+      echo "<td>{$waterfall['label']}</td><td><input type=\"range\" class=\"waterfall-transparency\" name=\"waterfall-$index\" min=\"0.0\" max=\"1.0\" step=\"0.01\" value=\"$o\"></td>";
+      echo '</tr>';
+    }
+  }
+  echo '</table>';
+  echo '</div>';
+
+  $row_count = 0;
+  foreach($waterfalls as $index => &$waterfall) {
+    $test_path = null;
+    $requests = getRequests($waterfall['id'], $test_path, $waterfall['run'], $waterfall['cached'], $has_secure_requests, $has_locations, false, false);
+    if (isset($requests) && is_array($requests)) {
+      $count = count($requests);
+      if ($count > $row_count)
+        $row_count = $count;
+    }
+  }
+  
+  $height_style = '';
+  if ($row_count) {
+    $row_height = imagefontheight(2) + 4;
+    $data_header_height = intval($row_height * 3 / 2);
+    $data_footer_height = $row_height;
+    $height = ($data_header_height + ($row_height * $row_count) +
+              $data_footer_height + 2) + 100;
+    $height += (2 * $row_height) + 2;
+    $height_style = "height:{$height}px;";
+  }
+  echo "<div style=\"background-color: #fff;$height_style\" class=\"waterfall-container\">";
+  foreach($waterfalls as $index => &$waterfall) {
+    $o = $index ? $opacity : '1.0';
+    echo "<img style=\"display:block;opacity:$o;position:absolute;top:0;left:0;\" class=\"waterfall-image\" alt=\"\" id=\"waterfall-$index\" src=\"/waterfall.php?test={$waterfall['id']}&run={$waterfall['run']}&cached={$waterfall['cached']}&rowcount=$row_count$waterfall_options\">";
+  }
+  echo '<div id="marker"></div>';
+  echo '</div>';
+}
 ?>

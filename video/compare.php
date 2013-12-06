@@ -1,7 +1,4 @@
 <?php
-// maximum number of tests that are allowed to be compared in video
-$maxCompare = 9;
-
 if( !isset($_REQUEST['tests']) && isset($_REQUEST['t']) )
 {
     $tests = '';
@@ -70,6 +67,9 @@ else
             <?php
                 if( !$ready )
                 {
+                  $autoRefresh = true;
+                  $noanalytics = true;
+
             ?>
                 <noscript>
                 <meta http-equiv="refresh" content="10" />
@@ -148,6 +148,7 @@ else
                     <?php
                         echo "color: #$color;\n"
                     ?>
+                    word-wrap: break-word;
                 }
                 .thumb{ border: none; }
                 .thumbChanged{border: 3px solid #FEB301;}
@@ -198,6 +199,10 @@ else
                 {
                     padding-top: 1em;
                     padding-left: 2em;
+                }
+                #statusTable a
+                {
+                    color: inherit;
                 }
                 #image
                 {
@@ -281,28 +286,6 @@ else
             </div>
 
             <script type="text/javascript">
-                <?php echo "var maxCompare = $maxCompare;"; ?>
-                function ValidateInput(form)
-                {
-                    var ret = false;
-                    
-                    var count = $('input:checked[name="t[]"]').size();
-                    if( count > 0 )
-                    {
-                        if( count <= maxCompare )
-                            ret = true;
-                        else
-                        {
-                            alert("Select no more than " + maxCompare + " tests to compare");
-                            return false;
-                        }
-                    }
-                    else
-                        alert("Please select at least one test to create a video from");
-                    
-                    return ret;
-                }
-
                 function ShowAdvanced()
                 {
                     $("#advanced").modal({opacity:80});
@@ -316,7 +299,13 @@ else
                     var position = $("#videoDiv").scrollLeft();
                     var viewable = $("#videoDiv").width();
                     var width = $("#video").width();
-                    var marker = parseInt(250 + ((position / width) * 680));
+                    <?php
+                    $padding = 250;
+                    if (array_key_exists('hideurls', $_REQUEST) && $_REQUEST['hideurls'])
+                      $padding = 30;
+                    echo "var padLeft = $padding;\n";
+                    ?>
+                    var marker = parseInt(padLeft + ((position / width) * (930 - padLeft)));
                     $('#marker').css('left', marker + 'px');
                 }
                 UpdateScrollPosition();
@@ -468,11 +457,9 @@ function ScreenShotTable()
                         $path = $test['video']['frames'][0];
                 }
 
-                $ms = $frame * 100;
-                if (array_key_exists('progress', $test['video']) 
-                    && array_key_exists('frames', $test['video']['progress'])
-                    && array_key_exists($ms, $test['video']['progress']['frames']))
-                    $progress = $test['video']['progress']['frames'][$ms]['progress'];
+                if (array_key_exists('frame_progress', $test['video']) &&
+                    array_key_exists($frame, $test['video']['frame_progress']))
+                  $progress = $test['video']['frame_progress'][$frame];
 
                 if( !$lastThumb )
                     $lastThumb = $path;
@@ -618,13 +605,25 @@ function ScreenShotTable()
         </div>
         <?php
         // display the waterfall if there is only one test
-        if( count($tests) == 1 )
-        {
+        if( count($tests) == 1 ) {
             $data = loadPageRunData($tests[0]['path'], $tests[0]['run'], $tests[0]['cached']);
             $secure = false;
             $haveLocations = false;
             $requests = getRequests($tests[0]['id'], $tests[0]['path'], $tests[0]['run'], $tests[0]['cached'], $secure, $haveLocations, true, true);
-            InsertWaterfall('', $requests, $tests[0]['id'], $tests[0]['run'], $tests[0]['cached'], "&max=$filmstrip_end_time&mime=1&state=1&cpu=0&bw=0" );
+            InsertWaterfall('', $requests, $tests[0]['id'], $tests[0]['run'], $tests[0]['cached'], $data, "&max=$filmstrip_end_time&mime=1&state=1&cpu=1&bw=1" );
+            echo '<br><br>';
+        } else {
+          $waterfalls = array();
+          foreach ($tests as &$test) {
+            $waterfalls[] = array('id' => $test['id'],
+                                  'label' => $test['name'],
+                                  'run' => $test['run'],
+                                  'cached' => $test['cached']);
+          }
+          $labels='';
+          if (array_key_exists('hideurls', $_REQUEST) && $_REQUEST['hideurls'])
+            $labels = '&labels=0';
+          InsertMultiWaterfall($waterfalls, "&max=$filmstrip_end_time&mime=1&state=1&cpu=1&bw=1$labels");
         }
         ?>
         
@@ -650,7 +649,6 @@ function ScreenShotTable()
             <input id="advanced-ok" type=button class="simplemodal-close" value="OK">
         </div>
         <?php
-        echo '<br><br>';
         } // EMBED
         // scroll the table to show the first thumbnail change
         $scrollPos = $firstFrame * ($thumbSize + 8);
@@ -675,7 +673,7 @@ function DisplayStatus()
     echo "<table id=\"statusTable\"><tr><th>Test</th><th>Status</th></tr><tr>";
     foreach($tests as &$test)
     {
-        echo "<tr><td>{$test['name']}</td><td>";
+        echo "<tr><td><a href=\"/result/{$test['id']}/\">{$test['name']}</a></td><td>";
         if( $test['done'] )
             echo "Done";
         elseif( $test['started'] )
@@ -720,7 +718,8 @@ function DisplayGraphs() {
                         'SpeedIndexDT' => 'Speed Index (Dev Tools)',
                         'TTFB' => 'Time to First Byte', 
                         'titleTime' => 'Time to Title', 
-                        'render' => 'Time to Start Render');
+                        'render' => 'Time to Start Render',
+                        'fullyLoadedCPUms' => 'CPU Busy Time');
     $progress_end = 0;
     $has_speed_index_dt = false;
     $testCount = count($tests);
@@ -804,6 +803,14 @@ function DisplayGraphs() {
                             $progress = $test['video']['progress']['frames'][$ms]['progress'];
                         }
                         $test['last_progress'] = $progress;
+                        if (array_key_exists('video', $test) &&
+                            array_key_exists('progress', $test['video']) &&
+                            array_key_exists('frames', $test['video']['progress'])) {
+                            foreach ($test['video']['progress']['frames'] as $time => $frameInfo) {
+                                if ($time <= $ms)
+                                    $progress = floatval($frameInfo['progress']);
+                            }
+                        }
                         echo ", $progress";
                     }
                     if ($has_speed_index_dt && $testCount == 1) {
@@ -855,9 +862,14 @@ function DisplayGraphs() {
                 echo "dataTimes.setValue($row, 0, '$label');\n";
                 $column = 1;
                 foreach($tests as &$test) {
-					$val = $test['pageData'][$test['run']][$test['cached']][$metric];
-					if(!empty($val))
-						echo 'dataTimes.setValue('.$row.', '.$column.', '. $val .');'.PHP_EOL;
+                    if (array_key_exists('pageData', $test) &&
+                        array_key_exists('run', $test) &&
+                        array_key_exists($test['run'], $test['pageData']) &&
+                        array_key_exists('cached', $test) &&
+                        array_key_exists($test['cached'], $test['pageData'][$test['run']]) &&
+                        array_key_exists($metric, $test['pageData'][$test['run']][$test['cached']]) &&
+                        strlen($test['pageData'][$test['run']][$test['cached']][$metric]))
+                      echo "dataTimes.setValue($row, $column, {$test['pageData'][$test['run']][$test['cached']][$metric]});\n";
                     $column++;
                 }
                 $row++;
@@ -866,12 +878,18 @@ function DisplayGraphs() {
             echo "dataBytes.setValue(0, 0, 'Total');\n";
             $column = 1;
             foreach($tests as &$test) {
-				$val = $test['pageData'][$test['run']][$test['cached']]['requests'];
-				if(!empty($val))
-					echo "dataRequests.setValue(0, $column, ".$val.');'.PHP_EOL;
-				$val = $test['pageData'][$test['run']][$test['cached']]['bytesIn'];
-				if(!empty($val))
-					echo "dataBytes.setValue(0, $column, ".$val.');'.PHP_EOL;
+                if (array_key_exists('pageData', $test) &&
+                    array_key_exists('run', $test) &&
+                    array_key_exists($test['run'], $test['pageData']) &&
+                    array_key_exists('cached', $test) &&
+                    array_key_exists($test['cached'], $test['pageData'][$test['run']])) {
+                    if (array_key_exists('requests', $test['pageData'][$test['run']][$test['cached']]) &&
+                        strlen($test['pageData'][$test['run']][$test['cached']]['requests']))
+                        echo "dataRequests.setValue(0, $column, {$test['pageData'][$test['run']][$test['cached']]['requests']});\n";
+                    if (array_key_exists('bytesIn', $test['pageData'][$test['run']][$test['cached']]) &&
+                        strlen($test['pageData'][$test['run']][$test['cached']]['bytesIn']))
+                        echo "dataBytes.setValue(0, $column, {$test['pageData'][$test['run']][$test['cached']]['bytesIn']});\n";
+                }
                 $column++;
             }
             $row = 1;
@@ -880,12 +898,8 @@ function DisplayGraphs() {
                 echo "dataBytes.setValue($row, 0, '$mimeType');\n";
                 $column = 1;
                 foreach($tests as &$test) {
-					$val = $test['breakdown'][$mimeType]['requests'];
-					if(!empty($val))
-						echo "dataRequests.setValue($row, $column, ".$val.');'.PHP_EOL;
-					$val = $test['breakdown'][$mimeType]['bytes'];
-					if(!empty($val))
-						echo "dataBytes.setValue($row, $column, ".$val.');'.PHP_EOL;
+                    echo "dataRequests.setValue($row, $column, {$test['breakdown'][$mimeType]['requests']});\n";
+                    echo "dataBytes.setValue($row, $column, {$test['breakdown'][$mimeType]['bytes']});\n";
                     $column++;
                 }
                 $row++;
@@ -897,7 +911,7 @@ function DisplayGraphs() {
                     echo "var progressChartDT = new google.visualization.LineChart(document.getElementById('compare_visual_progress_dt'));\n";
                     echo "progressChartDT.draw(dataProgressDT, {title: 'Visual Progress - Dev Tools (%)', hAxis: {title: 'Time (seconds)'}});\n";
                 }
-            }
+            }            
             ?>
             var timesChart = new google.visualization.ColumnChart(document.getElementById('compare_times'));
             timesChart.draw(dataTimes, {title: 'Timings (ms)'});
@@ -911,3 +925,4 @@ function DisplayGraphs() {
     </script>
     <?php
 }
+?>

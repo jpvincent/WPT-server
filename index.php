@@ -104,7 +104,7 @@ $loc = ParseLocations($locations);
                     <li class="analytical_review ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#">Analytical Review</a></li>
                     <li class="visual_comparison"><a href="/video/">Visual Comparison</a></li>
                     <?php
-                    if (isset($settings['mobile']))
+                    if (GetSetting('mobile'))
                         echo '<li class="mobile_test"><a href="/mobile">Mobile</a></li>';
                     ?>
                     <li class="traceroute"><a href="/traceroute">Traceroute</a></li>
@@ -202,9 +202,6 @@ $loc = ParseLocations($locations);
                                 <li><a href="#script">Script</a></li>
                                 <li><a href="#block">Block</a></li>
                                 <li><a href="#spof">SPOF</a></li>
-                                <?php if (isset($settings['enableVideo'])) { ?>
-                                <li><a href="#video">Video</a></li>
-                                <?php } ?>
                                 <?php if (!$settings['noBulk']) { ?>
                                 <li><a href="#bulk">Bulk Testing</a></li>
                                 <?php } ?>
@@ -267,6 +264,15 @@ $loc = ParseLocations($locations);
                                         ?>
                                         <input id="viewBoth" type="radio" name="fvonly" <?php if( !$fvOnly ) echo 'checked=checked'; ?> value="0">First View and Repeat View
                                         <input id="viewFirst" type="radio" name="fvonly" <?php if( $fvOnly ) echo 'checked=checked'; ?> value="1">First View Only
+                                    </li>
+                                    <li>
+                                      <label for="videoCheck">Capture Video</label>
+                                      <?php
+                                      $video = 0;
+                                      if (array_key_exists('video', $_REQUEST))
+                                          $video = (int)$_REQUEST['video'];
+                                      ?>
+                                      <input type="checkbox" name="video" id="videoCheck" class="checkbox" <?php if( $video ) echo 'checked=checked'; ?>>
                                     </li>
                                     <li>
                                         <label for="keep_test_private">Keep Test Private</label>
@@ -387,7 +393,7 @@ $loc = ParseLocations($locations);
                                         </label>
                                     </li>
                                     <li>
-                                        <input type="checkbox" name="timeline" id="timeline" class="checkbox" style="float: left;width: auto;" checked=checked>
+                                        <input type="checkbox" name="timeline" id="timeline" class="checkbox" style="float: left;width: auto;">
                                         <label for="timeline" class="auto_width">
                                             Capture Dev Tools Timeline
                                         </label>
@@ -421,6 +427,13 @@ $loc = ParseLocations($locations);
                                         <label for="disableThreadedParser" class="auto_width">
                                             Disable Threaded HTML Parser
                                         </label>
+                                    </li>
+                                    <li>
+                                        <label for="cmdline" style="width: auto;">
+                                        Command-line<br>
+                                        <small>Custom options</small>
+                                        </label>
+                                        <input type="text" name="cmdline" id="cmdline" class="text" style="width: 400px;">
                                     </li>
                                 </ul>
                             </div>
@@ -482,13 +495,6 @@ $loc = ParseLocations($locations);
 
                             <div id="block" class="test_subbox ui-tabs-hide">
                                 <p>
-                                    <input type="checkbox" name="blockads" id="blockads" class="checkbox" style="float: left;width: auto;">
-                                    <label for="blockads" class="auto_width">
-                                        Block ads (defined by adblockrules.org)
-                                    </label>
-                                </p>
-                                <br>
-                                <p>
                                     <label for="block_requests_containing" class="full_width">
                                         Block Requests Containing...<br>
                                         <small>Space separated list</small>
@@ -513,38 +519,6 @@ $loc = ParseLocations($locations);
                                     }
                                 ?></textarea>
                             </div>
-                            
-                            <?php if($settings['enableVideo']) { ?>
-                            <div id="video" class="test_subbox ui-tabs-hide">
-                                <div class="notification-container">
-                                    <div class="notification"><div class="message">
-                                        Video will appear in the Screenshot page of your results
-                                    </div></div>
-                                </div>
-                                <?php
-                                $video = 0;
-                                if (array_key_exists('video', $_REQUEST)) {
-                                    $video = (int)$_REQUEST['video'];
-                                }
-                                ?>
-                                <ul class="input_fields">
-                                    <li>
-                                      <input type="checkbox" name="video" id="videoCheck" class="checkbox before_label" <?php if( $video ) echo 'checked=checked'; ?>>
-                                      <label for="videoCheck" class="auto_width">Capture Video</label>
-                                    </li>
-                                    <?php
-                                    /*
-                                    <li>
-                                      <input type="checkbox" name="continuousVideo" id="continuousVideo" class="checkbox before_label">
-                                      <label for="continuousVideo" class="auto_width">Continuous Video Capture (may crash the browser)</label>
-                                    </li>
-                                    */
-                                    ?>
-                                </ul>
-                                <br>
-                                <br>
-                            </div>
-                            <?php } ?>
 
                             <?php if (!$settings['noBulk']) { ?>
                             <div id="bulk" class="test_subbox ui-tabs-hide">

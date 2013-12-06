@@ -59,7 +59,10 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
         GetDevToolsRequests($testPath, $run, $cached, $requests, $ret);
     
     // see if we have video files to calculate a visually complete time from
-    if (isset($ret)) {
+    $basic_results = false;
+    if (array_key_exists('basic', $_REQUEST) && $_REQUEST['basic'])
+      $basic_results = true;
+    if (isset($ret) && !$basic_results) {
         loadUserTimingData($ret, $testPath, $run, $cached);
         if (array_key_exists('loadTime', $ret) &&
             !$ret['loadTime'] &&
@@ -84,14 +87,15 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
             }
         }
         require_once('./video/visualProgress.inc.php');
-        $progress = GetVisualProgress($testPath, $run, $cached);
+        $startOffset = array_key_exists('testStartOffset', $ret) ? intval(round($ret['testStartOffset'])) : 0;
+        $progress = GetVisualProgress($testPath, $run, $cached, null, null, $startOffset);
         if (isset($progress) && is_array($progress)) {
-            if (array_key_exists('FLI', $progress)) {
-                $ret['SpeedIndex'] = $progress['FLI'];
-            }
-            if (array_key_exists('visualComplete', $progress)) {
+            if (array_key_exists('SpeedIndex', $progress))
+                $ret['SpeedIndex'] = $progress['SpeedIndex'];
+            if (array_key_exists('visualComplete', $progress))
                 $ret['visualComplete'] = $progress['visualComplete'];
-            }
+            if (array_key_exists('startRender', $progress) && (!array_key_exists('render', $ret) || !$ret['render']))
+                $ret['render'] = $progress['startRender'];
             if (array_key_exists('DevTools', $progress) && is_array($progress['DevTools'])) {
                 if (array_key_exists('SpeedIndex', $progress['DevTools'])) {
                     $ret['SpeedIndexDT'] = intval($progress['DevTools']['SpeedIndex']);
@@ -103,9 +107,11 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
                     if (!array_key_exists('visualComplete', $ret))
                         $ret['visualComplete'] = $ret['VisuallyCompleteDT'];
                 }
-                if (array_key_exists('StartRender', $progress['DevTools']) &&
-                    (!array_key_exists('render', $ret) || !$ret['render']))
-                    $ret['render'] = $progress['DevTools']['StartRender'];
+                if (array_key_exists('StartRender', $progress['DevTools'])) {
+                    $ret['renderDT'] = $progress['DevTools']['StartRender'];
+                    if (!array_key_exists('render', $ret) || !$ret['render'])
+                      $ret['render'] = $ret['renderDT'];
+                }
             }
             if ((!array_key_exists('lastVisualChange', $ret) ||
                  !$ret['lastVisualChange']) &&
@@ -116,15 +122,34 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
         $end = null;
         if (isset($options) && array_key_exists('end', $options)) {
             $end = $options['end'];
-            $progress = GetVisualProgress($testPath, $run, $cached, null, $end);
+            $progress = GetVisualProgress($testPath, $run, $cached, null, $end, $startOffset);
             if (isset($progress) && is_array($progress)) {
-                if (array_key_exists('FLI', $progress)) {
-                    $ret['SpeedIndexCustom'] = $progress['FLI'];
-                }
+                if (array_key_exists('SpeedIndex', $progress))
+                    $ret['SpeedIndexCustom'] = $progress['SpeedIndex'];
                 $ret['visualCompleteCustom'] = $progress['visualComplete'];
             }
         }
-        // clean up any insane values (from negative numbes as unsigned most likely)
+    }
+
+    if (isset($ret)) {
+        // calculate the effective bps
+        if (array_key_exists('fullyLoaded', $ret) &&
+            array_key_exists('TTFB', $ret) &&
+            array_key_exists('bytesIn', $ret) &&
+            $ret['fullyLoaded'] > 0 &&
+            $ret['TTFB'] > 0 &&
+            $ret['bytesIn'] > 0 &&
+            $ret['fullyLoaded'] > $ret['TTFB'])
+            $ret['effectiveBps'] = intval($ret['bytesIn'] / (($ret['fullyLoaded'] - $ret['TTFB']) / 1000.0));
+        if (array_key_exists('docTime', $ret) &&
+            array_key_exists('TTFB', $ret) &&
+            array_key_exists('bytesInDoc', $ret) &&
+            $ret['docTime'] > 0 &&
+            $ret['TTFB'] > 0 &&
+            $ret['bytesInDoc'] > 0 &&
+            $ret['docTime'] > $ret['TTFB'])
+            $ret['effectiveBpsDoc'] = intval($ret['bytesInDoc'] / (($ret['docTime'] - $ret['TTFB']) / 1000.0));
+        // clean up any insane values (from negative numbers as unsigned most likely)
         $times = array('loadTime',
                        'TTFB',
                        'render',
@@ -138,9 +163,12 @@ function loadPageRunData($testPath, $run, $cached, $options = null)
                        'domContentLoadedEventStart',
                        'domContentLoadedEventEnd',
                        'lastVisualChange',
-                       'server_rtt');
+                       'server_rtt',
+                       'firstPaint');
         foreach ($times as $key) {
-          if ($ret[$key] > 3600000 || $ret[$key] < 0)
+          if (!array_key_exists($key, $ret) ||
+              $ret[$key] > 3600000 ||
+              $ret[$key] < 0)
             $ret[$key] = 0;
         }
     }
@@ -223,6 +251,13 @@ function loadPageData($file, $options = null)
 
                 $ret['fixed_viewport'] = (array_key_exists(88, $fields) && strlen(trim($fields[88]))) ? (int)trim($fields[88]) : -1;
                 $ret['score_progressive_jpeg'] = (array_key_exists(89, $fields) && strlen(trim($fields[89]))) ? (int)trim($fields[89]) : -1;
+                $ret['firstPaint'] = (array_key_exists(90, $fields) && strlen(trim($fields[90]))) ? (int)trim($fields[90]) : 0;
+                //$ret['peakMem'] = (array_key_exists(91, $fields) && strlen(trim($fields[91]))) ? (int)trim($fields[91]) : 0;
+                //$ret['processCount'] = (array_key_exists(92, $fields) && strlen(trim($fields[92]))) ? (int)trim($fields[92]) : 0;
+                $ret['docCPUms'] = (array_key_exists(93, $fields) && strlen(trim($fields[93]))) ? floatval(trim($fields[93])) : 0.0;
+                $ret['fullyLoadedCPUms'] = (array_key_exists(94, $fields) && strlen(trim($fields[94]))) ? floatval(trim($fields[94])) : 0.0;
+                $ret['docCPUpct'] = (array_key_exists(95, $fields) && strlen(trim($fields[95]))) ? floatval(trim($fields[95])) : 0;
+                $ret['fullyLoadedCPUpct'] = (array_key_exists(96, $fields) && strlen(trim($fields[96]))) ? floatval(trim($fields[96])) : 0;
                 
                 $ret['date'] = strtotime(trim($fields[0]) . ' ' . trim($fields[1]));
                 if (!strlen($ret['pageSpeedVersion']))
@@ -382,7 +417,11 @@ function GetMedianRun(&$pageData, $cached, $metric = 'loadTime') {
     $count = count($times);
     if( $count > 1 ) {
         asort($times);
-        $medianIndex = (int)floor(((float)$count + 1.0) / 2.0);
+        if (array_key_exists('medianRun', $_REQUEST) &&
+            $_REQUEST['medianRun'] == 'fastest')
+          $medianIndex = 1;
+        else
+          $medianIndex = (int)floor(((float)$count + 1.0) / 2.0);
         $current = 0;
         foreach( $times as $index => $time ) {
             $current++;

@@ -202,7 +202,7 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
             
         $gradeRun = 1;
         if( array_key_exists('run', $_GET) && $_GET["run"] )
-            $gradeRun = $run;
+            $gradeRun = $_GET["run"];
         else
         {
             $medianRun = GetMedianRun($pageData, 0, $median_metric);
@@ -223,7 +223,7 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
                 }
             }
             
-            echo "<div id=\"opthelp\"><a href=\"http://www.webperformancecentral.com/wiki/WebPagetest/Optimization_Help\" title=\"Optimization Resources\" target=\"_blank\">Need help improving?</a></div>\n";
+            echo "<div id=\"opthelp\"><a href=\"https://sites.google.com/a/webpagetest.org/docs/other-resources/optimization-resources\" title=\"Optimization Resources\" target=\"_blank\">Need help improving?</a></div>\n";
             echo '</div>';
             echo '<div id="grades">';
                 $grades = GetGrades($pageData[$gradeRun][0], $test, $id, $gradeRun);
@@ -313,6 +313,11 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
             $tabs['PageSpeed'] = "/pagespeed.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Content Breakdown'] = "/breakdown.php?test=$id&run=$gradeRun&cached=$cached$end";
         $tabs['Domains'] = "/domains.php?test=$id&run=$gradeRun&cached=$cached$end";
+        if (array_key_exists('testinfo', $test) &&
+            array_key_exists('timeline', $test['testinfo']) &&
+            $test['testinfo']['timeline'] &&
+            gz_is_file("$testPath/$gradeRun{$cTxt2}_devtools.json"))
+            $tabs['Processing Breakdown'] = "/breakdownTimeline.php?test=$id&run=$gradeRun&cached=$cached$end";
         
         if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
             $tabs['Screen Shot'] = "/screen_shot.php?test=$id&run=$gradeRun&cached=$cached$end";

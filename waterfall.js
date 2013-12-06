@@ -88,11 +88,11 @@ function SelectRequest(request) {
             details += '<b>Host: </b>' + r['host'] + '<br>';
         if (r['ip_addr'])
             details += '<b>IP: </b>' + r['ip_addr'] + '<br>';
-        if (r['location'] !== undefined && r['location'].length)
+        if (r['location'] !== undefined && r['location'] !== null && r['location'].length)
             details += '<b>Location: </b>' + r['location'] + '<br>';
         if (r['responseCode'] !== undefined)
             details += '<b>Error/Status Code: </b>' + r['responseCode'] + '<br>';
-        if (r['client_port'] !== undefined && r['client_port'])
+        if (r['client_port'] !== undefined && r['client_port'] !== null && r['client_port'])
             details += '<b>Client Port: </b>' + r['client_port'] + '<br>';
         if (r['load_start'] !== undefined)
             details += '<b>Start Offset: </b>' + (r['load_start'] / 1000.0).toFixed(3) + ' s<br>';
@@ -144,6 +144,7 @@ function SelectRequest(request) {
             }
         }
         if (r['body_url'] !== undefined && r['body_url'].length) {
+            details += '<a href="' + r['body_url'] + '" target="_blank">Open response body in new window</a><br>'
             try {
                 $("#response-body").text('Loading...');
                 $('#response-body-button').show();
@@ -183,3 +184,10 @@ function SelectRequest(request) {
             $("#request-overlay-" + i).removeClass("selected");
     }
 }
+
+// support for the multi-waterfall translucency
+$(".waterfall-transparency").change(function() {
+    var newValue = this.value;
+    var id = this.name;
+    $("#" + id).css({ opacity: newValue });
+});

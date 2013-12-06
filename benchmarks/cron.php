@@ -11,9 +11,11 @@ require_once('archive.inc');
 set_time_limit(36000);
 error_reporting(E_ERROR | E_PARSE);
 $debug=true;
-if (!is_dir('./log')) {
+if (!is_dir('./log'))
     mkdir('./log', 0777, true);
-}
+if (is_file('./settings/custom_benchmark.inc'))
+  include ('./settings/custom_benchmark.inc');
+
 $logFile = 'benchmark.log';
 
 header ("Content-type: text/plain");
@@ -392,12 +394,17 @@ function SubmitBenchmark(&$configurations, &$state, $benchmark) {
                 $tests[$key] = array();
             }
             foreach ($config['locations'] as $location) {
+              $ok = true;
+              if (function_exists('CustomBenchmarkLocationFilter'))
+                $ok = CustomBenchmarkLocationFilter($benchmark, $location);
+              if ($ok) {
                 $tests[$key][] = array('url' => $url,
                                         'location' => $location,
                                         'settings' => $config['settings'],
                                         'benchmark' => $benchmark,
                                         'label' => $label,
                                         'config' => $config_label);
+              }
             }
         }
     }
@@ -583,7 +590,7 @@ function AggregateResults($benchmark, &$state, $options) {
                                 'js_bytes', 'js_requests', 'css_bytes', 'css_requests', 'image_bytes', 'image_requests',
                                 'flash_bytes', 'flash_requests', 'html_bytes', 'html_requests', 'text_bytes', 'text_requests',
                                 'other_bytes', 'other_requests', 'SpeedIndex', 'responses_404', 'responses_other', 'browser_version', 'server_rtt',
-                                'VisuallyCompleteDT', 'SpeedIndexDT');
+                                'VisuallyCompleteDT', 'SpeedIndexDT', 'docCPUms');
 
     // loop through all of the runs and see which ones we don't have aggregates for
     foreach ($state['runs'] as $run_time) {

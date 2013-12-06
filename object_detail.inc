@@ -183,7 +183,8 @@ function LoadRequests($request_file_name) {
         );
     $request_lines = gz_file($request_file_name);
     if( isset($request_lines) && is_array($request_lines)) {
-        foreach($request_lines as $linenum => &$line) {
+        foreach($request_lines as &$line) {
+          if (strncmp($line, "Date\t", 4)) {
             $columns = explode("\t", str_replace("\t", "\t ", $line));
             if (count($columns)) {
                 $request = array();
@@ -212,6 +213,7 @@ function LoadRequests($request_file_name) {
                 }
                 $requests[] = $request;
             }
+          }
         }
     }
     return $requests;
@@ -279,7 +281,8 @@ function AddLocationData(&$requests) {
 * Convert old format for DNS/connection data.
 */
 function MergeDnsAndConnectionTimes($requests) {
-    $merged_requests = array();
+  $merged_requests = array();
+  if (isset($requests) && is_array($requests)) {
     $dns_ms = null;
     $connect_ms = null;
     foreach($requests as $i => &$request) {
@@ -300,7 +303,8 @@ function MergeDnsAndConnectionTimes($requests) {
             $merged_requests[] = $request;
         }
     }
-    return $merged_requests;
+  }
+  return $merged_requests;
 }
 
 /**

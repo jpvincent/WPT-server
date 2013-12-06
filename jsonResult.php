@@ -116,7 +116,7 @@ function GetTestResult($id) {
     }
     
     $ret['runs'] = array();
-    for ($run = 0; $run <= $runs; $run++) {
+    for ($run = 1; $run <= $runs; $run++) {
         $ret['runs'][$run] = array();
         for ($cached = 0; $cached <= $cachedMax; $cached++) {
             $label = $cacheLabels[$cached];
@@ -150,7 +150,11 @@ function GetSingleRunData($id, $testPath, $run, $cached, &$pageData, $testInfo) 
       if ($cached)
           $cachedText = '_Cached';
 
-      if (gz_is_file("$testPath/$run{$cachedText}_pagespeed.txt")) {
+      $basic_results = false;
+      if (array_key_exists('basic', $_REQUEST) && $_REQUEST['basic'])
+        $basic_results = true;
+          
+      if (!$basic_results && gz_is_file("$testPath/$run{$cachedText}_pagespeed.txt")) {
           $ret['PageSpeedScore'] = GetPageSpeedScore("$testPath/$run{$cachedText}_pagespeed.txt");
           $ret['PageSpeedData'] = "http://$host$uri//getgzip.php?test=$id&amp;file=$run{$cachedText}_pagespeed.txt";
       }
@@ -183,44 +187,48 @@ function GetSingleRunData($id, $testPath, $run, $cached, &$pageData, $testInfo) 
       if( is_file("$testPath/$run{$cachedText}_bodies.zip") )
           $ret['rawData']['bodies'] = "http://$host$uri$path/$run{$cachedText}_bodies.zip";
 
-      if (array_key_exists('video', $testInfo) && $testInfo['video']) {
+      if (!$basic_results) {
+        $startOffset = array_key_exists('testStartOffset', $ret) ? intval(round($ret['testStartOffset'])) : 0;
+        $progress = GetVisualProgress($testPath, $run, $cached, null, null, $startOffset);
+        if (array_key_exists('frames', $progress) && is_array($progress['frames']) && count($progress['frames'])) {
           $cachedTextLower = strtolower($cachedText);
-          loadVideo("$testPath/video_{$run}$cachedTextLower", $frames);
-          if (isset($frames) && count($frames)) {
-              $progress = GetVisualProgress($testPath, $run, 0);
-              $ret['videoFrames'] = array();
-              foreach ($frames as $time => $frameFile) {
-                  $seconds = $time / 10.0;
-                  $frame = array('time' => $seconds);
-                  $frame['image'] = "http://$host$uri$path/video_{$run}$cachedTextLower/$frameFile";
-                  $ms = $time * 100;
-                  if (isset($progress) && is_array($progress) && 
-                      array_key_exists('frames', $progress) && array_key_exists($ms, $progress['frames'])) {
-                      $frame['VisuallyComplete'] = $progress['frames'][$ms]['progress'];
-                  }
-                  $ret['videoFrames'][] = $frame;
-              }
+          $ret['videoFrames'] = array();
+          foreach($progress['frames'] as $ms => $frame) {
+              $videoFrame = array('time' => $ms);
+              $videoFrame['image'] = "http://$host$uri$path/video_{$run}$cachedTextLower/{$frame['file']}";
+              $videoFrame['VisuallyComplete'] = $frame['progress'];
+              $ret['videoFrames'][] = $videoFrame;
           }
-      }
-      
-      $requests = getRequests($id, $testPath, $run, $cached, $secure, $haveLocations, false, true);
-      $ret['domains'] = getDomainBreakdown($id, $testPath, $run, $cached, $requests);
-      $ret['breakdown'] = getBreakdown($id, $testPath, $run, $cached, $requests);
-      $ret['requests'] = $requests;
-      $console_log = DevToolsGetConsoleLog($testPath, $run, $cached);
-      if (isset($console_log))
-          $ret['consoleLog'] = $console_log;
-      if (gz_is_file("$testPath/$run{$cachedText}_status.txt")) {
-          $ret['status'] = array();
-          $lines = gz_file("$testPath/$run{$cachedText}_status.txt");
-          foreach($lines as $line) {
-              $line = trim($line);
-              if (strlen($line)) {
-                  list($time, $message) = explode("\t", $line);
-                  if (strlen($time) && strlen($message))
-                      $ret['status'][] = array('time' => $time, 'message' => $message);
-              }
-          }
+        }
+        if (isset($progress) &&
+            is_array($progress) &&
+            array_key_exists('DevTools', $progress) &&
+            is_array($progress['DevTools'])) {
+            if (array_key_exists('processing', $progress['DevTools']))
+                $ret['processing'] = $progress['DevTools']['processing'];
+            if (array_key_exists('VisualProgress', $progress['DevTools']))
+                $ret['VisualProgress'] = $progress['DevTools']['VisualProgress'];
+        }
+        
+        $requests = getRequests($id, $testPath, $run, $cached, $secure, $haveLocations, false, true);
+        $ret['domains'] = getDomainBreakdown($id, $testPath, $run, $cached, $requests);
+        $ret['breakdown'] = getBreakdown($id, $testPath, $run, $cached, $requests);
+        $ret['requests'] = $requests;
+        $console_log = DevToolsGetConsoleLog($testPath, $run, $cached);
+        if (isset($console_log))
+            $ret['consoleLog'] = $console_log;
+        if (gz_is_file("$testPath/$run{$cachedText}_status.txt")) {
+            $ret['status'] = array();
+            $lines = gz_file("$testPath/$run{$cachedText}_status.txt");
+            foreach($lines as $line) {
+                $line = trim($line);
+                if (strlen($line)) {
+                    list($time, $message) = explode("\t", $line);
+                    if (strlen($time) && strlen($message))
+                        $ret['status'][] = array('time' => $time, 'message' => $message);
+                }
+            }
+        }
       }
     }
         

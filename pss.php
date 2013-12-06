@@ -99,7 +99,7 @@ $page_description = "Comparison Test$testLabel.";
               echo "<input type=\"hidden\" name=\"vh\" value=\"$hmac\">\n";
               
               if ($mps) {
-                echo '<h2 class="cufon-dincond_black"><small>Compare your currently optimized site to it\'s unoptimized version</a></small></h2>';
+                echo '<h2 class="cufon-dincond_black"><small>Compare your currently optimized site to its unoptimized version</a></small></h2>';
               } elseif ($preview) {
                 echo '<h2 class="cufon-dincond_black"><small>Preview optimization changes for your site hosted on <a href="http://code.google.com/speed/pss">PageSpeed Service</a></small></h2>';
               } elseif( array_key_exists('origin', $_GET) && strlen($_GET['origin']) )
@@ -380,8 +380,13 @@ $page_description = "Comparison Test$testLabel.";
                 if( url == "" || url == "Enter a Website URL" )
                 {
                     alert( "Please enter an URL to test." );
-                    form.url.focus();
-                    return false
+                    form.testurl.focus();
+                    return false;
+                }
+                if (url.match(/^https:\/\//i)) {
+                    alert( "Testing of secure (https) pages is not supported.\r\nPlease enter a non-secure page for testing." );
+                    form.testurl.focus();
+                    return false;
                 }
                 var proto = url.substring(0, 6).toLowerCase();
                 if (proto == 'https:') {
