@@ -193,3 +193,10 @@ Options -Indexes
     AddOutputFilterByType DEFLATE image/x-icon
 </IfModule>
 
+
+# typical PHP configuration
+php_value post_max_size 64M
+php_value upload_max_filesize 64M
+php_value short_open_tag On
+php_value display_errors Off
+php_value display_startup_errors On
