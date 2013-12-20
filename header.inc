@@ -321,6 +321,7 @@ if( !strcasecmp('Test Result', $tab) && !@$nosubheader && !defined('EMBED') )
         
         if( !isset($test['testinfo']) || !$test['testinfo']['noimages'] )
             $tabs['Screen Shot'] = "/screen_shot.php?test=$id&run=$gradeRun&cached=$cached$end";
+        $tabs['Interface Fluidity'] = "/front-experience.php?test=$id";
         //$tabs['More Checks'] = "/moreChecks.php?test=$id";
 
         foreach( $tabs as $tabName => $tabUrl )

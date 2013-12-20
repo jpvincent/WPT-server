@@ -25,7 +25,7 @@ $cpuMetrics = GetCPUMetrics($testPath, $run,  $id);
         <div class="page">
             <?php
             $tab = 'Test Result';
-            $subtab = 'User Experience';
+            $subtab = 'Interface Fluidity';
             include 'header.inc';
             ?>
 			<h2>Frontend User Experience</h2>

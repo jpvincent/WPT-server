@@ -1,6 +1,10 @@
 <?php
 require_once('draw.inc');
 
+/**
+*	will analyse the CPU peak records of a given test to estimate the number of time
+*	the UI is frozen : when CPU is 100% for more than 500 ms, it counts as a hog
+*/
 function GetCPUMetrics($testPath, $run) {
 	
 	$filename = $testPath.'/'.$run.'_progress.csv';
