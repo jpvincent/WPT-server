@@ -1,25 +1,26 @@
 Why?
 -
 
-This project is a fork of both [WebPageTest Private Instance 2.11](https://sites.google.com/a/webpagetest.org/docs/private-instances/releases/webpagetest-2-11) and [WPT Monitor](http://www.wptmonitor.org/). The original intention was to patch WPT monitor who looked a bit abandonned. Then, several clients of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
+This project is a fork of both [WebPageTest Private Instance 2.13](https://sites.google.com/a/webpagetest.org/docs/private-instances/releases/webpagetest-2-13) and [WPT Monitor](http://www.wptmonitor.org/). The original intention was to patch WPT monitor who looked a bit abandonned. Then, several customers of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
 
 Reliable ?
 -
 
-It's used currently in two major organizations running dozen of tests per minutes on dozen of pages.
+It's used currently in three major organizations running dozen of tests per minutes on dozen of pages.
 Also, I tend to follow closely the WebPageTest upgrades.
 
 Features
 -
 
+Additionally to the WPT and WPT monitor original features :
 * loads of WPT Monitor bug fixes
 * WPT results have a new metric : user experience, which tries to measure the number of time the page is freezing the browser.
-* added a placeholder to send the WPT monitor results to another monitoring tool (a Graphite server here)
+* added a placeholder to send the WPT monitor results to another monitoring tool (a Graphite server as an example)
 * changed some default values:
     * sharding is on (your tests go faster if you have several agents)
     * taking screenshots is on by default on WPT
     * 3 runs instead of 1
-* Debugging:
+* Debugging WPT Monitor :
     * more debug logs
     * less useless error logs
     * manually clear the queue with unlock.php
