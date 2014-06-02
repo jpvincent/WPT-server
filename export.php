@@ -43,6 +43,8 @@ if( isset($testPath) )
     if (!strlen($filename))
         $filename = "pagetest";
     $filename .= ".$id.har";
+    header('Access-Control-Allow-Origin: *');
+    header('Cache-Control: max-age=2592000');
     header("Content-disposition: attachment; filename=$filename");
     header('Content-type: application/json');
 
