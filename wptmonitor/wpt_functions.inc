@@ -22,20 +22,53 @@ function saveWPTXmlResults($id, $xmlResults) {
 }
 
 
-ini_set('default_socket_timeout', 2);
+//ini_set('default_socket_timeout', 2);
 // JPV : will send numeric results to a graphite instance
-function exportResultToExternal($metric_value, $metric_name, $time = null) {
+function exportResultToExternal($metric_name, $metric_value = null, $time = null) {
 	
-	$metric_name = str_replace(' ', '.', $metric_name);
+  if($time === null)
+    $time = time();
+
+  $body = date('r', $time);
+  
+  if(!is_array($metric_name)) {
+    $metric_name = array($metric_name => $metric_value );
+  }
+  
+  // flatten if given a bunch of metrics
+  foreach ($metric_name as $key => $value) {
+    $body .= ' '.$key.'='.$value;
+  }
+
+  $metric_name = str_replace(' ', '.', $metric_name);
 	
-	if($time === null)
-		$time = time();
-	
-	$msg = "WPT.".$metric_name
-		.' '.$metric_value
-		.' '.$time
-		."\n";
-	logOutput('[INFO] [exportResultTo] '.$msg);
+  $ch = curl_init(
+        'https://splunk.example.com/services/receivers/simple'
+        .'?index=metrics_browser_side'
+        .'&source=webpagetest'
+        .'&sourcetype=wpt_kpi');
+  curl_setopt($ch, CURLOPT_POST, true);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $body );
+
+  curl_setopt($ch, CURLOPT_CERTINFO, true);
+  // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  curl_setopt($ch, CURLOPT_VERBOSE, true);
+//  curl_setopt($ch, CURLOPT_MUTE, false);
+  //curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  
+  print curl_exec($ch);
+  
+  /*$info = curl_getinfo($ch);
+  print_r($info);*/
+  //echo 'Took ' . $info['total_time'] . ' seconds to send a request to ' . $info['url'];
+
+  curl_close($ch);
+
+	// logOutput('[INFO] [exportResultTo] '.$msg);
+
 	/*if(!is_numeric($metric_value))
 		return false;
 	if(!is_string($metric_name))
@@ -652,7 +685,7 @@ function processResultsForAll( $resultId = null ) {
       // Only fetch jobs that are "100" / still processing
       $q = Doctrine_Query::create()->from('WPTResult r')->where('r.Status = ?', '100');
       $results = $q->execute();
-		exportResultToExternal( count($results), 'global.nbtests');
+		exportResultToExternal( 'global.nbtests', count($results) );
     } else {
       $q = Doctrine_Query::create()->from('WPTResult r')->where('r.WPTResultId = ?', $resultId);
       $results = $q->execute();
@@ -764,7 +797,7 @@ function processResultsForAll( $resultId = null ) {
         } else {
 			logOutput("[WARN] [ProcessResults] firstView->rawData->pageData not received (tried at URL ".$pageDataLocation.")");
 		}
-        if ( $errorCode ){
+        if ( !empty($errorCode) ){
           $status = $errorCode;
         } else {
           $status = $xml->statusCode;
@@ -834,10 +867,11 @@ function processResultsForAll( $resultId = null ) {
           continue;
         }
 // logOutput('[LOG] will process pageDataArray '. print_r($pageDataArray, true));
-        foreach ( $pageDataArray as $key=>$data ){
+        if(isset($pageDataArrayRepeatView)) {
+        foreach ( $pageDataArrayRepeatView as $key=>$data ){
           $repeatViewData = $pageDataArrayRepeatView[$key];
 
-		logOutput('[LOG] pageDataArray pass '.$key);
+		      logOutput('[LOG] pageDataArray pass '.$key);
 
           // The first record in a job that is a sequence will be the sum of all the pages.
           if ($key == 0){
@@ -871,7 +905,7 @@ function processResultsForAll( $resultId = null ) {
              $result['AvgRepeatViewStartRender'] = array_sum(getArrayFor($pageDataArrayRepeatView,'Time to Start Render (ms)'));
              
            	}
-			$result->save();
+			     $result->save();
           }
           
 		/*if ( sizeof($pageDataArray) < 2 ){
@@ -924,55 +958,51 @@ function processResultsForAll( $resultId = null ) {
 
           $result->save();
         } // end foreach pageDataArray
+        }
         updateJobstatus($id, $status);
-        
+
         if ( $runToUse === '0' ) {
           $thisRun = $xml->data->run[$avgRun-1];
         } else {
           $thisRun = $xml->data->run[$runToUse-1];
         }
 
-          exportResultToExternal(
-            $thisRun->firstView->titleTime,
-            'results.'.makeLabelFromJobID($wptJobId).'.timeToTitle' );
+        $label = makeLabelFromJobID($wptJobId);
 
-          exportResultToExternal(
-              $thisRun->firstView->TTFB,
-              'results.'.makeLabelFromJobID($wptJobId).'.timeToFirstByte' );
+        /*error_log(
+            '[WPTMonitor] try to get TTFB for JobId('
+              .$wptJobId
+              .') and resultId(' 
+              . $wptResultId 
+              . ") : " 
+              . $thisRun->firstView->titleTime 
+              ." -> "
+              . print_r($thisRun, true) );*/
+        // print_r($thisRun);
 
-          exportResultToExternal(
-              $thisRun->firstView->bytesIn,
-              'results.'.makeLabelFromJobID($wptJobId).'.nbBytesIn' );
+        exportResultToExternal( array(
+            'results.'.$label.'.timeToTitle' => $thisRun->firstView->results->titleTime,
+            'results.'.$label.'.timeToFirstByte' => $thisRun->firstView->results->TTFB,
+            'results.'.$label.'.nbBytesIn' => $thisRun->firstView->results->bytesIn,
+            'results.'.$label.'.scoreGzip' => $thisRun->firstView->results->score_gzip,
+            'results.'.$label.'.scoreCache'  => $thisRun->firstView->results->score_cache,
+            'results.'.$label.'.timeToRender'  => $thisRun->firstView->results->render,
+            'results.'.$label.'.nbHttpQueries' => $thisRun->firstView->results->requests,
+            'results.'.$label.'.nb404' => $thisRun->firstView->results->responses_404,
+            'results.'.$label.'.fullyLoaded' => $thisRun->firstView->results->fullyLoaded,
+            'results.'.$label.'.serverLatency' => $thisRun->firstView->results->server_rtt,
+          ));
+        // $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
 
-          // $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
-          exportResultToExternal(
-              $thisRun->firstView->score_gzip,
-              'results.'.makeLabelFromJobID($wptJobId).'.scoreGzip' );
-          exportResultToExternal(
-              $thisRun->firstView->score_cache,
-              'results.'.makeLabelFromJobID($wptJobId).'.scoreCache' );
-          exportResultToExternal(
-              $thisRun->firstView->render,
-              'results.'.makeLabelFromJobID($wptJobId).'.timeToRender' );
-          exportResultToExternal(
-              $thisRun->firstView->requestsDoc,
-              'results.'.makeLabelFromJobID($wptJobId).'.nbHttpQueries' );
-          exportResultToExternal(
-              $thisRun->firstView->responses_404,
-              'results.'.makeLabelFromJobID($wptJobId).'.nb404' );
-          
-          
-          if(property_exists($thisRun, 'repeatView') === true) {
-            exportResultToExternal(
-              ( $thisRun->firstView->requests - $thisRun->repeatView->requests ),
-              'results.'.makeLabelFromJobID($wptJobId).'.requetesEconomisees' );
-            exportResultToExternal(
-              ( $thisRun->firstView->bytesIn - $thisRun->repeatView->bytesIn ),
-              'results.'.makeLabelFromJobID($wptJobId).'.poidsEconomise' );
-          }
+        if(property_exists($thisRun, 'repeatView') === true) {
+          exportResultToExternal(array(
+            'results.'.$label.'.requetesEconomisees' => $thisRun->firstView->requests - $thisRun->repeatView->requests,
+            'results.'.$label.'.poidsEconomise'  => $thisRun->firstView->bytesIn - $thisRun->repeatView->bytesIn
+          ));
+        }
 
       } // end result = 200
-      
+
     } // end foreach results
 
 

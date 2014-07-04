@@ -38,7 +38,7 @@ error_reporting(-1);
       $nbAlerts += processAlertsForJob($job['Id']);
     }
 
-	exportResultToExternal($nbAlerts, 'global.alerts');
+	exportResultToExternal('global.alerts', $nbAlerts);
 
 /*  } catch (Exception $e) {
     error_log("[WPTMonitor] Failed while Listing Users: " . $wptResultId . " message: " . $e->getMessage());

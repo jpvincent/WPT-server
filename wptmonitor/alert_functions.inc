@@ -60,8 +60,8 @@ function processAlertsForJob($jobId) {
 
     // Return if non found
 	if ($q->count() < 1) {
-		exportResultToExternal(0 , 'alerts.'.$alertLabel.'.AvgFirstViewFirstByte');
-		exportResultToExternal(0 , 'alerts.'.$alertLabel.'.AvgFirstViewStartRender');
+		exportResultToExternal('alerts.'.$alertLabel.'.AvgFirstViewFirstByte', 0);
+		exportResultToExternal('alerts.'.$alertLabel.'.AvgFirstViewStartRender', 0 );
 		return;
 	}
 	
@@ -140,7 +140,7 @@ function processAlertsForJob($jobId) {
             "Threshold: " . $alert['AlertThreshold'];
         $message = $message . " \n" . $link;
 
-		exportResultToExternal(1 , 'alerts.'.$alertLabel.'.'.$alert['AlertOn']);
+		exportResultToExternal('alerts.'.$alertLabel.'.'.$alert['AlertOn'], 1);
 
         sendEmailAlert($alertEmailAddresses, $message);
 		$nbAlerts++;
