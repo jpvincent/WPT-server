@@ -31,6 +31,12 @@ Additionally to the WPT and WPT monitor original features :
     * Reports listing now works with dozen of scenarios without eating the whole memory
 * WPT Monitor uses Curl instead of HttpRequest (better PHP compatibility)
 
+Extensible
+-
+
+WPT Monitor is not that good at displaying the collected data. You might also want to monitor additional data like the number of 404, the average size, the percentage of cached objects or the percentage of objects with gzip.
+Search for the `exportResultToExternal()` PHP method. It contains an example of a forward to a graphite installation of the WPT results.
+
 
 Support and issues
 -
