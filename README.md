@@ -31,6 +31,18 @@ Additionally to the WPT and WPT monitor original features :
     * Reports listing now works with dozen of scenarios without eating the whole memory
 * WPT Monitor uses Curl instead of HttpRequest (better PHP compatibility)
 
+
+Install
+-
+On a LAMP server :
+* get the zip file.
+* See the [https://sites.google.com/a/webpagetest.org/docs/private-instances](WPT private instance) installation documentation for requirements and first steps. The regular WPT must work, with agents running.
+* have a mysql running, with a database named `wpt`
+* edit `wptmonitor/settings/bootstrap.ini` for the mysql configuration
+* execute `/wptmonitor/install.php` and follow [http://www.wptmonitor.org/home/installation](the old but still accurate documentation).
+* setup cron jobs as per the above documentation.
+
+
 Extensible
 -
 
