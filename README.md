@@ -1,7 +1,7 @@
 Why?
 -
 
-This project is a fork of both [WebPageTest Private Instance 2.13](https://sites.google.com/a/webpagetest.org/docs/private-instances/releases/webpagetest-2-13) and [WPT Monitor](http://www.wptmonitor.org/). The original intention was to patch WPT monitor who looked a bit abandonned. Then, several customers of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
+This project is a fork of both [WebPageTest Private Instance 2.13](https://sites.google.com/a/webpagetest.org/docs/private-instances/releases/webpagetest-2-13) and [WPT Monitor](http://www.wptmonitor.org/). The agents are from the 2.15 version. The original intention was to patch WPT monitor who looked a bit abandonned. Then, several customers of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
 
 Reliable ?
 -
