@@ -1,7 +1,7 @@
 <?php
   require("login/login.php");
   include 'monitor.inc';
-  include 'common.inc';
+  include '../common.inc';
   $ownerId="";
   $userId = getCurrentUserId();
   if ( isset($_REQUEST['id']) ){
