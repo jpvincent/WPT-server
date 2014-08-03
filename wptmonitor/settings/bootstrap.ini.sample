@@ -1,2 +1,4 @@
-login="root"
+login=wpt
 password="mdp"
+dbhost=localhost
+dbname=wpt_monitor
