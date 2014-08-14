@@ -11,20 +11,23 @@ $wptJobId = '27';
 
 
 $label = makeLabelFromJobID($wptJobId);
-/*
+
 exportResultToExternal(
-  array(
-  	'results.'.$label.'.timeToTitle' =>   "250",
-	  'results.'.$label.'.timeToFirstByte' =>   "10000",
-	  'results.'.$label.'.nbBytesIn' => "90",
-	  'results.'.$label.'.scoreGzip' =>  "90",
-	  'results.'.$label.'.scoreCache' =>  "1500",
-	  'results.'.$label.'.timeToRender' =>  "200",
-	  'results.'.$label.'.nbHttpQueries' =>  "100",
-	  'results.'.$label.'.nb404' => '0'
+	array(
+		'scenario'	=> $label,
+		'browserName' => 'Internet Explorer',
+		'browserVersion' => '8.0.6001.18702',
+		'timeToTitle' =>   "250",
+		'timeToFirstByte' =>   "10000",
+		'nbBytesIn' => "90",
+		'scoreGzip' =>  "90",
+		'scoreCache' =>  "1500",
+		'timeToRender' =>  "200",
+		'nbHttpQueries' =>  "100",
+		'nb404' => '0'
 	)
 );
-*/
+
 
 $resultId = '140704_VD_7P';
 processResultsForAll($resultId);
