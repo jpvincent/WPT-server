@@ -7,44 +7,45 @@ error_reporting(-1);
  * to see if the results are ready. If they are the results are downloaded. The xmlResult file is downloaded and
  * optionally the additional assets can be downloaded if the job was configured to do so.
  */
-  include 'monitor.inc';
-  include 'alert_functions.inc';
-  include 'wpt_functions.inc';
-  include_once 'utils.inc';
-  require_once('bootstrap.php');
+include 'monitor.inc';
+include 'alert_functions.inc';
+include 'wpt_functions.inc';
+include_once 'utils.inc';
+require_once('bootstrap.php');
 
-  $key = $_REQUEST['key'];
-  $configKey = getWptConfigFor('jobProcessorKey');
-  if ( $configKey != $key ){
-    print "Invalid Key";
-    exit;
+$key = $_REQUEST['key'];
+$configKey = getWptConfigFor('jobProcessorKey');
+if ( $configKey != $key ){
+  print "Invalid Key";
+  exit;
+}
+
+checkQueueGrowthCountAndEmailAlert();
+/*try
+{/*/
+  $users = Doctrine_Core::getTable('User')->findAll();
+  foreach ($users as $user) {
+    if ($user->IsActive) {
+      processJobsForUser($user['Id'],null,null,"Scheduled");
+    }
+  }
+  // Process results for all
+  processResultsForAll();
+
+  $jobs = Doctrine_Core::getTable('WPTJob')->findAll();
+  $nbAlerts = 0;
+  foreach($jobs as $job){
+    $nbAlerts += processAlertsForJob($job['Id']);
   }
 
-  checkQueueGrowthCountAndEmailAlert();
-  /*try
-  {/*/
-    $users = Doctrine_Core::getTable('User')->findAll();
-    foreach ($users as $user) {
-      if ($user->IsActive) {
-        processJobsForUser($user['Id'],null,null,"Scheduled");
-      }
-    }
-    // Process results for all
-    processResultsForAll();
-
-    $jobs = Doctrine_Core::getTable('WPTJob')->findAll();
-	$nbAlerts = 0;
-    foreach($jobs as $job){
-      $nbAlerts += processAlertsForJob($job['Id']);
-    }
-
-	exportResultToExternal('global.alerts', $nbAlerts);
+// UNCOMMENT if you want to monitor the WPT Monitor activity itself
+// exportResultToExternal('global.alerts', $nbAlerts);
 
 /*  } catch (Exception $e) {
-    error_log("[WPTMonitor] Failed while Listing Users: " . $wptResultId . " message: " . $e->getMessage());
-    logOutput('[ERROR] [jobProcessor] Exception : ' . $e->getMessage());
-  }
+  error_log("[WPTMonitor] Failed while Listing Users: " . $wptResultId . " message: " . $e->getMessage());
+  logOutput('[ERROR] [jobProcessor] Exception : ' . $e->getMessage());
+}
 */
 
-  updateQueueProcessRate();
-  checkTesterRatioAndEmailAlert();
+updateQueueProcessRate();
+checkTesterRatioAndEmailAlert();

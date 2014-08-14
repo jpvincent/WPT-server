@@ -29,7 +29,7 @@ function exportResultToExternal($metric_name, $metric_value = null, $time = null
   if($time === null)
     $time = time();
 
-  $body = date('r', $time);
+  $body = '';//date('r', $time);
   
   if(!is_array($metric_name)) {
     $metric_name = array($metric_name => $metric_value );
@@ -43,48 +43,23 @@ function exportResultToExternal($metric_name, $metric_value = null, $time = null
   $metric_name = str_replace(' ', '.', $metric_name);
 	
   $ch = curl_init(
-        'https://splunk.example.com/services/receivers/simple'
+        'https://splunk-head01.in.karavel.com:8089/services/receivers/simple'
         .'?index=metrics_browser_side'
         .'&source=webpagetest'
         .'&sourcetype=wpt_kpi');
   curl_setopt($ch, CURLOPT_POST, true);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $body );
+  curl_setopt($ch, CURLOPT_USERPWD, 'khsghaier:8HXayuwT');
 
   curl_setopt($ch, CURLOPT_CERTINFO, true);
   // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
   curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-  curl_setopt($ch, CURLOPT_VERBOSE, true);
-//  curl_setopt($ch, CURLOPT_MUTE, false);
-  //curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_exec($ch);
   
-  print curl_exec($ch);
-  
-  /*$info = curl_getinfo($ch);
-  print_r($info);*/
-  //echo 'Took ' . $info['total_time'] . ' seconds to send a request to ' . $info['url'];
-
+  $info = curl_getinfo($ch);
   curl_close($ch);
 
-	// logOutput('[INFO] [exportResultTo] '.$msg);
-
-	/*if(!is_numeric($metric_value))
-		return false;
-	if(!is_string($metric_name))
-		return false;
-	*/
-	//logOutput('[INFO] [exportResultTo] ');
-	
-	/*
-  here your favorite visualisation tool, like Graphite
-  $url = 'http://yourserver/graphite?body='.urlencode($msg);
-	$body = file_get_contents($url, false);
-	
-	if($body === false) {
-		logOutput('[WARN] [exportResultTo] failed to reach '.$url);
-	}
-  */
 }
 
 
@@ -685,7 +660,8 @@ function processResultsForAll( $resultId = null ) {
       // Only fetch jobs that are "100" / still processing
       $q = Doctrine_Query::create()->from('WPTResult r')->where('r.Status = ?', '100');
       $results = $q->execute();
-		exportResultToExternal( 'global.nbtests', count($results) );
+      // UNCOMMENT if you want to monitor the WPT Monitor activity itself
+		  // exportResultToExternal( 'global.nbtests', count($results) );
     } else {
       $q = Doctrine_Query::create()->from('WPTResult r')->where('r.WPTResultId = ?', $resultId);
       $results = $q->execute();
@@ -978,28 +954,36 @@ function processResultsForAll( $resultId = null ) {
               . $thisRun->firstView->titleTime 
               ." -> "
               . print_r($thisRun, true) );*/
-        // print_r($thisRun);
+        //  print_r($thisRun);
+        logOutput('[LOG] [exportResultToExternal] BEFORE for label '.$label);
 
-        exportResultToExternal( array(
-            'results.'.$label.'.timeToTitle' => $thisRun->firstView->results->titleTime,
-            'results.'.$label.'.timeToFirstByte' => $thisRun->firstView->results->TTFB,
-            'results.'.$label.'.nbBytesIn' => $thisRun->firstView->results->bytesIn,
-            'results.'.$label.'.scoreGzip' => $thisRun->firstView->results->score_gzip,
-            'results.'.$label.'.scoreCache'  => $thisRun->firstView->results->score_cache,
-            'results.'.$label.'.timeToRender'  => $thisRun->firstView->results->render,
-            'results.'.$label.'.nbHttpQueries' => $thisRun->firstView->results->requests,
-            'results.'.$label.'.nb404' => $thisRun->firstView->results->responses_404,
-            'results.'.$label.'.fullyLoaded' => $thisRun->firstView->results->fullyLoaded,
-            'results.'.$label.'.serverLatency' => $thisRun->firstView->results->server_rtt,
+        /*exportResultToExternal( array(
+            'scenario'  => '"'.$label.'"',
+            'browserName' => '"'.$thisRun->firstView->results->browser_name.'"',
+            'browserVersion' => '"'.$thisRun->firstView->results->browser_version.'"',
+
+            'timeToTitle' => $thisRun->firstView->results->titleTime,
+            'timeToFirstByte' => $thisRun->firstView->results->TTFB,
+            'nbBytesIn' => $thisRun->firstView->results->bytesIn,
+            'scoreGzip' => $thisRun->firstView->results->score_gzip,
+            'scoreCache'  => $thisRun->firstView->results->score_cache,
+            'timeToRender'  => $thisRun->firstView->results->render,
+            'nbHttpQueries' => $thisRun->firstView->results->requests,
+            'nb404' => $thisRun->firstView->results->responses_404,
+            'fullyLoaded' => $thisRun->firstView->results->fullyLoaded,
+            'serverLatency' => $thisRun->firstView->results->server_rtt,
           ));
+          */
         // $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
 
-        if(property_exists($thisRun, 'repeatView') === true) {
+        /*if(property_exists($thisRun, 'repeatView') === true) {
           exportResultToExternal(array(
             'results.'.$label.'.requetesEconomisees' => $thisRun->firstView->requests - $thisRun->repeatView->requests,
             'results.'.$label.'.poidsEconomise'  => $thisRun->firstView->bytesIn - $thisRun->repeatView->bytesIn
           ));
-        }
+        }*/
+
+        logOutput('[LOG] [exportResultToExternal] AFTER for label '.$label);
 
       } // end result = 200
 

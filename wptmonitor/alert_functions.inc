@@ -60,8 +60,10 @@ function processAlertsForJob($jobId) {
 
     // Return if non found
 	if ($q->count() < 1) {
-		exportResultToExternal('alerts.'.$alertLabel.'.AvgFirstViewFirstByte', 0);
+    // UNCOMMENT if you want to use the WPT alerts in your own system
+		/*exportResultToExternal('alerts.'.$alertLabel.'.AvgFirstViewFirstByte', 0);
 		exportResultToExternal('alerts.'.$alertLabel.'.AvgFirstViewStartRender', 0 );
+    */
 		return;
 	}
 	
