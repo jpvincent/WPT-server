@@ -37,8 +37,7 @@ function GetTestResult($id) {
     $pageStats = calculatePageStats($pageData, $stats[0], $stats[1]);
     if( !strlen($url) )
         $url = $pageData[1][0]['URL'];
-    if (gz_is_file("$testPath/testinfo.json"))
-        $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
+    $testInfo = GetTestInfo($id);
     if (is_file("$testPath/testinfo.ini"))
         $test = parse_ini_file("$testPath/testinfo.ini", true);
     $fvOnly = false;
@@ -78,6 +77,8 @@ function GetTestResult($id) {
             $ret['label'] = $testInfo['label'];
         if (array_key_exists('completed', $testInfo))
             $ret['completed'] = $testInfo['completed'];
+        if (array_key_exists('tester', $testInfo) && strlen($testInfo['tester']))
+            $ret['tester'] = $testInfo['tester'];
         if (array_key_exists('testerDNS', $testInfo) && strlen($testInfo['testerDNS']))
             $ret['testerDNS'] = $testInfo['testerDNS'];
         if (array_key_exists('runs', $testInfo) && $testInfo['runs'])
@@ -150,6 +151,15 @@ function GetSingleRunData($id, $testPath, $run, $cached, &$pageData, $testInfo) 
       if ($cached)
           $cachedText = '_Cached';
 
+      if (isset($testInfo)) {
+        if (array_key_exists('tester', $testInfo))
+          $ret['tester'] = $testInfo['tester'];
+        if (array_key_exists('test_runs', $testInfo) &&
+            array_key_exists($run, $testInfo['test_runs']) &&
+            array_key_exists('tester', $testInfo['test_runs'][$run]))
+          $ret['tester'] = $testInfo['test_runs'][$run]['tester'];
+      }
+          
       $basic_results = false;
       if (array_key_exists('basic', $_REQUEST) && $_REQUEST['basic'])
         $basic_results = true;

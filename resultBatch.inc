@@ -1,46 +1,50 @@
 <?php
-set_time_limit(300);
+require_once('testStatus.inc');
 require_once('./video/visualProgress.inc.php');
+//error_reporting(E_ALL);
+
+set_time_limit(300);
 if( !defined('BARE_UI') )
     define('BARE_UI', true);
 $csv = false;
-if( $_REQUEST['f'] == 'csv' )
-{
-    //define('RESTORE_DATA_ONLY', true);
-    $csv = true;
-    $json_response = array();
-} elseif( $_REQUEST['f'] == 'json' ) {
-    $json_response = array();
-    $json = true;
+$json = false;
+if (array_key_exists('f', $_REQUEST)) {
+  if( $_REQUEST['f'] == 'csv' )
+  {
+      //define('RESTORE_DATA_ONLY', true);
+      $csv = true;
+      $json_response = array();
+  } elseif($_REQUEST['f'] == 'json') {
+      $json_response = array();
+      $json = true;
+  }
 }
 
-require_once('testStatus.inc');
 $tests = null;
-if( gz_is_file("$testPath/bulk.json") )
-    $tests = json_decode(gz_file_get_contents("$testPath/bulk.json"), true);
-elseif( gz_is_file("$testPath/tests.json") )
-{
-    $legacyData = json_decode(gz_file_get_contents("$testPath/tests.json"), true);
-    $tests = array();
-    $tests['variations'] = array();
-    $tests['urls'] = array();
-    foreach( $legacyData as &$legacyTest )
-        $tests['urls'][] = array('u' => $legacyTest['url'], 'id' => $legacyTest['id']);
+if( gz_is_file("$testPath/bulk.json") ) {
+  $tests = json_decode(gz_file_get_contents("$testPath/bulk.json"), true);
+} elseif( gz_is_file("$testPath/tests.json") ) {
+  $legacyData = json_decode(gz_file_get_contents("$testPath/tests.json"), true);
+  $tests = array();
+  $tests['variations'] = array();
+  $tests['urls'] = array();
+  foreach( $legacyData as &$legacyTest )
+    $tests['urls'][] = array('u' => $legacyTest['url'], 'id' => $legacyTest['id']);
 }
 $videoDirty = false;
-if( gz_is_file("$testPath/video.json") )
-    $videoInfo = json_decode(gz_file_get_contents("$testPath/video.json"), true);
-else {
-    $videoInfo = array('vID' => @$tests['vID'], 'vPathID' => @$tests['vPathID']);
+if( gz_is_file("$testPath/video.json") ) {
+  $videoInfo = json_decode(gz_file_get_contents("$testPath/video.json"), true);
+} else {
+  $videoInfo = array('vID' => @$tests['vID'], 'vPathID' => @$tests['vPathID']);
 }
 
 // grab the location from the first test
 $location = $test['test']['location'];
 if( count($tests) && count($tests['urls']) ) {
-    $location_test_path = './' . GetTestPath($tests['urls'][0]['id']);
-    $location_test_ini = parse_ini_file("$location_test_path/testinfo.ini",true);
-    if( array_key_exists('test', $location_test_ini) && array_key_exists('location', $location_test_ini['test']) )
-        $location = $location_test_ini['test']['location'];
+  $location_test_path = './' . GetTestPath($tests['urls'][0]['id']);
+  $location_test_ini = parse_ini_file("$location_test_path/testinfo.ini",true);
+  if( array_key_exists('test', $location_test_ini) && array_key_exists('location', $location_test_ini['test']) )
+    $location = $location_test_ini['test']['location'];
 }
     
 $view = trim(strtolower($test['testinfo']['view']));
@@ -64,7 +68,7 @@ $fvonly = false;
 if( $test['test']['fvonly'] )
     $fvonly = true;
 $videoCaptured = false;
-if ($test['test']['video'])
+if (array_key_exists('video', $test['test']) && $test['test']['video'])
     $videoCaptured = true;
 $showExperimental = false;
 if( $videoCaptured && (!$supportsAuth || ($admin || strpos($_COOKIE['google_email'], '@google.com') !== false)) )
@@ -163,9 +167,7 @@ else
             {
                 $navTabs = array(   'New Comparison' => FRIENDLY_URLS ? "/compare?pssid=$id" : "/pss.php?pssid=$id",
                                     'Test Result' => FRIENDLY_URLS ? "/result/$id/" : "/results.php?test=$id",
-                                    'PageSpeed Service Home' => 'http://code.google.com/speed/pss', 
-                                    'Sample Tests' => 'http://code.google.com/speed/pss/gallery.html',
-                                    'Sign Up!' => 'https://docs.google.com/a/google.com/spreadsheet/viewform?hl=en_US&formkey=dDdjcmNBZFZsX2c0SkJPQnR3aGdnd0E6MQ');
+                                    'PageSpeed Service' => 'https://developers.google.com/speed/pagespeed/service');
                 if (array_key_exists('testinfo', $test) && array_key_exists('pss_advanced', $test['testinfo']) && $test['testinfo']['pss_advanced']) {                
                     $navTabs['New Comparison'] = FRIENDLY_URLS ? "/compare?pssid=$id&option=prioritize_visible_content" : "/pss.php?pssid=$id&option=prioritize_visible_content";
                 }
@@ -272,8 +274,7 @@ else
                         <div class="left" style="width: 630px; margin-left: auto; margin-right: auto;">
                         <p>Here are some resources you can browse while you wait for testing to complete (all open in new browser tabs):</p>
                         <ul class="bullet_list">
-                        <li><a href="http://code.google.com/speed/pss" target="_blank">PageSpeed Service home page</a> - information about the service</li>
-                        <li><a href="http://code.google.com/speed/pss/gallery.html" target="_blank">Sample Tests</a> - Tests for common types of sites optimized by the PageSpeed Service</li>
+                        <li><a href="https://developers.google.com/speed/pagespeed/service" target="_blank">PageSpeed Service home page</a> - information about the service</li>
                         </ul>
                         </div>
                         <?php
@@ -409,7 +410,6 @@ if( $dirty )
     $dirty = false;
 }
 
-
 /**
 * Display a straight data table of the test results
 * 
@@ -439,10 +439,11 @@ function DisplayTests(&$tests)
         </tr>';
     foreach( $tests['urls'] as &$test )
     {
-        $label = $test['l'];
+        $label = array_key_exists('l', $test) ? $test['l'] : '';
         if( !strlen($label) )
             $label = htmlspecialchars(ShortenUrl($test['u']));
-        DisplayTest($test['id'], $test['u'], $label, $test['c']);
+        $complete = array_key_exists('c', $test) ? $test['c'] : false;
+        DisplayTest($test['id'], $test['u'], $label, $complete);
     }
     echo '</table>';
     if ($videoCaptured) {
@@ -511,7 +512,7 @@ function DisplayTest($id, $url, $label, $complete)
 
     echo '<tr>';
     if ($videoCaptured) {
-        echo "<td><input type=\"checkbox\" name=\"t[]\" value=\"$id\"></td>";    
+        echo "<td><input type=\"checkbox\" name=\"t[]\" value=\"$id\" title=\"First View\">";    
     }
     $safeUrl = htmlspecialchars($url);
     $label = htmlspecialchars($label);
@@ -522,14 +523,18 @@ function DisplayTest($id, $url, $label, $complete)
     if( $complete )
     {
         $pageData = loadAllPageData($testPath);
-        $fvMedian = GetMedianRun($pageData, 0, $median_metric);
-        $rvMedian = GetMedianRun($pageData, 1, $median_metric);
+        $fvMedian = GetMedianRun($pageData, 0, 'docTime');
+        $rvMedian = GetMedianRun($pageData, 1, 'docTime');
         $rvMedian_column = '';
         if ($rvMedian)
             $rvMedian_column = number_format($pageData[$rvMedian][1]['loadTime'] / 1000.0, 3);
-        echo "<td>" . number_format($pageData[$fvMedian][0]['loadTime'] / 1000.0, 3) . "</td>";
-        if( $pageData[$fvMedian][0]['loadTime'] )
-            $stats['fv'][] = $pageData[$fvMedian][0]['loadTime'];
+        if ($fvMedian) {
+          echo "<td>" . number_format($pageData[$fvMedian][0]['loadTime'] / 1000.0, 3) . "</td>";
+          if( $pageData[$fvMedian][0]['loadTime'] )
+              $stats['fv'][] = $pageData[$fvMedian][0]['loadTime'];
+        } else {
+          echo '<td></td>';
+        }
         if( !$fvonly )
         {
             if ($pageData[$rvMedian][1]['loadTime'])
@@ -537,8 +542,10 @@ function DisplayTest($id, $url, $label, $complete)
             echo "<td>$rvMedian_column</td>";
         }
         echo '<td>';
-        if (array_key_exists('SpeedIndex', $pageData[$fvMedian][0]))
-            echo $pageData[$fvMedian][0]['SpeedIndex'];
+        if ($fvMedian && array_key_exists('SpeedIndex', $pageData[$fvMedian][0])) {
+            $siMedian = GetMedianRun($pageData, 0, 'SpeedIndex');
+            echo $pageData[$siMedian][0]['SpeedIndex'];
+        }
         echo '</td>';
         if( FRIENDLY_URLS )
         {
@@ -550,7 +557,7 @@ function DisplayTest($id, $url, $label, $complete)
             echo "<td><a href=\"/csv.php?test=$id\">Download Page Data</a></td>";
             echo "<td><a href=\"/csv.php?test=$id&requests=1\">Download Object Data</a></td>";
         }
-        echo "<td><a href=\"/export.php?test=$id\">Download HAR</a></td>";
+        echo "<td><a href=\"/export.php?bodies=1&pretty=1&test=$id\">Download HAR</a></td>";
     }
     else
     {
@@ -638,9 +645,9 @@ function DisplayPSS(&$tests, $video, &$dirty)
         $path = substr($testPath, 1);
         if( $test['c'] )
         {
-            $testInfo = json_decode(gz_file_get_contents("$testPath/testinfo.json"), true);
-            if( !$started || (array_key_exists('started', $testInfo) && $testInfo['started'] < $started) )
-                $started = $testInfo['started'];
+            $testInfo = GetTestInfo($test['id']);
+            if( $testInfo && (!$started || (array_key_exists('started', $testInfo) && $testInfo['started'] < $started)))
+              $started = $testInfo['started'];
             $options = array('end' => $test['end']);
             $pageData = loadAllPageData($testPath, $options);
             $fvMedian = GetMedianRun($pageData, 0, $median_metric);
@@ -672,7 +679,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
-                                'time' => number_format((double)$time / 10.0, 1),
+                                'time' => number_format((double)$time / 1000.0, 3),
                                 'image' => "http://$host$path/video_{$fvMedian}/$frameFile");
                             $ms = $time * 100;
                             if (array_key_exists('frames', $visual) && array_key_exists($ms, $visual['frames']))
@@ -695,7 +702,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
-                                'time' => number_format((double)$time / 10.0, 1),
+                                'time' => number_format((double)$time / 1000.0, 3),
                                 'image' => "http://$host$path/video_{$fvMedian}/$frameFile");
                             $ms = $time * 100;
                             if (array_key_exists('frames', $visual) && array_key_exists($ms, $visual['frames']))
@@ -724,7 +731,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
-                                'time' => number_format((double)$time / 10.0, 1),
+                                'time' => number_format((double)$time / 1000.0, 3),
                                 'image' => "http://$host$path/video_{$rvMedian}_cached/$frameFile");
                             $ms = $time * 100;
                             if (array_key_exists('frames', $visual) && array_key_exists($ms, $visual['frames']))
@@ -746,7 +753,7 @@ function DisplayPSS(&$tests, $video, &$dirty)
                     if( is_array($frames) && count($frames) ) {
                         foreach( $frames as $time => $frameFile ) {
                             $entry = array (   
-                                'time' => number_format((double)$time / 10.0, 1),
+                                'time' => number_format((double)$time / 1000.0, 3),
                                 'image' => "http://$host$path/video_{$rvMedian}_cached/$frameFile");
                             $ms = $time * 100;
                             if (array_key_exists('frames', $visual) && array_key_exists($ms, $visual['frames']))
@@ -1784,47 +1791,45 @@ function VideoHtml($id)
 */
 function CheckTests(&$tests, &$dirty)
 {
-    global $location;
-    $allComplete = true;
+  global $location;
+  $allComplete = true;
+  $completed = 0;
+  $checked = 0;
 
-    foreach( $tests['urls'] as &$test )
-    {
-        if( !$test['c'] )
-        {
-            $complete = true;
-            $id = $test['id'];
-            RestoreTest($id);
-            $testPath = './' . GetTestPath($id);
-            $testIni = parse_ini_file("$testPath/testinfo.ini",true);
-            if( (!isset($testIni['test']) || !isset($testIni['test']['completeTime'])) )
-                $complete = false;
-            else
-            {
-                // go through all of the variations as well
-                foreach( $test['v'] as $variationId )
-                {
-                    RestoreTest($variationId);
-                    $testPath = './' . GetTestPath($variationId);
-                    $testIni = parse_ini_file("$testPath/testinfo.ini",true);
-                    if( (!isset($testIni['test']) || !isset($testIni['test']['completeTime'])) )
-                    {
-                        $complete = false;
-                        break;
-                    }
-                }
-            }
-            
-            if( $complete )
-            {
-                $test['c'] = 1;
-                $dirty = true;
-            }
-            else
-                $allComplete = false;
+  foreach( $tests['urls'] as &$test ) {
+    if( !$test['c'] ) {
+      $complete = true;
+      $id = $test['id'];
+      RestoreTest($id);
+      $testPath = './' . GetTestPath($id);
+      $testIni = parse_ini_file("$testPath/testinfo.ini",true);
+      $checked++;
+      if( (!isset($testIni['test']) || !isset($testIni['test']['completeTime'])) ) {
+        $complete = false;
+      } else {
+        // go through all of the variations as well
+        foreach( $test['v'] as $variationId ) {
+          RestoreTest($variationId);
+          $testPath = './' . GetTestPath($variationId);
+          $testIni = parse_ini_file("$testPath/testinfo.ini",true);
+          if( (!isset($testIni['test']) || !isset($testIni['test']['completeTime'])) ) {
+            $complete = false;
+            break;
+          }
         }
+      }
+      
+      if( $complete ) {
+        $test['c'] = 1;
+        $dirty = true;
+        $completed++;
+      } else {
+        $allComplete = false;
+      }
     }
-    
-    return $allComplete;
+  }
+  
+  return $allComplete;
 }
 
 /**

@@ -4,6 +4,7 @@
 /dat/*.dat
 /dat/*.json
 /dat/*.lock
+/dat/*.db
 /images/sponsors/
 /log/
 /log.txt
@@ -20,4 +21,6 @@
 /settings/block*.txt
 /settings/whitelist.txt
 /settings/customrules.txt
+/settings/benchmarks/*
+!/settings/benchmarks/sample
 *.log
