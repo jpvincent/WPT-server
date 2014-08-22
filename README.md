@@ -46,8 +46,10 @@ On a LAMP server :
 Extensible
 -
 
-WPT monitor is super useful to schedule tests but not that good at displaying the collected data. You might also want to monitor additional data like the number of 404, the average size, the percentage of cached objects or the percentage of objects with gzip.
-Search for the `exportResultToExternal()` PHP method. It contains an example of a forward to a graphite installation of the WPT results.
+WPT monitor is super useful to schedule tests but not that good at displaying the collected data. You might also want to monitor additional data like the number of 404, the average size, the percentage of cached objects or the percentage of objects with gzip. Files to edit :
+* `wptmonitor/custom_wpt_functions.inc` for the labelling and results exports to another monitoring tool if you need to.
+* Search for the `exportResultToExternal()` calls, to enable or disable more logging
+* for debug, uncomment the `echo` in the `logOutput` function, in the `wptmonitor/utils.inc`. Also simply monitor the apache error logs ("undefined index" notices are considered as normal-but-not-ideal for now)
 
 
 Support and issues
@@ -58,7 +60,7 @@ Since most of the code is still original, your main source for help remain the [
 Future
 -
 
-WPT Monitor is abandoned, so your hope for a better monitoring remains here. Do not hesitate to open issues to require features, or to pull request.
+WPT Monitor is abandoned, so your hope for a better Frontend monitoring remains here. Do not hesitate to open issues to require features, or to pull request.
 
 We are sticking to the WPT releases.
 
