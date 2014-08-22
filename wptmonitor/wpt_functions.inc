@@ -671,62 +671,25 @@ function processResultsForAll($resultId = null)
 			$result['Status'] = $status;
 			
 			if ($status == "100") {
-				logOutput("[INFO] [ProcessResults] $wptResultId pending (code 100)");
+				logOutput("[INFO] [ProcessResults] skipping $wptResultId pending (code 100)");
 				continue;
 			}
 			// Only process 200s
 			if ($status == "200" || $resultId) {
-				logOutput("[INFO] [ProcessResults] $wptResultId Completed (code 200)");
-				logOutput('DEBUG received :' . print_r($xml->data, true));
-				
-				
-				// Check for empty run
-				$headersLocation  = $xml->data->run[$runToUse - 1]->firstView->rawData->headers;
-				$headers          = file_get_contents($headersLocation);
-				$pageDataLocation = $xml->data->run[0]->firstView->rawData->pageData;
-				$pageData         = file_get_contents($pageDataLocation);
-				
-				if (property_exists($xml->data->run[0], 'repeatView') === true) {
-					$pageDataLocationRepeatView = $xml->data->run[0]->repeatView->rawData->pageData;
-					//$pageDataRepeatView = file_get_contents($pageDataLocationRepeatView );
-				}
-				
-				
-				if ($pageData) {
-					$lines = explode("\n", $pageData);
-					//logOutput("[INFO] [ProcessResults] firstView->rawData->pageData received ".count($lines)." lines");
-					if ($lines) {
-						$headers = explode("\t", $lines[0]);
-						$line    = explode("\t", $lines[1]);
-					}
-					foreach ($headers as $key => $header) {
-						//Set default
-						$dialerId = '0';
-						if ($header == "Dialer ID") {
-							$dialerId = $line[$key];
-						}
-						if ($header == "Error Code") {
-							// Ignore the 99999.
-							//            if (!$line[$key] == "99999"){
-							$errorCode = $line[$key];
-							//            }
-						}
-					}
-				} else {
-					logOutput("[WARN] [ProcessResults] firstView->rawData->pageData not received (tried at URL " . $pageDataLocation . ")");
-				}
-				if (!empty($errorCode)) {
-					$status = $errorCode;
-				} else {
-					$status = $xml->statusCode;
-				}
-				// If 100 then it's still waiting
-				$result['Status'] = $status;
+				logOutput("[INFO] [ProcessResults] processing $wptResultId Completed (code 200)");
+				// logOutput('DEBUG received :' . print_r($xml->data, true));
+
 				
 				if ($xml->data->runs == 0) {
 					logOutput("[WARN] [ProcessResults] Result set with 0 runs for WPTResultdId: $wptResultId Id: $id");
 					updateJobStatus($id, "999");
 					continue;
+				}
+				
+				if( $xml->data->average->result != 99999 )
+					$result['Status'] = $status = $xml->data->average->result;
+				else {
+					$result['Status'] = $xml->data->average->result;
 				}
 				
 				// if = then use average.
@@ -735,194 +698,85 @@ function processResultsForAll($resultId = null)
 				logOutput('[LOG] [ProcessResults] runToUse  =(' . gettype($runToUse) . ')=' . $runToUse);
 				
 				if ($runToUse === '0') {
-					//          $avgFV = $xml->data->average->firstView;
-					//          $avgRV = $xml->data->average->repeatView;
-					$requestDataLocation = $xml->data->run[$avgRun - 1]->firstView->rawData->requestsData;
-					if (property_exists($xml->data->run[$avgRun - 1], 'repeatView') === true) {
-						$requestDataLocationRepeatView = $xml->data->run[$avgRun - 1]->repeatView->rawData->requestsData;
+					$firstView 		= $xml->data->average->firstView;
+					if (property_exists($xml->data->average, 'repeatView') === true) {
+						$repeatView 	= $xml->data->average->repeatView;
 					}
-					$pageDataLocation = $xml->data->run[$avgRun - 1]->firstView->rawData->pageData;
-					// TODO: Not sure if this was left out as a copy paste error 1/8/2012
-					if (property_exists($xml->data->run[$avgRun - 1], 'repeatView') === true) {
-						$pageDataLocationRepeatView = $xml->data->run[$avgRun - 1]->repeatView->rawData->pageData;
-					}
+
 				} else {
-					//          $avgFV = $xml->data->run[$runToUse - 1]->firstView->results;
-					//          $avgRV = $xml->data->run[$runToUse - 1]->repeatView->results;
-					$requestDataLocation = $xml->data->run[$runToUse - 1]->firstView->rawData->requestsData;
-					if (property_exists($xml->data->run[$avgRun - 1], 'repeatView') === true) {
-						$requestDataLocationRepeatView = $xml->data->run[$runToUse - 1]->repeatView->rawData->requestsData;
-					}
-					// TODO: Not sure if this was left out as a copy paste error 1/8/2012
-					$pageDataLocation = $xml->data->run[$runToUse - 1]->firstView->rawData->pageData;
-					// TODO: Not sure if this was a copy paste error 1/8/2012
-					//$pageDataLocationRepeatView = $xml->data->run[$avgRun-1]->repeatView->rawData->pageData;
-					if (property_exists($xml->data->run[$avgRun - 1], 'repeatView') === true) {
-						$pageDataLocationRepeatView = $xml->data->run[$runToUse - 1]->repeatView->rawData->pageData;
+					$firstView 		= $xml->data->run[$runToUse - 1]->firstView->results;
+					if (property_exists($xml->data->run[$runToUse - 1], 'repeatView') === true) {
+						$repeatView 	= $xml->data->run[$runToUse - 1]->repeatView->results;
 					}
 				}
-				$result['DialerId'] = $dialerId;
-				
-				// Iterate through raw data and gather results
-				try {
-					logOutput('[LOG] will process pageDataLocation :' . $pageDataLocation);
-					
-					$pageData      = file_get_contents(trim($pageDataLocation));
-					$pageDataArray = delimitedToArray($pageData, "\t", false);
-					
-					if (!empty($pageDataLocationRepeatView)) {
-						logOutput('[LOG] will process pageDataArrayRepeatView:' . $pageDataLocationRepeatView);
-						$pageDataRepeatView      = file_get_contents(trim($pageDataLocationRepeatView));
-						$pageDataArrayRepeatView = delimitedToArray($pageDataRepeatView, "\t", false);
-						logOutput('[LOG] will process pageDataArrayRepeatView :' . $pageDataLocation);
-					}
-					logOutput('[LOG] ended  pageDataLocation ' . print_r($pageDataArray, true));
-					if (count($pageDataArray) < 1) {
-						logOutput('[WARN]  pageDataArray contains no data' . print_r($pageDataArray, true));
-					}
+				$result['DialerId'] = $xml->data->tester;//$dialerId;
+
+				$result['TimeToLoadTitle'] 	= $firstView->titleTime;
+				$result['AvgFirstViewLoadTime']	= $firstView->loadTime;
+				$result['AvgFirstViewDocCompleteTime']	= $firstView->docTime;
+				$result['AvgFirstViewDocCompleteRequests']	= $firstView->requestsDoc;
+				$result['AvgFirstViewDocCompleteBytesIn']	= $firstView->bytesInDoc;
+				$result['AvgFirstViewFullyLoadedTime']	= $firstView->fullyLoaded; 
+				$result['AvgFirstViewFullyLoadedRequests']	= $firstView->requests;
+				$result['AvgFirstViewFullyLoadedBytesIn']	= $firstView->bytesIn;
+				$result['AvgFirstViewFirstByte']	= $firstView->TTFB;
+				$result['AvgFirstViewStartRender']	= $firstView->render;
+				if (isset($repeatView)) {
+					$result['TimeToLoadTitleRepeatView']	= $repeatView->titleTime;
+					$result['AvgRepeatViewLoadTime']	= $repeatView->loadTime;
+					$result['AvgRepeatViewDocCompleteTime']	= $repeatView->docTime;
+					$result['AvgRepeatViewDocCompleteRequests']	= $repeatView->requestsDoc;
+					$result['AvgRepeatViewDocCompleteBytesIn']	= $repeatView->bytesInDoc;
+					$result['AvgRepeatViewFullyLoadedTime']	= $repeatView->fullyLoaded;
+					$result['AvgRepeatViewFullyLoadedRequests']	= $repeatView->requests;
+					$result['AvgRepeatViewFullyLoadedBytesIn']	= $repeatView->bytesIn;
+					$result['AvgRepeatViewFirstByte']	= $repeatView->TTFB;
+					$result['AvgRepeatViewStartRender']	= $repeatView->render;
 				}
-				catch (Exception $ex) {
-					logOutput("[WARN] [ProcessResults] Exception processing page data. Message: " . $ex->getMessage());
-					continue;
-				}
-				logOutput('[LOG] will process pageDataArray ' . print_r($pageDataArrayRepeatView, true));
-				if (isset($pageDataArrayRepeatView)) {
-					foreach ($pageDataArrayRepeatView as $key => $data) {
-						$repeatViewData = $pageDataArrayRepeatView[$key];
-						
-						logOutput('[LOG] pageDataArray pass ' . $key);
-						
-						// The first record in a job that is a sequence will be the sum of all the pages.
-						if ($key == 0) {
-							// Is this job multistep / sequence
-							if (sizeof($pageDataArray) > 1) {
-								$result['MultiStep'] = true;
-							}
-							// Get host/location from record 0 to add subsequent seq #s
-							$host                                      = $result['WPTHost'];
-							$location                                  = $result['WPTLocation'];
-							$result['TimeToLoadTitle']                 = array_sum(getArrayFor($pageDataArray, 'Time to Title'));
-							$result['AvgFirstViewLoadTime']            = array_sum(getArrayFor($pageDataArray, 'Load Time (ms)'));
-							$result['AvgFirstViewDocCompleteTime']     = array_sum(getArrayFor($pageDataArray, 'Doc Complete Time (ms)'));
-							$result['AvgFirstViewDocCompleteRequests'] = array_sum(getArrayFor($pageDataArray, 'Requests (Doc)'));
-							$result['AvgFirstViewDocCompleteBytesIn']  = array_sum(getArrayFor($pageDataArray, 'Bytes In (Doc)'));
-							$result['AvgFirstViewFullyLoadedTime']     = array_sum(getArrayFor($pageDataArray, 'Activity Time(ms)'));
-							$result['AvgFirstViewFullyLoadedRequests'] = array_sum(getArrayFor($pageDataArray, 'Requests'));
-							$result['AvgFirstViewFullyLoadedBytesIn']  = array_sum(getArrayFor($pageDataArray, 'Bytes In'));
-							$result['AvgFirstViewFirstByte']           = array_sum(getArrayFor($pageDataArray, 'Time to First Byte (ms)'));
-							$result['AvgFirstViewStartRender']         = array_sum(getArrayFor($pageDataArray, 'Time to Start Render (ms)'));
-							if (isset($pageDataArrayRepeatView) && sizeof($pageDataArrayRepeatView) > 0) {
-								$result['TimeToLoadTitleRepeatView']        = array_sum(getArrayFor($pageDataArrayRepeatView, 'Time to Title'));
-								$result['AvgRepeatViewLoadTime']            = array_sum(getArrayFor($pageDataArrayRepeatView, 'Load Time (ms)'));
-								$result['AvgRepeatViewDocCompleteTime']     = array_sum(getArrayFor($pageDataArrayRepeatView, 'Doc Complete Time (ms)'));
-								$result['AvgRepeatViewDocCompleteRequests'] = array_sum(getArrayFor($pageDataArrayRepeatView, 'Requests (Doc)'));
-								$result['AvgRepeatViewDocCompleteBytesIn']  = array_sum(getArrayFor($pageDataArrayRepeatView, 'Bytes In (Doc)'));
-								$result['AvgRepeatViewFullyLoadedTime']     = array_sum(getArrayFor($pageDataArrayRepeatView, 'Activity Time(ms)'));
-								$result['AvgRepeatViewFullyLoadedRequests'] = array_sum(getArrayFor($pageDataArrayRepeatView, 'Requests'));
-								$result['AvgRepeatViewFullyLoadedBytesIn']  = array_sum(getArrayFor($pageDataArrayRepeatView, 'Bytes In'));
-								$result['AvgRepeatViewFirstByte']           = array_sum(getArrayFor($pageDataArrayRepeatView, 'Time to Repeat Byte (ms)'));
-								$result['AvgRepeatViewStartRender']         = array_sum(getArrayFor($pageDataArrayRepeatView, 'Time to Start Render (ms)'));
-								
-							}
-							$result->save();
-						}
-						
-						/*if ( sizeof($pageDataArray) < 2 ){
-						continue;
-						}*/
-						
-						// Check if this is the first and/or only result item in the sequence.
-						// If not, create a new $result object
-						//          if ($key > 0){
-						$result                                    = new WPTResult();
-						$result['WPTResultId']                     = $wptResultId;
-						$result['WPTJobId']                        = $wptJobId;
-						$result['WPTHost']                         = $host;
-						$result['WPTLocation']                     = $location;
-						//          }
-						$dte                                       = new DateTime($data['Date'] . ' ' . $data['Time']);
-						$testComplete                              = abs($dte->getTimestamp());
-						$result['SequenceNumber']                  = $key + 1;
-						$result['WPTEventName']                    = $data['Event Name'];
-						$result['WPTPageTitle']                    = $data['Page Title'];
-						$result['TimeToLoadTitle']                 = $data['Time to Title'];
-						$result['AvgFirstViewLoadTime']            = $data['Load Time (ms)'];
-						$result['AvgFirstViewFirstByte']           = $data['Time to First Byte (ms)'];
-						$result['AvgFirstViewStartRender']         = $data['Time to Start Render (ms)'];
-						$result['AvgFirstViewDocCompleteTime']     = $data['Doc Complete Time (ms)'];
-						$result['AvgFirstViewDocCompleteRequests'] = $data['Requests (Doc)'];
-						$result['AvgFirstViewDocCompleteBytesIn']  = $data['Bytes In (Doc)'];
-						$result['AvgFirstViewDomTime']             = $data['Time to DOM Element (ms)'];
-						$result['AvgFirstViewFullyLoadedTime']     = $data['Activity Time(ms)'];
-						$result['AvgFirstViewFullyLoadedRequests'] = $data['Requests'];
-						$result['AvgFirstViewFullyLoadedBytesIn']  = $data['Bytes In'];
-						
-						$result['TimeToLoadTitleRepeatView']        = $repeatViewData['Time to Title'];
-						$result['AvgRepeatViewLoadTime']            = $repeatViewData['Load Time (ms)'];
-						$result['AvgRepeatViewFirstByte']           = $repeatViewData['Time to First Byte (ms)'];
-						$result['AvgRepeatViewStartRender']         = $repeatViewData['Time to Start Render (ms)'];
-						$result['AvgRepeatViewDocCompleteTime']     = $repeatViewData['Doc Complete Time (ms)'];
-						$result['AvgRepeatViewDocCompleteRequests'] = $repeatViewData['Requests (Doc)'];
-						$result['AvgRepeatViewDocCompleteBytesIn']  = $repeatViewData['Bytes In (Doc)'];
-						$result['AvgRepeatViewDomTime']             = $repeatViewData['Time to DOM Element (ms)'];
-						$result['AvgRepeatViewFullyLoadedTime']     = $repeatViewData['Activity Time(ms)'];
-						$result['AvgRepeatViewFullyLoadedRequests'] = $repeatViewData['Requests'];
-						$result['AvgRepeatViewFullyLoadedBytesIn']  = $repeatViewData['Bytes In'];
-						
-						if ($testComplete) {
-							$result['Date'] = $testComplete;
-						} else {
-							$result['Date'] = current_seconds();
-						}
-						
-						$result->save();
-					} // end foreach pageDataArray
-				}
+				$result->save();
+
 				updateJobstatus($id, $status);
-				
+
 				if ($runToUse === '0') {
-					$thisRun = $xml->data->run[$avgRun - 1];
+					$firstView 		= $xml->data->average->firstView;
+					if (property_exists($xml->data->average, 'repeatView') === true) {
+						$repeatView 	= $xml->data->average->repeatView;
+					}
+
 				} else {
-					$thisRun = $xml->data->run[$runToUse - 1];
+					$firstView 		= $xml->data->run[$runToUse - 1]->firstView->results;
+					if (property_exists($xml->data->run[$runToUse - 1], 'repeatView') === true) {
+						$repeatView 	= $xml->data->run[$runToUse - 1]->repeatView->results;
+					}
 				}
 				
 				$label = makeLabelFromJobID($wptJobId);
 				
-				/*error_log(
-				'[WPTMonitor] try to get TTFB for JobId('
-				.$wptJobId
-				.') and resultId(' 
-				. $wptResultId 
-				. ") : " 
-				. $thisRun->firstView->titleTime 
-				." -> "
-				. print_r($thisRun, true) );*/
-				//  print_r($thisRun);
 				logOutput('[LOG] [exportResultToExternal] BEFORE for label ' . $label);
 				
 				exportResultToExternal( array(
 					'scenario'  => '"'.$label.'"',
-					'browserName' => '"'.$thisRun->firstView->results->browser_name.'"',
-					'browserVersion' => '"'.$thisRun->firstView->results->browser_version.'"',
-					
-					'timeToTitle' => $thisRun->firstView->results->titleTime,
-					'timeToFirstByte' => $thisRun->firstView->results->TTFB,
-					'nbBytesIn' => $thisRun->firstView->results->bytesIn,
-					'scoreGzip' => $thisRun->firstView->results->score_gzip,
-					'scoreCache'  => $thisRun->firstView->results->score_cache,
-					'timeToRender'  => $thisRun->firstView->results->render,
-					'nbHttpQueries' => $thisRun->firstView->results->requests,
-					'nb404' => $thisRun->firstView->results->responses_404,
-					'fullyLoaded' => $thisRun->firstView->results->fullyLoaded,
-					'serverLatency' => $thisRun->firstView->results->server_rtt,
+					'browserName' => '"'.$xml->data->run[0]->firstView->results->browser_name.'"',
+					'browserVersion' => '"'.$xml->data->run[0]->firstView->results->browser_version.'"',
+					'timeToTitle' => $firstView->titleTime,
+					'timeToFirstByte' => $firstView->TTFB,
+					'nbBytesIn' => $firstView->bytesIn,
+					'scoreGzip' => $firstView->score_gzip,
+					'scoreCache'  => $firstView->score_cache,
+					'timeToRender'  => $firstView->render,
+					'nbHttpQueries' => $firstView->requests,
+					'nb404' => $firstView->responses_404,
+					'fullyLoaded' => $firstView->fullyLoaded,
+					'serverLatency' => $firstView->server_rtt,
 				));
 				
 				// $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
 				
-				if(property_exists($thisRun, 'repeatView') === true) {
+				if(isset($repeatView)) {
 					exportResultToExternal(array(
-					'results.'.$label.'.requetesEconomisees' => $thisRun->firstView->requests - $thisRun->repeatView->requests,
-					'results.'.$label.'.poidsEconomise'  => $thisRun->firstView->bytesIn - $thisRun->repeatView->bytesIn
+						'scenario'  => '"'.$label.'"',
+						'results.'.$label.'.requetesEconomisees' => $firstView->requests - $repeatView->requests,
+						'results.'.$label.'.poidsEconomise'  => $firstView->bytesIn - $repeatView->bytesIn
 					));
 				}
 				
@@ -934,7 +788,6 @@ function processResultsForAll($resultId = null)
 		
 		
 		
-		// $thisRun->firstView->score_gzip
 		// score_compress
 	}
 	catch (Exception $e) {

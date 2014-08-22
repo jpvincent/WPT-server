@@ -10,7 +10,7 @@ ini_set('display_errors', 'on');
 $wptJobId = '27';
 
 
-/*
+
 $label = makeLabelFromJobID($wptJobId);
 
 exportResultToExternal(
@@ -28,7 +28,6 @@ exportResultToExternal(
 		'nb404' => '0'
 	)
 );
-*/
 
 $resultId = '140822_C8_A9';
 processResultsForAll($resultId);

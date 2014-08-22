@@ -488,7 +488,7 @@ function logOutput($msg, $file="jobProcessor_log.html") {
     echo "[ERROR] [logOutput] Cannot open log file";
   } else {
     fwrite($fp, $a . "" . $m);
-    echo $a . "" . $m;
+    // echo $a . "" . $m;
   }
 
   // truncate only once per 
