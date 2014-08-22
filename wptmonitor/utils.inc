@@ -488,13 +488,14 @@ function logOutput($msg, $file="jobProcessor_log.html") {
     echo "[ERROR] [logOutput] Cannot open log file";
   } else {
     fwrite($fp, $a . "" . $m);
+    echo $a . "" . $m;
   }
 
   // truncate only once per 
   static $already_truncated = false;
 
   if($already_truncated === false) {
-    ftruncate($fp, 100000); // 100Kb max
+    ftruncate($fp, 1000000); // 1000Kb max
     $already_truncated = true;
   }
     
