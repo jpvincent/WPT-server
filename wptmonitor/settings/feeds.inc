@@ -1,7 +1,7 @@
 <?php
 
 $feeds = array();
-
+/*
 $feeds['Recent Industry Blog Posts'] = array();
 $feeds['Recent Industry Blog Posts']['Steve Souders'] = 'http://www.stevesouders.com/blog/feed/';
 $feeds['Recent Industry Blog Posts']['Patrick Meenan'] = 'http://blog.patrickmeenan.com/feeds/posts/default';
@@ -23,5 +23,5 @@ $feeds['Recent Discussions'] = array();
 $feeds['Recent Discussions']['WebPagetest Forums'] = 'http://www.webpagetest.org/forums/syndication.php?limit=30';
 $feeds['Recent Discussions']['Yahoo Exceptional Performance'] = 'http://rss.groups.yahoo.com/group/exceptional-performance/rss';
 $feeds['Recent Discussions']['Make The Web Faster Google Group'] = 'http://groups.google.com/group/make-the-web-faster/feed/atom_v1_0_msgs.xml';
-
+*/
 ?>
