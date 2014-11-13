@@ -4,7 +4,6 @@ if(extension_loaded('newrelic')) {
     newrelic_add_custom_tracer('GetImageHistogram');
 }
 require_once('devtools.inc.php');
-
 /**
 * Calculate the progress for all of the images in a given directory
 */
@@ -331,4 +330,3 @@ function RGB_TO_YUV(&$r, &$g, &$b) {
     $g = min(max((int)$U, 0), 255);
     $b = min(max((int)$V, 0), 255);
 }
-?>

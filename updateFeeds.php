@@ -13,8 +13,8 @@ function UpdateFeeds()
 	if( isset($lock) )
 	{
 		// load the list of feeds
-		require_once('./settings/feeds.inc');
-		require_once('./lib/simplepie.inc');
+		require_once('settings/feeds.inc');
+		require_once('lib/simplepie.inc');
 
 		// loop through and update each one
 		foreach( $feeds as $category => &$feedList )
@@ -87,7 +87,7 @@ function UpdateFeeds()
 		}
 
 		// save out the feed data
-		file_put_contents('./tmp/feeds.dat', json_encode($feedData));
+		file_put_contents('tmp/feeds.dat', json_encode($feedData));
 		Unlock($lock);
 	}
 }
