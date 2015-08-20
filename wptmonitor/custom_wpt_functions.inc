@@ -46,7 +46,7 @@ function exportResultToExternal($metric_name, $metric_value = null, $time = null
 	$ch = curl_init('https://splunk-head01.in.karavel.com:8089/services/receivers/simple' . '?index=metrics_browser_side' . '&source=webpagetest' . '&sourcetype=wpt_kpi');
 	curl_setopt($ch, CURLOPT_POST, true);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-	curl_setopt($ch, CURLOPT_USERPWD, 'jevincent:Dxa4s812');
+	curl_setopt($ch, CURLOPT_USERPWD, 'cs-wptsplunkpublisher:pUE5Sw7T');
 	
 	curl_setopt($ch, CURLOPT_CERTINFO, true);
 	// curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);

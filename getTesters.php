@@ -30,9 +30,9 @@ if( array_key_exists('f', $_REQUEST) && $_REQUEST['f'] == 'json' ) {
       if ($location['elapsed'] < 30)
         $error = ' success';
     }
-    echo "<tr id=\"$name\"><th class=\"header$error\" colspan=\"13\">" . htmlspecialchars($name) . "$elapsed</th></tr>\n";
+    echo "<tr id=\"$name\"><th class=\"header$error\" colspan=\"14\">" . htmlspecialchars($name) . "$elapsed</th></tr>\n";
     if (array_key_exists('testers', $location)) {
-      echo "<tr><th class=\"tester\">Tester</th><th>Busy?</th><th>Last Check (minutes)</th><th>Last Work (minutes)</th><th>Version</th><th>PC</th><th>EC2 Instance</th><th>CPU Utilization</th><th>Free Disk (GB)</th><th>IE Version</th>";
+      echo "<tr><th class=\"tester\">Tester</th><th>Busy?</th><th>Last Check (minutes)</th><th>Last Work (minutes)</th><th>Version</th><th>PC</th><th>EC2 Instance</th><th>CPU Utilization</th><th>Error Rate</th><th>Free Disk (GB)</th><th>IE Version</th>";
       echo "<th>GPU?</th><th>IP</th><th>DNS Server(s)</th></tr>\n";
       $count = 0;
       foreach($location['testers'] as $tester) {
@@ -45,6 +45,7 @@ if( array_key_exists('f', $_REQUEST) && $_REQUEST['f'] == 'json' ) {
         echo "<td>" . @htmlspecialchars($tester['pc']) . "</td>";
         echo "<td>" . @htmlspecialchars($tester['ec2']) . "</td>";
         echo "<td>" . @htmlspecialchars($tester['cpu']) . "</td>";
+        echo "<td>" . @htmlspecialchars($tester['errors']) . "</td>";
         echo "<td>" . @htmlspecialchars($tester['freedisk']) . "</td>";
         echo "<td>" . @htmlspecialchars($tester['ie']) . "</td>";
         echo "<td>" . @htmlspecialchars($tester['GPU']) . "</td>";
@@ -117,9 +118,19 @@ if( array_key_exists('f', $_REQUEST) && $_REQUEST['f'] == 'json' ) {
 function GetAllTesters()
 {
     $locations = array();
-    $loc = parse_ini_file('./settings/locations.ini', true);
-    BuildLocations($loc);
+    $loc = LoadLocationsIni();
 
+    if (isset($_REQUEST['location'])) {
+      $location = $_REQUEST['location'];
+      $new = array('locations' => array('1' => 'group', 'default' => 'group'),
+                   'group' => array('1' => $location, 'default' => $location, 'label' => 'placeholder'));
+      if (isset($loc[$_REQUEST['location']]))
+        $new[$_REQUEST['location']] = $loc[$_REQUEST['location']];
+      $loc = $new;
+    }
+
+    BuildLocations($loc);
+    
     $i = 1;
     while( isset($loc['locations'][$i]) )
     {
@@ -139,7 +150,7 @@ function GetAllTesters()
 
         $i++;
     }
-
+    
     return $locations;
 }
 

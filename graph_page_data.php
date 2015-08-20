@@ -1,6 +1,7 @@
 <?php 
 // We intend to change to "?tests" but also allow "?test" so as to not break existing links.
 $tests = (isset($_REQUEST['tests'])) ? $_REQUEST['tests'] : $_REQUEST['test'];
+$tests = preg_replace('/[^a-zA-Z0-9,_\.\-:\ ]/', '', $tests);
 
 // Get choice of statistical control from request URL.
 $statControl = 'None'; // 'None' or index starting with 1 into list of tests.
@@ -30,10 +31,8 @@ if (count($testsId) == 1) {
   $_REQUEST['test'] = $testsId[0];
 }
 include 'common.inc';
-include 'lib/PHPStats/PHPStats.phar';
 require_once('page_data.inc');
 require_once('graph_page_data.inc');
-require_once('stat.inc');
 $page_keywords = array('Graph Page Data','Webpagetest','Website Speed Test','Page Speed', 'comparison');
 $page_description = "Graph Page Data Comparison.";
 
@@ -161,6 +160,7 @@ $common_label = implode(" ", $common_labels);
             $metrics = array('docTime' => 'Load Time (onload - ms)', 
                             'SpeedIndex' => 'Speed Index',
                             'TTFB' => 'Time to First Byte (ms)', 
+                            'basePageSSLTime' => 'Base Page SSL Time (ms)',
                             'render' => 'Time to Start Render (ms)', 
                             'visualComplete' => 'Time to Visually Complete (ms)',
                             'lastVisualChange' => 'Last Visual Change (ms)', 
@@ -247,122 +247,7 @@ $common_label = implode(" ", $common_labels);
                     echo "var chartData = " . json_encode($chartData) . ";\n";
                     echo "var runs = $num_runs;\n";
                 ?>
-                google.load("visualization", "1", {packages:["corechart", "table"]});
-                google.setOnLoadCallback(onLoadHandler);
-
-                /** Draws the chart for a metric.
-                  *
-                  * Takes a JSON object corresponding to a Chart class as
-                  * defined in graph_page_data.inc.
-                 */
-                function drawChart(chart_metric) {
-                  var data = new google.visualization.DataTable();
-
-                  // We construct the series plotting option, which
-                  // depends on each column in chart_metric except the
-                  // first.  For simplicity, we extract from all columns
-                  // and then drop the first.
-                  series = [];
-                  for (column in chart_metric['columns']) {
-                    chartColumn = chart_metric['columns'][column];
-                    data.addColumn('number', chartColumn.label);
-                    if (chartColumn.line) {
-                      series = series.concat({color: chartColumn.color});
-                    } else {
-                      series = series.concat({color: chartColumn.color,
-                        lineWidth: 0, pointSize: 3});
-                    }
-                  }
-                  series.shift();
-
-                  // Values is a map from run number (1-indexed) to value.
-                  for (i = 1; i <= runs; i++) {
-                    row = []
-                    for (column in chart_metric['columns']) {
-                       // If run i is missing, we add a cell with
-                        // an undefined array element as a placeholder.
-                      cell = chart_metric['columns'][column].values[i];
-                      row = row.concat([cell]);
-
-                    }
-                    data.addRow(row);
-                  }
-                  var options = {
-                      legend: (series.length == 1) ? 'none' : 'right',
-                      width: 950,
-                      height: Math.max(500, series.length * 45),
-                      lineWidth: 1,
-                      hAxis: {minValue: 1, maxValue: runs, gridlines: {count: runs}},
-                      series: series,
-                      chartArea: { width: "60%", left: 70, height: "85%" }
-                  }
-                  var chart = new google.visualization.LineChart(
-                      document.getElementById(chart_metric.div));
-                  chart.draw(data, options);
-
-                };
-
-                /** Given a p-value, returns "TRUE" if it is significant
-                  * or "FALSE" if it is not.
-                 */
-                function signifString(pValue) {
-                  if (!pValue) {
-                    return "";
-                  } else if (pValue < 0.05) {
-                    return "TRUE";
-                  } else {
-                    return "FALSE";
-                  }
-                }
-
-                /** Draws a table for a metric.
-                  * Takes a JSON object corresponding to CompareTable
-                  * as defined in graph_page_data.inc.
-                 */
-                function drawTable(compareData) {
-                  var data = new google.visualization.DataTable();
-                  var selectEl = document.getElementById("control");
-                  var selectId = selectEl.options[selectEl.selectedIndex].value;
-                  data.addColumn('string', 'Variant');
-                  data.addColumn('number', 'Count');
-                  data.addColumn('string', 'Mean +/- 95% Conf. Int');
-                  data.addColumn('number', 'Diff of mean from ' + compareData.compareFrom[selectId].confData.label);
-                  data.addColumn('number', 'p-value (2-tailed)');
-                  data.addColumn('string', 'Significant?');
-                  for (index in compareData.compareFrom) {
-                    confData = compareData.compareFrom[index].confData;
-                    diff = compareData.compareFrom[index].diff;
-                    pValue = compareData.compareFrom[index].pValue,
-                    pDisplay = pValue ? ((diff > 0) ? 2 * pValue : 2 * (1 - pValue)) : null;
-                    meanDisplay = confData.mean.toPrecision(6) + ' +/- ' +
-                      confData.ciHalfWidth.toPrecision(6)
-                    data.addRow([
-                      confData.label,
-                      confData.n,
-                      meanDisplay,
-                      diff,
-                      pDisplay,
-                      signifString(pDisplay)]);
-                  }
-                  var table = new google.visualization.Table(document.getElementById(compareData.div));
-                  var formatter = new google.visualization.NumberFormat(
-                    {'fractionDigits': 3});
-                  formatter.format(data, 3);
-                  formatter.format(data, 4);
-                  table.draw(data);
-                };
-
-                function onLoadHandler() {
-                  for (metric in chartData) {
-                    chart_metric = chartData[metric];
-                    drawChart(chart_metric);
-                    if (chart_metric.compareData.length > 0) {
-                      for (index in chart_metric.compareData) {
-                        drawTable(chart_metric.compareData[index]);
-                      }
-                    }
-                  }
-                };
+            <?php include('graph_page_data.js'); ?>
             </script>
         </div>
     </body>
@@ -436,7 +321,9 @@ function InsertChart($metric, $label) {
         $statLabels[] = implode(" ", $labels);
       }
     }
-    if (($statControl !== 'NOSTAT') && (count($pagesData) >= 1)) {
+    if (is_file('lib/PHPStats/PHPStats.phar') && ($statControl !== 'NOSTAT') && (count($pagesData) >= 1)) {
+      require_once('lib/PHPStats/PHPStats.phar');
+      require_once('stat.inc');
 
       // First populate compareFrom for statistical control, if it has values
       if (count($statValues[$statControl]) > 0) {
@@ -459,6 +346,10 @@ function InsertChart($metric, $label) {
           $confData = ConfData::fromArr($statLabels[$key], $statValues[$key]);
           $pValue = \PHPStats\StatisticalTests::twoSampleTTest($statValues[$statControl], $statValues[$key]);
           $diff = $confData->mean - $compareFrom[$statControl]->confData->mean;
+
+          // Derive 2-tailed p-value from 1-tailed p-view returned by twoSampleTTest.
+          $pValue = ($diff > 0) ? (2 * $pValue) : (2 * (1 - $pValue));
+
           $compareFrom[$key] = new CompareFrom($confData, $diff, $pValue);
         }
         $compareTable[] = new CompareTable($statDiv, $compareFrom);
