@@ -10,16 +10,31 @@ $lock = Lock("cron-60", false, 3600);
 if (!isset($lock))
   exit(0);
 
+header("Content-type: text/plain");
+header("Cache-Control: no-cache, must-revalidate");
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+  
+echo "Running hourly cron...\n";
+
+require_once('./ec2/ec2.inc.php');
+if (GetSetting('ec2_key')) {
+  EC2_DeleteOrphanedVolumes();
+}
+
 GitUpdate();
 AgentUpdate();
+
+echo "Done\n";
 
 /**
 * Automatically update from the git master (if configured)
 * 
 */
 function GitUpdate() {
-  if (GetSetting('gitUpdate'))
-    shell_exec('git pull origin master');
+  if (GetSetting('gitUpdate')) {
+    echo "Updating from GitHub...\n";
+    echo shell_exec('git pull origin master');
+  }
 }
 
 /**
@@ -28,6 +43,7 @@ function GitUpdate() {
 */
 function AgentUpdate() {
   $updateServer = GetSetting('agentUpdate');
+  echo "\nChecking for agent update...\n";
   if ($updateServer && strlen($updateServer)) {
     if (!is_dir('./work/update'))
       mkdir('./work/update', 0777, true); 
@@ -48,6 +64,7 @@ function AgentUpdate() {
           if (is_file($tmp))
             unlink($tmp);
           $url = $updateServer . str_replace(" ","%20","work/update/{$update['name']}.zip?v={$update['ver']}");
+          echo "Fetching $url\n";
           if (http_fetch_file($url, $tmp)) {
             $md5 = md5_file($tmp);
             if ($md5 == $update['md5']) {

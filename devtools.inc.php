@@ -8,6 +8,8 @@ if(extension_loaded('newrelic')) {
     newrelic_add_custom_tracer('DevToolsGetConsoleLog');
     newrelic_add_custom_tracer('DevToolsGetCPUSlices');
     newrelic_add_custom_tracer('GetDevToolsCPUTime');
+    newrelic_add_custom_tracer('ParseDevToolsEvents');
+    newrelic_add_custom_tracer('DevToolsMatchEvent');
 }
 
 /**
@@ -51,6 +53,7 @@ function GetDevToolsRequests($testPath, $run, $cached, &$requests, &$pageData) {
     $ver = 13;
     $cached = isset($cached) && $cached ? 1 : 0;
     $ok = GetCachedDevToolsRequests($testPath, $run, $cached, $requests, $pageData, $ver);
+    $ok = false;
     if (!$ok) {
       if (GetDevToolsEvents(null, $testPath, $run, $cached, $events, $startOffset)) {
           if (DevToolsFilterNetRequests($events, $rawRequests, $rawPageData)) {
@@ -215,6 +218,9 @@ function GetDevToolsRequests($testPath, $run, $cached, &$requests, &$pageData) {
                       $request['initiator'] = $rawRequest['initiator']['url'];
                       if (isset($rawRequest['initiator']['lineNumber']))
                         $request['initiator_line'] = $rawRequest['initiator']['lineNumber'];
+                    }
+                    if (isset($rawRequest['initialPriority'])) {
+                      $request['priority'] = $rawRequest['initialPriority'];
                     }
                     $request['server_rtt'] = null;
                     $request['headers'] = array('request' => array(), 'response' => array());
@@ -578,7 +584,7 @@ function DevToolsFilterNetRequests($events, &$requests, &$pageData) {
     // pull out just the requests that were served on the wire
     foreach ($rawRequests as &$request) {
       if (array_key_exists('startTime', $request)) {
-        if (!isset($rawRequests[$id]['fromCache']) && isset($request['response']['timing'])) {
+        if (!isset($request['fromCache']) && isset($request['response']['timing'])) {
           if (array_key_exists('requestTime', $request['response']['timing']) &&
               array_key_exists('end_time', $request) &&
               $request['response']['timing']['requestTime'] >= $request['startTime'] &&
@@ -678,19 +684,7 @@ function ParseDevToolsEvents(&$json, &$events, $filter, $removeParams, &$startOf
   $hasNet = strpos($json, '"Network.') !== false ? true : false;
   $hasTimeline = strpos($json, '"Timeline.eventRecorded"') !== false ? true : false;
   $hasTrim = strpos($json, $START_MESSAGE) !== false ? true : false;
-  $messages = json_decode($json, true);
-  // try fixing up the file if it doesn't look like it is valid json
-  if (!isset($messages) && substr($json, -1) !== ']') {
-    do {
-      $pos = strrpos($json, '}');
-      if ($pos !== false) {
-        $json = substr($json, 0, $pos);
-        $messages = json_decode($json . '}]', true);
-      } else {
-        $json = '';
-      }
-    } while(!isset($messages) && strlen($json));
-  }
+  $messages = json_decode($json, true, 100000);
   unset($json);
 
   $firstEvent = null;
@@ -737,22 +731,26 @@ function ParseDevToolsEvents(&$json, &$events, $filter, $removeParams, &$startOf
     }
   }
   
-  if (!$firstEvent && ($hasTimeline || $hasNet)) {
+  if (!$firstEvent && $hasTimeline) {
     foreach ($messages as $message) {
       if (is_array($message) && isset($message['method'])) {
         $eventTime = DevToolsEventTime($message);
-        if ($hasTimeline) {
-          $json = json_encode($message);
-          if (strpos($json, '"type":"Resource') !== false) {
-            $firstEvent = $eventTime;
-            break;
-          }
-        } else {
-          $method_class = substr($message['method'], 0, strpos($message['method'], '.'));
-          if ($eventTime && $method_class === 'Network') {
-            $firstEvent = $eventTime * 1000.0;
-            break;
-          }
+        $json = json_encode($message);
+        if (strpos($json, '"type":"Resource') !== false) {
+          $firstEvent = $eventTime;
+          break;
+        }
+      }
+    }
+  }
+  if (!$firstEvent && $hasNet) {
+    foreach ($messages as $message) {
+      if (is_array($message) && isset($message['method'])) {
+        $eventTime = DevToolsEventTime($message);
+        $method_class = substr($message['method'], 0, strpos($message['method'], '.'));
+        if ($eventTime && $method_class === 'Network') {
+          $firstEvent = $eventTime * 1000.0;
+          break;
         }
       }
     }
@@ -1012,7 +1010,11 @@ function GetTraceTimeline($testPath, $run, $cached, &$timeline) {
       $main_thread = null;
       $threads = array();
       $ignore_threads = array();
+      $user_timing = array();
       foreach ($events['traceEvents'] as $event) {
+        if (isset($event['cat']) && isset($event['name']) && isset($event['ts']) && $event['cat'] == 'blink.user_timing') {
+          $user_timing[] = $event;
+        }
         if (isset($event['cat']) && isset($event['name']) && isset($event['pid']) && isset($event['tid']) && isset($event['ph']) && isset($event['ts']) &&
             ($event['cat'] == 'disabled-by-default-devtools.timeline' || $event['cat'] == 'devtools.timeline')) {
           $thread = "{$event['pid']}:{$event['tid']}";
@@ -1083,6 +1085,10 @@ function GetTraceTimeline($testPath, $run, $cached, &$timeline) {
       }
       if (count($timeline))
         $ok = true;
+        
+      if (count($user_timing) && !gz_is_file("$testPath/$run{$cachedText}_user_timing.json")) {
+        gz_file_put_contents("$testPath/$run{$cachedText}_user_timing.json", json_encode($user_timing));
+      }
     }
   }
   return $ok;

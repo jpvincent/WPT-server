@@ -180,6 +180,7 @@ function LoadRequests($request_file_name) {
         72 => 'server_rtt',
         73 => 'client_port',
         74 => 'jpeg_scan_count',
+        75 => 'priority',
         );
     $request_lines = gz_file($request_file_name);
     if( isset($request_lines) && is_array($request_lines)) {
@@ -286,6 +287,7 @@ function MergeDnsAndConnectionTimes($requests) {
     $dns_ms = null;
     $connect_ms = null;
     foreach($requests as $i => &$request) {
+      if (isset($request['type'])) {
         $request_type = (int)$request['type'];
         if ($request_type == 1) {
             $dns_ms = $request['load_ms'];
@@ -302,6 +304,7 @@ function MergeDnsAndConnectionTimes($requests) {
             unset($connect_ms);
             $merged_requests[] = $request;
         }
+      }
     }
   }
   return $merged_requests;

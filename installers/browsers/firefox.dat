@@ -1,6 +1,6 @@
 browser=Firefox
-url=http://cdn.webpagetest.org/installers/browsers/firefox_39.exe
-md5=3D6E1F120E618AB6EE653DBA79BDE8C6
-version=39
-command=firefox_39.exe -ms
+url=http://cdn.webpagetest.org/installers/browsers/firefox_43.exe
+md5=E8DBF4ED84C07E494AA759C2384047E2
+version=43
+command=firefox_43.exe -ms
 update=1

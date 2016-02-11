@@ -21,10 +21,10 @@ $thumbTop = $fontHeight + $rowMargin;
 $bgcolor = '000000';
 $color = 'ffffff';
 if (array_key_exists('bg', $_GET)) {
-    $bgcolor = preg_replace('/[^0-9]/', $_GET['bg']);
+    $bgcolor = preg_replace('/[^0-9a-fA-F]/', '', $_GET['bg']);
 }
 if (array_key_exists('text', $_GET)) {
-    $color = preg_replace('/[^0-9]/', $_GET['text']);
+    $color = preg_replace('/[^0-9a-fA-F]/', '', $_GET['text']);
 }
 $bgcolor = html2rgb($bgcolor);
 $color = html2rgb($color);
@@ -167,7 +167,10 @@ foreach( $tests as &$test ) {
                     imagedestroy($thumb);
                     unset($thuumb);
                 }
-                $tmp = imagecreatefromjpeg("./$imgPath");
+                if (strtolower(substr($imgPath, -4)) == '.png')
+                  $tmp = imagecreatefrompng("./$imgPath");
+                else
+                  $tmp = imagecreatefromjpeg("./$imgPath");
                 if( $tmp ) {
                     $thumb = imagecreatetruecolor($test['video']['thumbWidth'], $test['video']['thumbHeight']);
                     fastimagecopyresampled($thumb, $tmp, 0, 0, 0, 0, $test['video']['thumbWidth'], $test['video']['thumbHeight'], imagesx($tmp), imagesy($tmp), 4);
