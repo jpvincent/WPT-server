@@ -754,7 +754,7 @@ function processResultsForAll($resultId = null)
 				
 				logOutput('[LOG] [exportResultToExternal] BEFORE for label ' . $label);
 				
-				exportResultToExternal( array(
+				$toBeExported = array(
 					'scenario'  => '"'.$label.'"',
 					'browserName' => '"'.$xml->data->run[0]->firstView->results->browser_name.'"',
 					'browserVersion' => '"'.$xml->data->run[0]->firstView->results->browser_version.'"',
@@ -768,8 +768,16 @@ function processResultsForAll($resultId = null)
 					'nb404' => $firstView->responses_404,
 					'fullyLoaded' => $firstView->fullyLoaded,
 					'serverLatency' => $firstView->server_rtt,
-				));
-				
+					'speedIndex' => $firstView->SpeedIndex,
+				);
+				//logOutput('[LOG] '.print_r($xml->data->run[0]->firstView->results->userTimes, true));
+				// is we have user timing, get them
+				if(property_exists($xml->data->run[$runToUse - 1]->firstView->results, 'userTimes')) {
+					foreach ($xml->data->run[$runToUse - 1]->firstView->results->userTimes->children() as $metric_name => $metric_value) {
+						$toBeExported[$metric_name] = $metric_value;
+					}
+				}
+				exportResultToExternal($toBeExported);
 				// $xml->data->run[$runToUse-1]->repeatView->rawData->pageData;
 				
 				if(isset($repeatView)) {
