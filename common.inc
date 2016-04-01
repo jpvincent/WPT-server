@@ -1,6 +1,6 @@
 <?php
-require_once('./common_lib.inc');
-require_once('./plugins.php.inc');
+require_once('common_lib.inc');
+require_once('plugins.php.inc');
 
 // if any query parameter includes a .., exit right away - likely a hack attempt
 foreach($_REQUEST as $key => $val) {
