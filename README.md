@@ -55,35 +55,13 @@ WPT monitor is super useful to schedule tests but not that good at displaying th
 Support and issues
 -
 
-Since most of the code is still original, your main source for help remain the [WPT forums](http://www.webpagetest.org/forums/). I mainly patched the WPT Monitor project, so in case of trouble, first chek on the [Monitor forum](http://www.webpagetest.org/forums/forumdisplay.php?fid=22), then check the original [Monitor source code](http://code.webpagetest.org/listing.php?repname=WebPagetest&path=%2Ftrunk%2Fwww%2Fwptmonitor%2F&#acd403ebe86e0515da3b1856b1c217fa1) and see if the bug you encountered could be in a file I modified myself. If so, open an issue.
+The code works on the few installations I made, so I cant guarantee it works everywhere, but if after debugging (see above) you still have a problem, please fill in issues
+
 
 Future
 -
 
-WPT Monitor is abandoned, so your hope for a better Frontend monitoring remains here. Do not hesitate to open issues to require features, or to pull request.
-
-We are sticking to the WPT releases.
-
-
-BSD License
--
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
-following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this list of conditions and the following
-disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
-disclaimer in the documentation and/or other materials provided with the distribution.
-
-* Neither the name of the author nor the names of its contributors may be used to endorse or promote products derived
-from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+The original WPT Monitor has been abandoned and I maintain what my clients need, dont expect me adding lot more functionalities. 
+However we tend to stick to the WPT releases, we will try to containerize the project for easier installation and we'll try to have a sitespeed.io option that will allow to have a far [better dashboard system](https://dashboard.sitespeed.io/).
+There is newer projects like [OpenSpeedMonitor](https://github.com/IteraSpeed/OpenSpeedMonitor) or [WPT Charts UI](https://github.com/trulia/webpagetest-charts-ui) but none of them currrently have the number of features this project has, but maybe it's enough for your needs ?
+Do not hesitate to open issues to require features, or to pull request.
