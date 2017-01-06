@@ -99,6 +99,16 @@ $loc = ParseLocations($locations);
               echo '<input type="hidden" name="timeout" value="' . htmlspecialchars($_REQUEST['timeout']) . "\">\n";
             if (array_key_exists('appendua', $_REQUEST))
               echo '<input type="hidden" name="appendua" value="' . htmlspecialchars($_REQUEST['appendua']) . "\">\n";
+            if (array_key_exists('keepvideo', $_REQUEST))
+              echo '<input type="hidden" name="keepvideo" value="' . htmlspecialchars($_REQUEST['keepvideo']) . "\">\n";
+            if (array_key_exists('medianMetric', $_REQUEST))
+              echo '<input type="hidden" name="medianMetric" value="' . htmlspecialchars($_REQUEST['medianMetric']) . "\">\n";
+            if (array_key_exists('affinity', $_REQUEST))
+              echo '<input type="hidden" name="affinity" value="' . htmlspecialchars($_REQUEST['affinity']) . "\">\n";
+            if (array_key_exists('tester', $_REQUEST))
+              echo '<input type="hidden" name="tester" value="' . htmlspecialchars($_REQUEST['tester']) . "\">\n";
+            if (array_key_exists('minimal', $_REQUEST))
+              echo '<input type="hidden" name="minimal" value="' . htmlspecialchars($_REQUEST['minimal']) . "\">\n";
             ?>
 
             <h2 class="cufon-dincond_black">Test a website's performance</h2>
@@ -141,8 +151,6 @@ $loc = ParseLocations($locations);
                             <?php if (isset($settings['map'])) { ?>
                             <input id="change-location-btn" type=button onclick="SelectLocation();" value="Select from Map">
                             <?php } ?>
-                            <span class="pending_tests hidden" id="pending_tests"><span id="backlog">0</span> Pending Tests</span>
-                            <span class="cleared"></span>
                         </li>
                         <li>
                             <label for="browser">Browser</label>
@@ -157,6 +165,8 @@ $loc = ParseLocations($locations);
                                 }
                                 ?>
                             </select>
+                            <span class="pending_tests hidden" id="pending_tests"><span id="backlog">0</span> Pending Tests</span>
+                            <span class="cleared"></span>
                         </li>
                     </ul>
                     <?php if (isset($settings['multi_locations'])) { ?>
@@ -261,7 +271,7 @@ $loc = ParseLocations($locations);
                                             $runs = (int)$req_runs;
                                         $runs = max(1, min($runs, $settings['maxruns']));
                                         ?>
-                                        <input id="number_of_tests" type="number" class="text short" name="runs" value=<?php echo "\"$runs\""; ?>>
+                                        <input id="number_of_tests" type="number" min="1" max=<?php echo "\"{$settings['maxruns']}\""; ?> class="text short" name="runs" value=<?php echo "\"$runs\""; ?> required>
                                     </li>
                                     <li>
                                         <label for="viewBoth">
@@ -319,7 +329,7 @@ $loc = ParseLocations($locations);
                                         <input type="checkbox" name="clearcerts" id="clearcerts" class="checkbox" style="float: left;width: auto;">
                                         <label for="clearcerts" class="auto_width">
                                             Clear SSL Certificate Caches<br>
-                                            <small>Internet Explorer</small>
+                                            <small>Internet Explorer and Chrome</small>
                                         </label>
                                     </li>
                                     <li>
@@ -438,16 +448,27 @@ $loc = ParseLocations($locations);
                                         <label for="timeline" class="auto_width">
                                             Capture Dev Tools Timeline
                                         </label>
+                                        <?php
+                                        /*
                                         <input type="checkbox" name="timelineStack" id="timelineStack" class="checkbox" style="float: left;width: auto;">
                                         <label for="timelineStack" class="auto_width">
                                             Include call stack (increases overhead)
                                         </label>
+                                        */
+                                        ?>
                                     </li>
                                     <li>
                                         <input type="checkbox" name="trace" id="trace" class="checkbox" style="float: left;width: auto;">
                                         <label for="trace" class="auto_width">
                                             Capture Chrome Trace (about://tracing)
                                         </label>
+                                    </li>
+                                    <li>
+                                        <label for="traceCategories" style="width: auto;">
+                                        Trace Categories<br>
+                                        <small>(when tracing is enabled)</small>
+                                        </label>
+                                        <input type="text" name="traceCategories" id="traceCategories" class="text" style="width: 400px;" value="*">
                                     </li>
                                     <li>
                                         <input type="checkbox" name="netlog" id="netlog" class="checkbox" style="float: left;width: auto;">
@@ -488,7 +509,7 @@ $loc = ParseLocations($locations);
                                     ?>
                                     <li>
                                         <label for="hostResolverRules" style="width: auto;">
-                                        <a href="https://github.com/atom/electron/blob/master/docs/api/chrome-command-line-switches.md#--host-rulesrules">Host Rules</a><br>
+                                        <a href="https://github.com/atom/electron/blob/master/docs/api/chrome-command-line-switches.md#--host-rulesrules">Host Resolver Rules</a><br>
                                         <small>i.e. MAP * 1.2.3.4</small>
                                         </label>
                                         <input type="text" name="hostResolverRules" id="hostResolverRules" class="text" style="width: 400px;">
@@ -675,17 +696,12 @@ $loc = ParseLocations($locations);
             $sponsors = parse_ini_file('./settings/sponsors.ini', true);
             foreach( $sponsors as &$sponsor )
             {
-                if( strlen($GLOBALS['cdnPath']) )
-                {
-                    if( isset($sponsor['logo']) )
-                        $sponsor['logo'] = $GLOBALS['cdnPath'] . $sponsor['logo'];
-                    if( isset($sponsor['logo_big']) )
-                        $sponsor['logo_big'] = $GLOBALS['cdnPath'] . $sponsor['logo_big'];
-                }
-                $offset = 0;
-                if( $sponsor['index'] )
-                    $offset = -40 * $sponsor['index'];
-                $sponsor['offset'] = $offset;
+              if( strlen($GLOBALS['cdnPath']) && isset($sponsor['logo']) )
+                $sponsor['logo'] = $GLOBALS['cdnPath'] . $sponsor['logo'];
+              $offset = 0;
+              if( $sponsor['index'] )
+                $offset = -40 * $sponsor['index'];
+              $sponsor['offset'] = $offset;
             }
             echo "var sponsors = " . @json_encode($sponsors) . ";\n";
         ?>

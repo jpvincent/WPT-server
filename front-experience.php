@@ -7,7 +7,7 @@ include 'cpuUsage.inc';
 
 
 $page_keywords = array('Domains','Webpagetest','Website Speed Test');
-$page_description = "Website domain breakdown$testLabel";
+$page_description = "CPU hogs detection";
 
 $runData = loadPageRunData($testPath, $run, $cached);
 
@@ -25,7 +25,7 @@ $cpuMetrics = GetCPUMetrics($testPath, $run,  $id);
         <div class="page">
             <?php
             $tab = 'Test Result';
-            $subtab = 'Interface Fluidity';
+            $subtab = 'CPU Usage';
             include 'header.inc';
             ?>
 			<h2>Frontend User Experience</h2>

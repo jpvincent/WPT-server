@@ -757,7 +757,7 @@ function processResultsForAll($resultId = null)
 				$toBeExported = array(
 					'scenario'  => '"'.$label.'"',
 					'browserName' => '"'.$xml->data->run[0]->firstView->results->browser_name.'"',
-					'browserVersion' => '"'.$xml->data->run[0]->firstView->results->browser_version.'"',
+					//'browserVersion' => '"'.$xml->data->run[0]->firstView->results->browser_version.'"',
 					'timeToTitle' => $firstView->titleTime,
 					'timeToFirstByte' => $firstView->TTFB,
 					'nbBytesIn' => $firstView->bytesIn,
@@ -769,11 +769,19 @@ function processResultsForAll($resultId = null)
 					'fullyLoaded' => $firstView->fullyLoaded,
 					'serverLatency' => $firstView->server_rtt,
 					'speedIndex' => $firstView->SpeedIndex,
+					'fullyLoadedCPUms' => $firstView->fullyLoadedCPUms,
 				);
 				//logOutput('[LOG] '.print_r($xml->data->run[0]->firstView->results->userTimes, true));
 				// is we have user timing, get them
 				if(property_exists($xml->data->run[$runToUse - 1]->firstView->results, 'userTimes')) {
 					foreach ($xml->data->run[$runToUse - 1]->firstView->results->userTimes->children() as $metric_name => $metric_value) {
+
+						// normalize names, for Splunk
+						// WPT has this : Trackers_-_Omniture_start
+						// and We want that : TrackersOmnitureStart
+						$metric_name = str_replace(array('-', '_'), " ", $metric_name);
+						$metric_name = ucwords(strtolower($metric_name));
+						$metric_name = str_replace(' ', "", $metric_name);
 						$toBeExported[$metric_name] = $metric_value;
 					}
 				}

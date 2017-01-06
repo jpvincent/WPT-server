@@ -3,6 +3,7 @@ include 'common.inc';
 require_once('page_data.inc');
 require_once('object_detail.inc');
 require_once('./video/visualProgress.inc.php');
+set_time_limit(3600);
 
 $sentHeader = false;
 $hasCSV = null;
@@ -42,6 +43,7 @@ if( isset($test['test']) && (isset($test['test']['completeTime']) || $test['test
     }
     if( isset($tests) ) {
       foreach( $tests['urls'] as &$testData ) {
+        RestoreTest($testData['id']);
         $path = './' . GetTestPath($testData['id']);
         if (!isset($hasCSV)) {
           $files = glob("$path/*$fileType");
@@ -125,7 +127,7 @@ function csvPageData($id, $testPath, $runs) {
   if( $_GET['requests'] ) {
     for( $i = 1; $i <= $runs; $i++ ) {
       for ($cached = 0; $cached <= 1; $cached++) {
-        $requests = getRequests($id, $testPath, $i, $cached, $secure, $loc, false);
+        $requests = getRequests($id, $testPath, $i, $cached, $secure);
         if (isset($requests) && is_array($requests) && count($requests))
           foreach ($requests as &$row)
             csvArray($row, $id, $i, $cached);

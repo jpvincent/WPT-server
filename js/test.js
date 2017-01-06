@@ -278,26 +278,6 @@ function ConnectionChanged()
         var setSpeed = true;
         
         var backlog = locations[config]['backlog'];
-        var wait = locations[config]['wait'];
-        var waitText = '';
-        if( wait < 0 ) {
-            waitText = 'Location is offline, please select a different browser or location';
-            $('#wait').removeClass('backlogWarn').addClass('backlogHigh');
-        } else if( wait > 120 ) {
-            waitText = 'Location is exceptionally busy, please select a different location or try again later';
-            $('#wait').removeClass('backlogWarn').addClass('backlogHigh');
-        } else {
-            $('#wait').removeClass('backlogWarn , backlogHigh');
-            if( wait == 1 )
-                waitText = '1 minute';
-            else if (wait > 0) {
-                if (wait > 120)
-                    waitText = Math.rount(wait / 60) + ' hours';
-                else
-                    waitText = wait + ' minutes';
-            } else
-                waitText = 'None';
-        }
 
         var up = locations[config]['up'] / 1000;
         var down = locations[config]['down'] / 1000;
@@ -336,8 +316,6 @@ function ConnectionChanged()
         else
             $('#pending_tests').removeClass('backlogWarn , hidden').addClass("backlogHigh");
 
-        $('#wait').text(waitText);
-            
         UpdateSettingsSummary();
     }
 }
@@ -387,43 +365,37 @@ function UpdateSponsor()
             var s = sponsors[sponsor];
             if( s != undefined )
             {
-                var sponsorImg = null;
                 var sponsorTxt = '';
                 var sponsorHref = '';
-                var sponsorStyle = '';
+                var sponsorDiv = '';
 
-                if( s["logo_big"] != undefined && s["logo_big"].length )
-                    sponsorImg = s["logo_big"];
-                else if( s["logo"] != undefined && s["logo"].length ) {
-                    sponsorImg = s["logo"];
-                    sponsorStyle = ' style="top: ' + s["offset"] + 'px;" ';
+                if( s["logo"] != undefined && s["logo"].length ) {
+                    sponsorDiv = '<div class="sponsor_logo" style="background-image: url(' +
+                                  s["logo"] + '); background-position: 0px ' + s["offset"] + 'px; margin-left: auto; margin-right: auto;"></div>';
                 }
                     
                 if( s["alt"] != undefined && s["alt"].length )
-                    sponsorTxt = s["alt"];
+                    sponsorTxt = ' title="' + s["alt"] + '"';
 
                 if( s["href"] != undefined && s["href"].length )
                     sponsorHref = s["href"];
                 
-                if( sponsorImg && sponsorImg.length )
+                if(sponsorDiv.length)
                 {
                     if( count )
                         html += '<p class="centered nomargin"><small>and</small></p>';
 
-                    html += '<p class="centered nomargin">';
-                    if( sponsorStyle.length )
-                        html += '<div class="sponsor_logo">';
-                    if( sponsorHref.length )
-                        html += '<a class="sponsor_link" href="' + sponsorHref + '">';
+                    html += '<div class="centered nomargin">';
+                    if( sponsorHref.length ) {
+                        html += '<a class="sponsor_link" href="' + sponsorHref + '"' + sponsorTxt + '>';
+                    }
                     
-                    html += '<img title="' + sponsorTxt + '" alt="' + sponsorTxt + '" src="' + sponsorImg + '" ' + sponsorStyle + '>';
+                    html += sponsorDiv;
                     
                     if( sponsorHref.length )
                         html += '</a>';
-                    if( sponsorStyle.length )
-                        html += '</div>';
                     
-                    html += '</p>';
+                    html += '</div>';
                 
                     count++;
                 }
@@ -494,7 +466,7 @@ function SelectLocation()
    
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src = "http://maps.google.com/maps/api/js?v=3.1&sensor=false&callback=InitializeMap";
+    script.src = "https://maps.google.com/maps/api/js?v=3.1&sensor=false&callback=InitializeMap";
     document.body.appendChild(script);
     
     return false;
