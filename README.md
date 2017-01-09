@@ -1,67 +1,82 @@
-Why?
--
+# Why?
 
 This project is a fork of both [WebPageTest Private Instance 3.0](https://github.com/WPO-Foundation/webpagetest/releases/tag/WebPageTest-3.0) and [WPT Monitor](http://www.wptmonitor.org/). The agents are automatically updated since the 3.0 version. The original intention was to patch WPT monitor who looked a bit abandonned. Then, several customers of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
 
-Reliable ?
--
+# Reliable ?
 
 It's used currently in three major organizations running dozen of tests per minutes on dozen of pages.
 Also, I tend to follow closely the WebPageTest upgrades.
 
-Features
--
+# Features
 
-Additionally to the WPT and WPT monitor original features :
-* loads of WPT Monitor bug fixes
-* WPT results have a new metric : user experience, which tries to measure the number of time the page is freezing the browser.
-* added a placeholder to send the WPT monitor results to another monitoring tool (a Graphite server as an example)
-* changed some default values:
-    * sharding is on (your tests go faster if you have several agents)
-    * taking screenshots is on by default on WPT
-    * 3 runs instead of 1
-* Debugging WPT Monitor :
-    * more debug logs
-    * less useless error logs
-    * manually clear the queue with unlock.php
-    * about page now display the version number
-* Scalability
-    * limit size of jobProcessor_log.html to 100K
-    * WPT monitor uses MySQL by default
-    * Reports listing now works with dozen of scenarios without eating the whole memory
-* WPT Monitor uses Curl instead of HttpRequest (better PHP compatibility)
+* Program WebPageTest tests (Jobs)
+** Choose locations and browsers, number of runs, first view only, video capture …
+** If you mount several [WPT agents](https://sites.google.com/a/webpagetest.org/docs/private-instances#TOC-Test-Machine-s-1), tests are made in parallel
+** select preset connectivity (tied to ```connectivity.ini```) or define one per job
+** Set Frequency of test
+* Set up WebPageTest test (Scripts)
+** simple URL of course
+** [WPT Scripting](https://sites.google.com/a/webpagetest.org/docs/using-webpagetest/scripting) is supported
+** supports multi steps and HTTP basic auth
+** Data scripts, that allows to inject randomness or calculation in your tests
+* Visualization
+** Basic graph for the usual metrics : TTFB, render, DOM loaded, fully loaded
+** documented placeholder to send the results to your own monitoring tool (Graphite, Splunk …) and trace all the metrics WPT gathers (speedIndex, custom metrics, CPU consumption, user metrics …)
+* Alerts
+** Set alerts on metrics, with thresholds
+** set alerts on response code (404, 500 …)
+** validation mechanic : define if your test succeeds and be warned if it fails
+* User management: Super Admin, regular account with number of job submission limitations
+* Folders
+** organize neatly dozen of jobs and scripts
+** manage folders / users permissions
+* Know tests queue state, on multiple WPT Hosts and agents
+* Dated Notes, to mark on the graphes important events
+* compared to the original WPT monitor :
+** more debug logs
+** clear the queue (```unlock.php```)
+** Bug fixes, like preventing ```jobProcessor_log.html``` to grow infinitely or manage a huge volume of tests without overtaking RAM
 
+# Install
 
-Install
--
-On a LAMP server :
-* get the zip file.
+* get the code from github
 * See the [https://sites.google.com/a/webpagetest.org/docs/private-instances](WPT private instance) installation documentation for requirements and first steps. The regular WPT must work, with agents running.
 * have a mysql running, with a database named `wpt`
 * edit `wptmonitor/settings/bootstrap.ini` for the mysql configuration
-* execute `/wptmonitor/install.php` and follow [http://www.wptmonitor.org/home/installation](the old but still accurate documentation).
+* execute `/wptmonitor/install.php` and follow [http://www.wptmonitor.org/home/installation](the old but still accurate documentation), starting from "Initial Configuration".
 * setup cron jobs as per the above documentation.
 
+## Requirements
 
-Extensible
--
+* PHP 5.2.4 or greater (Note that WPT 3.0 works on PHP 7, but WPT Monitor has not yet been tested on it)
+* following modules :
+** gcc
+** php
+** zlib
+** curl
+** php-pear
+** php-pdo
+** php-gd
+** pecl_http
 
-WPT monitor is super useful to schedule tests but not that good at displaying the collected data. You might also want to monitor additional data like the number of 404, the average size, the percentage of cached objects or the percentage of objects with gzip. Files to edit :
+# Export metrics to your own dashboard
+
+WPT monitor is super useful to schedule tests but not that modern at displaying the collected data. You might also want to monitor additional data like the number of 404, the average size, the percentage of cached objects or the percentage of objects with gzip. Files to edit :
 * `wptmonitor/custom_wpt_functions.inc` for the labelling and results exports to another monitoring tool if you need to.
 * Search for the `exportResultToExternal()` calls, to enable or disable more logging
 * for debug, uncomment the `echo` in the `logOutput` function, in the `wptmonitor/utils.inc`. Also simply monitor the apache error logs ("undefined index" notices are considered as normal-but-not-ideal for now)
 
 
-Support and issues
--
+# Support and issues
 
-The code works on the few installations I made, so I cant guarantee it works everywhere, but if after debugging (see above) you still have a problem, please fill in issues
+The code works on the few installations I made, so I can't guarantee it works everywhere, but if after debugging (see above) you still have a problem, please fill in issues
 
 
-Future
--
+# Future and alternatives
 
-The original WPT Monitor has been abandoned and I maintain what my clients need, dont expect me adding lot more functionalities. 
-However we tend to stick to the WPT releases, we will try to containerize the project for easier installation and we'll try to have a sitespeed.io option that will allow to have a far [better dashboard system](https://dashboard.sitespeed.io/).
+The original WPT Monitor has been abandoned and I maintain what my clients need, dont expect me adding lot more functionalities. Eg: WPT Custom Metrics are not yet supported and I'll wait that one of my client really needs it.
+However we tend to stick to the WPT releases, we will try to containerize the project for easier installation. We'll also try to have a sitespeed.io option that will allow to have a far [better dashboard system](https://dashboard.sitespeed.io/).
+
 There is newer projects like [OpenSpeedMonitor](https://github.com/IteraSpeed/OpenSpeedMonitor) or [WPT Charts UI](https://github.com/trulia/webpagetest-charts-ui) but none of them currrently have the number of features this project has, but maybe it's enough for your needs ?
+
 Do not hesitate to open issues to require features, or to pull request.
