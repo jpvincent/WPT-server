@@ -10,7 +10,7 @@ Please read this [presentation that compares webperf monitoring system](https://
 
 ## Paying alternatives (Saas) :
 * the most known WPT paying service is [SpeedCurve](https://speedcurve.com/), the dashboards cant't be customized but the visualization is excellent
-* [_contact us_](mailto:monitoring@braincracking.fr) : we are used to host the WPT server and agents, the scheduling and the dashboards for our own clients, at scale. Dashboards can be customized, audits can be required and we contribute back to open-source.
+* [_contact us_](mailto:monitoring@braincracking.fr), especially if you're french : we are used to host the WPT server and agents, the scheduling and the dashboards for our own clients, at scale. Dashboards can be customized, audits can be required, we can *monitor with real devices* and we contribute back to open-source.
 
 
 # Why?
