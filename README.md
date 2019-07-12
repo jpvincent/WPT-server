@@ -15,7 +15,7 @@ Please read this [presentation that compares webperf monitoring system](https://
 
 # Why?
 
-This project is a fork of both [WebPageTest Private Instance 3.0](https://github.com/WPO-Foundation/webpagetest/releases/tag/WebPageTest-3.0) and [WPT Monitor](http://www.wptmonitor.org/). The agents are automatically updated since the 3.0 version. The original intention was to patch WPT monitor who looked a bit abandonned. Then, several customers of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
+This project is a fork of both [WebPageTest Private Instance 3.0](https://github.com/WPO-Foundation/webpagetest/releases/tag/WebPageTest-3.0) and [WPT Monitor](http://www.wptmonitor.org/). The agents are automatically updated since the 3.0 version. The original intention was to patch WPT monitor who looked a bit abandoned. Then, several customers of mine needed Private installs to monitor their front-end performances on a regular basis so I decided to provide a single package and give it access to anyone interested in Web Performance Monitoring.
 
 # Reliable ?
 
